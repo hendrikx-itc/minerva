@@ -392,3 +392,15 @@ BEGIN
 		format(' JOIN directory.aliastype %I ON %I.id = %I.type_id and %I.name = %L AND lower(%I.name) = lower(%L)', aliastype_alias, aliastype_alias, alias_alias, aliastype_alias, 'name', alias_alias, alias);
 END;
 $$ LANGUAGE plpgsql STABLE STRICT;
+
+
+CREATE OR REPLACE FUNCTION rebuild_entitytags()
+    RETURNS void
+AS $$
+    TRUNCATE directory.entitytags;
+
+    INSERT INTO directory.entitytags(entity_id, tag_ids)
+    SELECT entity_id, array_agg(tag_id)
+    FROM directory.entitytaglink
+    GROUP BY entity_id;
+$$ LANGUAGE SQL VOLATILE;

@@ -261,6 +261,30 @@ ALTER TABLE ONLY entitytaglink
 CREATE INDEX ix_directory_entitytaglink_entity_id
 	ON entitytaglink USING btree (entity_id);
 
+-- Table 'entitytags'
+
+CREATE TABLE entitytags (
+	entity_id integer NOT NULL,
+	tag_ids integer[] NOT NULL
+);
+
+ALTER TABLE directory.entitytags OWNER TO minerva_admin;
+
+ALTER TABLE ONLY entitytags
+	ADD CONSTRAINT entitytags_pkey PRIMARY KEY (entity_id);
+
+CREATE INDEX ix_directory_entitytags_tag_ids
+	ON entitytags USING gin(tag_ids);
+
+GRANT ALL ON TABLE entitytags TO minerva_admin;
+GRANT SELECT ON TABLE entitytags TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE entitytags TO minerva_writer;
+
+ALTER TABLE ONLY entitytags
+	ADD CONSTRAINT entitytags_entity_id_fkey
+	FOREIGN KEY (entity_id) REFERENCES entity(id)
+	ON DELETE CASCADE;
+
 -- Table 'aliastype'
 
 CREATE TABLE aliastype
