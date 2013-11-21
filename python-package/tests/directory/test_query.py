@@ -18,6 +18,7 @@ from minerva.directory.query import compile_sql, QueryError
 
 
 def test_simple():
+    """Simple query should render to SQL."""
     minerva_query = [{"type": "C", "value": ["Cell"]}]
     relation_group_name = "test"
 
