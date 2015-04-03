@@ -1,18 +1,15 @@
-Source: python-minerva
-Section: contrib/python
+Source: minerva-database
+Section: contrib/database
 Priority: extra
-Maintainer: Alfred Blokland <a.j.n.blokland@hendrikx-itc.nl>
-Build-Depends: debhelper (>= 8.0.0), python-setuptools, python-sphinx
+Maintainer: Hendrikx ITC <info@hendrikx-itc.nl>
+Build-Depends: debhelper (>= 8.0.0)
 Standards-Version: 3.9.2
-XS-Python-Version: 2.7
-Homepage: http://hendrikx-itc.nl
+Homepage: http://www.hendrikx-itc.nl
 Vcs-Git: http://github.com/hendrikx-itc/minerva.git
 Vcs-Browser: http://github.com/hendrikx-itc/minerva
 
-Package: python-minerva
-Section: contrib/python
+Package: minerva-database
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python (>=2.6.5), python-setuptools, python-psycopg2, python-tz, python-yaml, python-dateutil, python-configobj, python-pyparsing, python-dbutils
-Description: Minerva Core Library
- The Minerva Core Library provides core functionality for all Python based
- Minerva solutions.
+Depends: ${misc:Depends}, postgresql(>=9.1)
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
