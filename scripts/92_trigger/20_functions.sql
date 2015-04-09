@@ -156,7 +156,7 @@ CREATE OR REPLACE FUNCTION trigger.create_rule_view(trigger.rule, rule_view_sql 
     RETURNS trigger.rule
 AS $$
 SELECT trigger.action($1, trigger.create_rule_view_sql($1, $2));
-$$ LANGUAGE SQL VOLATILE;
+$$ LANGUAGE SQL VOLATILE SECURITY DEFINER;
 
 
 --- View <rule>_kpi
@@ -753,11 +753,11 @@ $$SELECT trigger.set_weight($1, 'SELECT 1');$$
 LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_trigger_notificationstore(name)
-    RETURNS notification.notificationstore
+CREATE OR REPLACE FUNCTION trigger.create_trigger_notification_store(name)
+    RETURNS notification_directory.notification_store
 AS
 $$
-SELECT notification.create_notificationstore($1, ARRAY[
+SELECT notification_directory.create_notification_store($1, ARRAY[
     ('created', 'timestamp with time zone'),
     ('rule_id', 'integer'),
     ('weight', 'integer'),
@@ -766,7 +766,7 @@ SELECT notification.create_notificationstore($1, ARRAY[
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.transfer_notifications_from_staging(notification.notificationstore)
+CREATE OR REPLACE FUNCTION trigger.transfer_notifications_from_staging(notification_directory.notification_store)
     RETURNS integer
 AS $$
 DECLARE
@@ -791,7 +791,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, notification.notificationstore, timestamp with time zone)
+CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, notification_directory.notification_store, timestamp with time zone)
     RETURNS integer
 AS $$
 DECLARE
@@ -817,13 +817,14 @@ CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, timestamp 
     RETURNS integer
 AS $$
     SELECT
-        trigger.create_notifications($1, notificationstore, $2)
-    FROM notification.notificationstore
-    WHERE id = $1.notificationstore_id;
+        trigger.create_notifications($1, notification_store, $2)
+    FROM notification_directory.notification_store
+    WHERE id = $1.notification_store_id;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, notification.notificationstore, interval)
+CREATE OR REPLACE FUNCTION trigger.create_notifications(
+    trigger.rule, notification_directory.notification_store, interval)
     RETURNS integer
 AS $$
 DECLARE
@@ -848,42 +849,50 @@ $$ LANGUAGE plpgsql VOLATILE;
 CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, interval)
     RETURNS integer
 AS $$
-    SELECT trigger.create_notifications($1, notificationstore, $2)
-    FROM notification.notificationstore
-    WHERE id = $1.notificationstore_id;
+    SELECT trigger.create_notifications($1, notification_store, $2)
+    FROM notification_directory.notification_store
+    WHERE id = $1.notification_store_id;
 $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule)
     RETURNS integer
 AS $$
-    SELECT trigger.create_notifications($1, notificationstore, $1.default_interval)
-    FROM notification.notificationstore
-    WHERE id = $1.notificationstore_id;
+    SELECT trigger.create_notifications($1, notification_store, $1.default_interval)
+    FROM notification_directory.notification_store
+    WHERE id = $1.notification_store_id;
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notifications(rule_name name, notificationstore_name name, timestamp with time zone)
+CREATE OR REPLACE FUNCTION trigger.create_notifications(rule_name name, notification_store_name name, timestamp with time zone)
     RETURNS integer
 AS $$
-    SELECT trigger.create_notifications(trigger.get_rule($1), notification.get_notificationstore($2), $3);
+    SELECT trigger.create_notifications(
+        trigger.get_rule($1),
+        notification_directory.get_notification_store($2),
+        $3
+    );
 $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trigger.create_notifications(rule_name name, timestamp with time zone)
     RETURNS integer
 AS $$
-    SELECT trigger.create_notifications(rule, notificationstore, $2)
+    SELECT trigger.create_notifications(rule, notification_store, $2)
     FROM trigger.rule
-    JOIN notification.notificationstore ON notificationstore.id = rule.notificationstore_id
+    JOIN notification_directory.notification_store ON notification_store.id = rule.notification_store_id
     WHERE rule.name = $1;
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notifications(rule_name name, notificationstore_name name, interval)
+CREATE OR REPLACE FUNCTION trigger.create_notifications(rule_name name, notification_store_name name, interval)
     RETURNS integer
 AS $$
-    SELECT trigger.create_notifications(trigger.get_rule($1), notification.get_notificationstore($2), $3);
+    SELECT trigger.create_notifications(
+        trigger.get_rule($1),
+        notification_directory.get_notification_store($2),
+        $3
+    );
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -982,3 +991,4 @@ AS $$
         - $1.granularity
     );
 $$ LANGUAGE sql STABLE;
+
