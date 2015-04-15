@@ -168,7 +168,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE STRICT;
 
 
-CREATE VIEW relation.dependencies AS
+CREATE VIEW relation_directory.dependencies AS
 SELECT
     type,
     max(depth) depth
@@ -183,7 +183,7 @@ JOIN relation.type ON type.name = pg_class.relname
 GROUP BY type;
 
 
-CREATE VIEW relation.materialization_order AS
+CREATE VIEW relation_directory.materialization_order AS
 SELECT (foo.t).*, depth
 FROM (
     SELECT t, coalesce(depth, 0) depth
