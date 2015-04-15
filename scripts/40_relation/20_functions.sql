@@ -97,3 +97,30 @@ BEGIN
     RETURN result;
 END;
 $$ LANGUAGE plpgsql VOLATILE STRICT;
+
+
+CREATE VIEW relation.dependencies AS
+SELECT
+    type,
+    max(depth) depth
+FROM (SELECT dep_recurse.view_ref('relation_def', type.name) AS ref FROM relation.type) root_obj
+JOIN dep_recurse.dependency_tree ON
+    (root_obj.ref).obj_id = dependency_tree.root_obj_id
+    AND
+    (root_obj.ref).obj_type = dependency_tree.root_obj_type
+JOIN pg_class ON pg_class.oid = (dependency_tree.obj_ref).obj_id
+JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace AND pg_namespace.nspname = 'relation'
+JOIN relation.type ON type.name = pg_class.relname
+GROUP BY type;
+
+
+CREATE VIEW relation.materialization_order AS
+SELECT (foo.t).*, depth
+FROM (
+    SELECT t, coalesce(depth, 0) depth
+    FROM relation.type t
+    LEFT JOIN relation.dependencies ON (dependencies.type).id = t.id
+    WHERE dep_recurse.view_ref('relation_def', t.name) IS NOT NULL
+) foo
+ORDER BY depth DESC;
+
