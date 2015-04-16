@@ -1,0 +1,9 @@
+#!/bin/bash
+buildtype=${1:-production}
+workdir="$(dirname "$0")"
+pushd $workdir > /dev/null
+echo "changed work dir to '$workdir'"
+echo 'building...'
+docker build -t minerva-db:5.0 -f $buildtype.dockerfile .
+echo 'done'
+popd
