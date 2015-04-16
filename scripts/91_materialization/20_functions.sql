@@ -267,7 +267,7 @@ AS $$
     SELECT materialization.define(
         $1,
         trend_directory.attributes_to_table_trend_store(
-            substring(data_source.name, '^v(.*)'),
+            materialization.materialized_data_source_name(data_source.name),
             entity_type.name,
             $1.granularity,
             array_agg((view_trend.name, view_trend.data_type, view_trend.description)::trend_directory.trend_descr)
