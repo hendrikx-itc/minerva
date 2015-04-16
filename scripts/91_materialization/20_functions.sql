@@ -261,6 +261,19 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION materialization.materialized_data_source_name(name character varying)
+  RETURNS character varying
+AS $$
+BEGIN
+  IF NOT name ~ '^v.*' THEN
+    RAISE EXCEPTION '% does not start with a ''v''', name;
+  ELSE
+    RETURN substring(name, '^v(.*)');
+  END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
 CREATE FUNCTION materialization.define(trend_directory.view_trend_store)
     RETURNS materialization.type
 AS $$
@@ -293,19 +306,6 @@ the source trend_store should start with a ''v'' for views and that the
 destination trend_store has the same properties except for a data_source with a
 name without the leading ''v''. A new trend_store and data_source are created if
 they do not exist.';
-
-
-CREATE FUNCTION materialization.materialized_data_source_name(name character varying)
-  RETURNS character varying
-AS $$
-BEGIN
-  IF NOT name ~ '^v.*' THEN
-    RAISE EXCEPTION '% does not start with a ''v''', name;
-  ELSE
-    RETURN substring(name, '^v(.*)');
-  END IF;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
 
 
 CREATE FUNCTION materialization.render_job_json(type_id integer, timestamp with time zone)
