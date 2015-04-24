@@ -1192,9 +1192,7 @@ CREATE OR REPLACE FUNCTION attribute_directory.modify_column_type(attribute_dire
 AS $$
     SELECT dep_recurse.alter(
         dep_recurse.table_ref('attribute_base', attribute_directory.to_table_name($1)),
-        ARRAY[
-            attribute_directory.modify_column_type_sql($1, $2, $3)
-        ],
+        attribute_directory.modify_column_type_sql($1, $2, $3),
         attribute_directory.dependees($1)
     );
 
