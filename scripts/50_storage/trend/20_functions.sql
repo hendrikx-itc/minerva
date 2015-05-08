@@ -203,10 +203,28 @@ CREATE FUNCTION trend_directory.create_staging_table_sql(trend_store trend_direc
     RETURNS text[]
 AS $$
 SELECT ARRAY[
-    format('CREATE UNLOGGED TABLE trend.%I () INHERITS (trend.%I);', trend_directory.staging_table_name($1), trend_directory.base_table_name(trend_store)),
-    format('ALTER TABLE ONLY trend.%I ADD PRIMARY KEY (entity_id, "timestamp");', trend_directory.staging_table_name($1)),
-    format('GRANT SELECT ON TABLE trend.%I TO minerva;', trend_directory.staging_table_name($1)),
-    format('GRANT INSERT,DELETE,UPDATE ON TABLE trend.%I TO minerva_writer;', trend_directory.staging_table_name($1))
+    format(
+        'CREATE UNLOGGED TABLE %I.%I () INHERITS (%I.%I);',
+        trend_directory.staging_table_schema(),
+        trend_directory.staging_table_name($1),
+        trend_directory.staging_table_schema(),
+        trend_directory.base_table_name(trend_store)
+    ),
+    format(
+        'ALTER TABLE ONLY %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
+        trend_directory.staging_table_schema(),
+        trend_directory.staging_table_name($1)
+    ),
+    format(
+        'GRANT SELECT ON TABLE %I.%I TO minerva;',
+        trend_directory.staging_table_schema(),
+        trend_directory.staging_table_name($1)
+    ),
+    format(
+        'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
+        trend_directory.staging_table_schema(),
+        trend_directory.staging_table_name($1)
+    )
 ];
 $$ LANGUAGE sql STABLE;
 
