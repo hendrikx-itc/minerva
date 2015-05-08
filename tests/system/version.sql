@@ -2,7 +2,7 @@ BEGIN;
 
 SELECT plan(3);
 
-SELECT is(system.version(), (4,7,0)::system.version_tuple);
+SELECT is(system.version(), (5,0,0)::system.version_tuple);
 
 SELECT ok(
     (1,0,0)::system.version_tuple < (2,0,0)::system.version_tuple
