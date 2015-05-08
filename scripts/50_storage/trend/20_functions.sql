@@ -790,7 +790,7 @@ CREATE FUNCTION trend_directory.modify_trend_store_columns(
     RETURNS trend_directory.trend_store
 AS $$
    SELECT trend_directory.alter_column_types(
-        'trend',
+        trend_directory.base_table_schema(),
         trend_directory.base_table_name($1),
         $2
    );
