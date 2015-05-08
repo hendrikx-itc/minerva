@@ -676,25 +676,6 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.create_partition_column(
-        partition_name name, trend_id integer, data_type text)
-    RETURNS void
-AS $$
-DECLARE
-    trend_name varchar;
-BEGIN
-    SELECT name INTO trend_name FROM trend WHERE id = trend_id;
-
-    EXECUTE format(
-        'ALTER TABLE %I ADD COLUMN %I %I;',
-        partition_name,
-        trend_name,
-        data_type
-    );
-END;
-$$ LANGUAGE plpgsql;
-
-
 CREATE FUNCTION trend_directory.modify_trend_store_column(
         trend_directory.trend_store, column_name name, data_type text)
     RETURNS trend_directory.trend_store
