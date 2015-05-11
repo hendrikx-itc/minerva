@@ -729,6 +729,27 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION trend_directory.alter_trend_name(
+        trend_directory.table_trend_store, trend_name name, new_name name)
+    RETURNS trend_directory.table_trend_store
+AS $$
+    UPDATE trend_directory.table_trend
+    SET name = $3
+    WHERE trend_store_id = $1.id AND name = $2;
+
+    SELECT public.action(
+        $1,
+        format(
+            'ALTER TABLE %I.%I RENAME %I TO %I',
+            trend_directory.base_table_schema(),
+            trend_directory.base_table_name($1),
+            $2,
+            $3
+        )
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE TYPE trend_directory.column_info AS (
     name name,
     data_type text
