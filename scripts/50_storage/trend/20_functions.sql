@@ -810,11 +810,11 @@ CREATE FUNCTION trend_directory.modify_trend_store_columns(
         trend_directory.trend_store, columns trend_directory.column_info[])
     RETURNS trend_directory.trend_store
 AS $$
-   SELECT trend_directory.alter_column_types(
+    SELECT trend_directory.alter_column_types(
         trend_directory.base_table_schema(),
         trend_directory.base_table_name($1),
         $2
-   );
+    );
 
     SELECT $1;
 $$ LANGUAGE sql;
@@ -824,7 +824,7 @@ CREATE FUNCTION trend_directory.modify_trend_store_columns(
         trend_store_id integer, columns trend_directory.column_info[])
     RETURNS trend_directory.trend_store
 AS $$
-   SELECT trend_directory.modify_trend_store_columns(
+    SELECT trend_directory.modify_trend_store_columns(
         trend_store,
         columns
     )
