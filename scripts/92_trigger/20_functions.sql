@@ -974,6 +974,8 @@ AS $$
     SELECT CASE
         WHEN $2 = '1 day' THEN
             date_trunc('day', $1)
+        WHEN $2 = '1 week' THEN
+            date_trunc('week', $1)
         ELSE
             to_timestamp((
                 extract(epoch FROM $1)::integer / extract(epoch FROM $2)::integer
