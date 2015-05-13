@@ -4,7 +4,7 @@ MAINTAINER Hendrikx ITC
 RUN apt-get update
 RUN apt-get install -y make patch libpq-dev postgresql-server-dev-9.4
 
-ADD https://github.com/hendrikx-itc/db-deps/archive/274f0f3300077a859426912337ffc04983663ff3.tar.gz /db-deps.tar.gz
+ADD https://github.com/hendrikx-itc/db-deps/archive/7cd7beb062093cff389eb6761fab84bab3f7e285.tar.gz /db-deps.tar.gz
 RUN mkdir /db-deps
 RUN tar -xzvf /db-deps.tar.gz -C /db-deps --strip-components=1
 
