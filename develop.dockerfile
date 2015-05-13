@@ -8,9 +8,6 @@ ADD https://github.com/hendrikx-itc/db-deps/archive/7cd7beb062093cff389eb6761fab
 RUN mkdir /db-deps
 RUN tar -xzvf /db-deps.tar.gz -C /db-deps --strip-components=1
 
-ADD scripts /minerva
-ADD tests /tests
-
 ADD https://github.com/theory/pgtap/archive/master.tar.gz /pgtap.tar.gz
 RUN mkdir /pgtap
 RUN tar -xzvf /pgtap.tar.gz -C /pgtap --strip-components=1
@@ -24,3 +21,6 @@ COPY docker-resources/drop-minerva-database /usr/bin/
 COPY docker-resources/recreate-minerva-database /usr/bin/
 
 ADD init-minerva-db.sh /docker-entrypoint-initdb.d/
+
+ADD scripts /minerva
+ADD tests /tests
