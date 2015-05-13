@@ -14,7 +14,7 @@ FROM trend."test-source_test-type_qtr";
 SELECT
     trend_directory.alter_view(view_trend_store, 'SELECT 2 x, 3 y')
 FROM trend_directory.view_trend_store
-WHERE view_trend_store::text = 'test-source_test-type_qtr';
+WHERE view_trend_store::name = 'test-source_test-type_qtr';
 
 SELECT
     is(x, 2)
