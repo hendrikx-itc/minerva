@@ -1560,10 +1560,7 @@ BEGIN
         ARRAY['entity_id', 'timestamp', 'modified'] || trend_names
     ) AS trend_name;
 
-    dst_partition = trend_directory.attributes_to_partition(
-        target,
-        trend_directory.timestamp_to_index(target.partition_size, timestamp)
-    );
+    dst_partition = trend_directory.attributes_to_partition(target, timestamp);
 
     EXECUTE format(
         'INSERT INTO trend_directory.%I (%s) SELECT %s FROM trend_directory.%I WHERE timestamp = $1',
