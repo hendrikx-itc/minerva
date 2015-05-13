@@ -26,7 +26,7 @@ VALUES
 
 SELECT trend_directory.transfer_staged(table_trend_store)
 FROM trend_directory.table_trend_store
-WHERE table_trend_store::text = 'test-data_Node_qtr';
+WHERE table_trend_store::name = 'test-data_Node_qtr';
 
 
 SELECT materialization.define(
