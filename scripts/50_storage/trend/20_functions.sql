@@ -942,7 +942,7 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.create_trends(trend_directory.table_trend_store, trend_directory.trend_descr[])
+CREATE FUNCTION trend_directory.create_table_trends(trend_directory.table_trend_store, trend_directory.trend_descr[])
     RETURNS SETOF trend_directory.table_trend
 AS $$
     SELECT trend_directory.create_table_trend($1, descr)
@@ -950,7 +950,7 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.missing_trends(trend_directory.table_trend_store, required trend_directory.trend_descr[])
+CREATE FUNCTION trend_directory.missing_table_trends(trend_directory.table_trend_store, required trend_directory.trend_descr[])
     RETURNS SETOF trend_directory.trend_descr
 AS $$
     SELECT required
@@ -960,11 +960,11 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.assure_trends_exist(trend_directory.table_trend_store, trend_directory.trend_descr[])
+CREATE FUNCTION trend_directory.assure_table_trends_exist(trend_directory.table_trend_store, trend_directory.trend_descr[])
     RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.create_table_trend($1, t)
-    FROM trend_directory.missing_trends($1, $2) t;
+    FROM trend_directory.missing_table_trends($1, $2) t;
 
     SELECT $1;
 $$ LANGUAGE sql VOLATILE;
