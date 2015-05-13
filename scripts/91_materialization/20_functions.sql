@@ -1,9 +1,12 @@
 CREATE FUNCTION materialization.to_char(materialization.type)
     RETURNS text
 AS $$
-    SELECT trend_directory.base_table_name(view_trend_store) || ' -> ' || trend_directory.base_table_name(table_trend_store)
+    SELECT view_trend_store::name || ' -> ' || table_trend_store::name
     FROM trend_directory.view_trend_store, trend_directory.table_trend_store
-    WHERE view_trend_store.id = $1.view_trend_store_id AND table_trend_store.id = $1.table_trend_store_id
+    WHERE
+        view_trend_store.id = $1.view_trend_store_id
+        AND
+        table_trend_store.id = $1.table_trend_store_id
 $$ LANGUAGE sql STABLE STRICT;
 
 
@@ -94,7 +97,7 @@ AS $$
     FROM
         trend_directory.table_columns(
             trend_directory.view_schema(),
-            trend_directory.base_table_name($1)
+            $1::name
         );
 $$ LANGUAGE sql STABLE;
 
@@ -116,7 +119,7 @@ AS $$
             'SELECT %s FROM %I.%I WHERE timestamp = %L',
             materialization.columns_part(materialization.view_trend_store($1)),
             trend_directory.view_schema(),
-            trend_directory.base_table_name(materialization.view_trend_store($1)),
+            materialization.view_trend_store($1)::name,
             $2
         )
     );

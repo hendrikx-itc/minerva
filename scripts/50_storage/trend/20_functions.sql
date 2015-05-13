@@ -50,7 +50,7 @@ AS $$
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION trend_directory.base_table_name(trend_store trend_directory.trend_store)
+CREATE FUNCTION trend_directory.trend_store_name(trend_directory.trend_store)
     RETURNS name
 AS $$
     SELECT format(
@@ -64,31 +64,38 @@ AS $$
 $$ LANGUAGE sql STABLE STRICT;
 
 
+CREATE FUNCTION trend_directory.base_table_name(trend_directory.table_trend_store)
+    RETURNS name
+AS $$
+    SELECT trend_directory.trend_store_name($1);
+$$ LANGUAGE sql STABLE STRICT;
+
+
 CREATE FUNCTION trend_directory.view_name(trend_directory.view_trend_store)
     RETURNS name
 AS $$
-    SELECT trend_directory.base_table_name($1);
+    SELECT trend_directory.trend_store_name($1);
 $$ LANGUAGE sql;
 
 
 CREATE FUNCTION trend_directory.to_char(trend_directory.trend_store)
     RETURNS text
 AS $$
-    SELECT trend_directory.base_table_name($1)::text;
+    SELECT trend_directory.trend_store_name($1)::text;
 $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE FUNCTION trend_directory.to_char(trend_directory.table_trend_store)
     RETURNS text
 AS $$
-    SELECT trend_directory.base_table_name($1)::text;
+    SELECT trend_directory.trend_store_name($1)::text;
 $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE FUNCTION trend_directory.to_char(trend_directory.view_trend_store)
     RETURNS text
 AS $$
-    SELECT trend_directory.base_table_name($1)::text;
+    SELECT trend_directory.trend_store_name($1)::text;
 $$ LANGUAGE sql STABLE STRICT;
 
 
@@ -165,8 +172,8 @@ AS $$
 $$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
 
 
-CREATE FUNCTION trend_directory.create_base_table(trend_directory.trend_store, trend_directory.trend[])
-    RETURNS trend_directory.trend_store
+CREATE FUNCTION trend_directory.create_base_table(trend_directory.table_trend_store, trend_directory.trend[])
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.create_base_table(trend_directory.base_table_name($1), $2);
     SELECT $1;
@@ -182,8 +189,8 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.create_base_table(trend_directory.trend_store)
-    RETURNS trend_directory.trend_store
+CREATE FUNCTION trend_directory.create_base_table(trend_directory.table_trend_store)
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.create_base_table(
         $1,
@@ -192,14 +199,14 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.staging_table_name(trend_directory.trend_store)
+CREATE FUNCTION trend_directory.staging_table_name(trend_directory.table_trend_store)
     RETURNS name
 AS $$
     SELECT (trend_directory.base_table_name($1) || '_staging')::name;
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.create_staging_table_sql(trend_store trend_directory.trend_store)
+CREATE FUNCTION trend_directory.create_staging_table_sql(trend_directory.table_trend_store)
     RETURNS text[]
 AS $$
 SELECT ARRAY[
@@ -208,7 +215,7 @@ SELECT ARRAY[
         trend_directory.staging_table_schema(),
         trend_directory.staging_table_name($1),
         trend_directory.staging_table_schema(),
-        trend_directory.base_table_name(trend_store)
+        trend_directory.base_table_name($1)
     ),
     format(
         'ALTER TABLE ONLY %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
@@ -229,8 +236,8 @@ SELECT ARRAY[
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.create_staging_table(trend_store trend_directory.trend_store)
-    RETURNS trend_directory.trend_store
+CREATE FUNCTION trend_directory.create_staging_table(trend_directory.table_trend_store)
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT public.action($1, trend_directory.create_staging_table_sql($1));
 $$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
@@ -539,7 +546,7 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.partition_name(trend_store trend_directory.trend_store, index integer)
+CREATE FUNCTION trend_directory.partition_name(trend_directory.table_trend_store, index integer)
     RETURNS name
 AS $$
     SELECT (trend_directory.base_table_name($1) || '_' || $2)::name;
@@ -615,7 +622,7 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.staged_timestamps(trend_store trend_directory.trend_store)
+CREATE FUNCTION trend_directory.staged_timestamps(trend_store trend_directory.table_trend_store)
     RETURNS SETOF timestamp with time zone
 AS $$
 BEGIN
@@ -695,8 +702,8 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.modify_trend_store_column(
-        trend_directory.trend_store, column_name name, data_type text)
-    RETURNS trend_directory.trend_store
+        trend_directory.table_trend_store, column_name name, data_type text)
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT dep_recurse.alter(
         dep_recurse.table_ref(
@@ -719,13 +726,13 @@ $$ LANGUAGE sql VOLATILE;
 
 CREATE FUNCTION trend_directory.modify_trend_store_column(
         trend_store_id integer, column_name name, data_type text)
-    RETURNS trend_directory.trend_store
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.modify_trend_store_column(
-        trend_store, $2, $3
+        table_trend_store, $2, $3
     )
-    FROM trend_directory.trend_store
-    WHERE trend_store.id = $1;
+    FROM trend_directory.table_trend_store
+    WHERE table_trend_store.id = $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -807,8 +814,8 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.modify_trend_store_columns(
-        trend_directory.trend_store, columns trend_directory.column_info[])
-    RETURNS trend_directory.trend_store
+        trend_directory.table_trend_store, columns trend_directory.column_info[])
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.alter_column_types(
         trend_directory.base_table_schema(),
@@ -822,14 +829,14 @@ $$ LANGUAGE sql;
 
 CREATE FUNCTION trend_directory.modify_trend_store_columns(
         trend_store_id integer, columns trend_directory.column_info[])
-    RETURNS trend_directory.trend_store
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.modify_trend_store_columns(
-        trend_store,
+        table_trend_store,
         columns
     )
-    FROM trend_directory.trend_store
-    WHERE trend_store.id = trend_store_id;
+    FROM trend_directory.table_trend_store
+    WHERE table_trend_store.id = trend_store_id;
 $$ LANGUAGE sql;
 
 
@@ -903,7 +910,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.add_trend_to_trend_store(
-        trend_directory.trend_store, trend_directory.table_trend)
+        trend_directory.table_trend_store, trend_directory.table_trend)
     RETURNS trend_directory.table_trend
 AS $$
     SELECT dep_recurse.alter(
@@ -970,8 +977,8 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.modify_data_type(trend_directory.trend_store, trend_directory.trend, required_data_type text)
-    RETURNS trend_directory.trend_store
+CREATE FUNCTION trend_directory.modify_data_type(trend_directory.table_trend_store, trend_directory.trend, required_data_type text)
+    RETURNS trend_directory.table_trend_store
 AS $$
     UPDATE trend_directory.trend SET data_type = $3;
 
@@ -981,8 +988,8 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.assure_data_types(trend_directory.trend_store, trend_directory.trend_descr[])
-    RETURNS trend_directory.trend_store
+CREATE FUNCTION trend_directory.assure_data_types(trend_directory.table_trend_store, trend_directory.trend_descr[])
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.modify_data_type($1, trend, required.data_type)
     FROM unnest($2) required
@@ -1227,10 +1234,10 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.remove_trend_from_trend_store(
-        trend_store trend_directory.trend_store, trend_name character varying)
-    RETURNS trend_directory.trend_store
+        trend_store trend_directory.table_trend_store, trend_name character varying)
+    RETURNS trend_directory.table_trend_store
 AS $$
-    DELETE FROM trend_directory.trend
+    DELETE FROM trend_directory.table_trend
     WHERE trend_store_id = $1.id AND name = $2;
 
     SELECT public.action(
@@ -1247,10 +1254,10 @@ $$ LANGUAGE sql VOLATILE;
 
 CREATE FUNCTION trend_directory.remove_trend_from_trend_store(
         trend_store text, trend_name character varying)
-    RETURNS trend_directory.trend_store
+    RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.remove_trend_from_trend_store(trend_store, $2)
-    FROM trend_directory.trend_store
+    FROM trend_directory.table_trend_store
     WHERE trend_store::text = $1;
 $$ LANGUAGE sql VOLATILE;
 
@@ -1331,7 +1338,7 @@ CREATE TYPE trend_directory.upgrade_record AS (
 );
 
 
-CREATE FUNCTION trend_directory.get_partition(trend_store trend_directory.trend_store, index integer)
+CREATE FUNCTION trend_directory.get_partition(trend_store trend_directory.table_trend_store, index integer)
     RETURNS trend_directory.partition
 AS $$
     SELECT partition
@@ -1340,7 +1347,7 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.define_partition(trend_store trend_directory.trend_store, index integer)
+CREATE FUNCTION trend_directory.define_partition(trend_store trend_directory.table_trend_store, index integer)
     RETURNS trend_directory.partition
 AS $$
     INSERT INTO trend_directory.partition(
@@ -1355,7 +1362,7 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.create_partition(trend_store trend_directory.trend_store, index integer)
+CREATE FUNCTION trend_directory.create_partition(trend_store trend_directory.table_trend_store, index integer)
     RETURNS trend_directory.partition
 AS $$
     SELECT trend_directory.create_partition_table(
@@ -1525,7 +1532,7 @@ $$ LANGUAGE sql STABLE;
 CREATE FUNCTION trend_directory.get_dependent_views(trend_directory.trend_store)
     RETURNS SETOF trend_directory.view_trend_store
 AS $$
-    SELECT trend_directory.get_dependent_views(trend_directory.base_table_name($1));
+    SELECT trend_directory.get_dependent_views(trend_directory.trend_store_name($1));
 $$ LANGUAGE sql;
 
 
@@ -1622,7 +1629,7 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.clear_timestamp(trend_directory.trend_store, timestamp with time zone)
+CREATE FUNCTION trend_directory.clear_timestamp(trend_directory.table_trend_store, timestamp with time zone)
     RETURNS integer
 AS $$
 DECLARE
