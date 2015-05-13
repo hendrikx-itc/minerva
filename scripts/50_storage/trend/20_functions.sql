@@ -880,7 +880,7 @@ CREATE FUNCTION trend_directory.alter_view(trend_directory.view_trend_store, tex
     RETURNS trend_directory.view_trend_store
 AS $$
     SELECT dep_recurse.alter(
-        dep_recurse.view_ref(trend_directory.view_schema(), $1::text),
+        dep_recurse.view_ref(trend_directory.view_schema(), $1::name),
         ARRAY[
             format(
                 'SELECT trend_directory.drop_view(view_trend_store) '
