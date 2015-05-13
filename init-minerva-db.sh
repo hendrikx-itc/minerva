@@ -7,3 +7,4 @@ gosu postgres create-minerva-database
 
 gosu postgres pg_ctl stop
 
+echo 'minerva.trigger_mark_modified = on' >> /var/lib/postgresql/data/postgresql.conf
