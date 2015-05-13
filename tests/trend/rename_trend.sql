@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(2);
+SELECT plan(3);
 
 SELECT trend_directory.create_table_trend_store(
     'test1',
@@ -28,6 +28,11 @@ SELECT trend_directory.alter_trend_name(
     'y'
 )
 FROM trend_directory.table_trend_store;
+
+SELECT is(name, 'y'::name, 'trend should have new name')
+FROM trend_directory.table_trend
+JOIN trend_directory.table_trend_store ON table_trend_store.id = table_trend.trend_store_id
+WHERE table_trend_store::name = 'test1_some_entity_type_name_qtr';
 
 SELECT columns_are(
     'trend',
