@@ -42,7 +42,8 @@ GRANT UPDATE ON TABLE trigger.exception_base TO minerva_writer;
 
 CREATE TABLE trigger.rule_tag_link (
     rule_id integer references trigger.rule(id) on delete cascade,
-    tag_id integer references directory.tag(id) on delete cascade
+    tag_id integer references directory.tag(id) on delete cascade,
+    PRIMARY KEY(rule_id, tag_id)
 );
 
 GRANT SELECT ON TABLE trigger.rule_tag_link TO minerva;
