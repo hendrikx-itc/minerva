@@ -1375,6 +1375,17 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION trend_directory.attributes_to_partition(
+        trend_directory.table_trend_store, timestamp with time zone)
+    RETURNS trend_directory.partition
+AS $$
+    SELECT trend_directory.attributes_to_partition(
+        $1,
+        trend_directory.timestamp_to_index($1.partition_size, $2)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION trend_directory.partition_exists(trend_directory.partition)
     RETURNS boolean
 AS $$
