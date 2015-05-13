@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(1);
+SELECT plan(2);
 
 CREATE OR REPLACE VIEW trend."global_sales_day" AS
 SELECT * FROM (
@@ -32,6 +32,18 @@ FROM trigger.rule
 JOIN trigger.rule_tag_link ON rule_tag_link.rule_id = rule.id
 JOIN directory.tag ON tag.id = rule_tag_link.tag_id
 WHERE rule.name = 'test-rule';
+
+PREPARE my_thrower AS
+SELECT trigger.tag('LTE', id)
+FROM trigger.rule
+WHERE name = 'test-rule';
+
+SELECT throws_ok(
+    'my_thrower',
+    '23505',
+    'duplicate key value violates unique constraint "rule_tag_link_pkey"',
+    'We should get a unique violation for a duplicate PK'
+);
 
 SELECT * FROM finish();
 ROLLBACK;
