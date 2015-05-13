@@ -1365,7 +1365,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.attributes_to_partition(
-        trend_store trend_directory.trend_store, index integer)
+        trend_directory.table_trend_store, index integer)
     RETURNS trend_directory.partition
 AS $$
     SELECT COALESCE(
