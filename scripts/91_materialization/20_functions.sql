@@ -72,94 +72,101 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION materialization.view_trend_store(materialization.type)
+    RETURNS trend_directory.view_trend_store
+AS $$
+    SELECT * FROM trend_directory.view_trend_store WHERE id = $1.view_trend_store_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION materialization.table_trend_store(materialization.type)
+    RETURNS trend_directory.table_trend_store
+AS $$
+    SELECT * FROM trend_directory.table_trend_store WHERE id = $1.table_trend_store_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION materialization.columns_part(trend_directory.view_trend_store)
+    RETURNS text
+AS $$
+    SELECT
+        array_to_string(array_agg(quote_ident(name)), ', ')
+    FROM
+        trend_directory.table_columns(
+            trend_directory.view_schema(),
+            trend_directory.base_table_name($1)
+        );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION materialization.transfer_sql(materialization.type, timestamp with time zone)
+    RETURNS text
+AS $$
+    SELECT format(
+        'INSERT INTO %I.%I (%s) %s',
+        trend_directory.partition_table_schema(),
+        trend_directory.table_name(
+            trend_directory.attributes_to_partition(
+                materialization.table_trend_store($1),
+                $2
+            )
+        ),
+        materialization.columns_part(materialization.view_trend_store($1)),
+        format(
+            'SELECT %s FROM %I.%I WHERE timestamp = %L',
+            materialization.columns_part(materialization.view_trend_store($1)),
+            trend_directory.view_schema(),
+            trend_directory.base_table_name(materialization.view_trend_store($1)),
+            $2
+        )
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION materialization.transfer(materialization.type, timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
+    EXECUTE materialization.transfer_sql($1, $2);
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION materialization.clear_timestamp(materialization.type, timestamp with time zone)
+    RETURNS materialization.type
+AS $$
+    SELECT trend_directory.clear_timestamp(
+        materialization.table_trend_store($1),
+        $2
+    );
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION materialization.materialize(type materialization.type, "timestamp" timestamp with time zone)
     RETURNS integer
 AS $$
 DECLARE
-    src_trend_store trend_directory.view_trend_store;
-    dst_trend_store trend_directory.table_trend_store;
-    view_name character varying;
-    dst_table_name character varying;
-    dst_partition trend_directory.partition;
-    sources_query character varying;
-    data_query character varying;
-    conn_str character varying;
-    columns_part character varying;
-    column_defs_part character varying;
-    modified timestamp with time zone;
     row_count integer;
-    replicated_server_conn system.setting;
     tmp_source_states materialization.source_fragment_state[];
 BEGIN
-    SELECT * INTO src_trend_store FROM trend_directory.view_trend_store WHERE id = type.view_trend_store_id;
-    SELECT * INTO dst_trend_store FROM trend_directory.table_trend_store WHERE id = type.table_trend_store_id;
+    PERFORM materialization.clear_timestamp(type, timestamp);
 
-    view_name = trend_directory.base_table_name(src_trend_store);
-    dst_table_name = trend_directory.base_table_name(dst_trend_store);
-
-    dst_partition = trend_directory.attributes_to_partition(
-        dst_trend_store,
-        trend_directory.timestamp_to_index(dst_trend_store.partition_size, "timestamp")
-    );
-
-    PERFORM trend_directory.clear_timestamp(dst_trend_store, timestamp);
-
-    SELECT
-        array_to_string(array_agg(quote_ident(name)), ', ') INTO columns_part
-    FROM
-        trend_directory.table_columns(trend_directory.view_schema(), view_name);
-
-    sources_query = format(
-        'SELECT source_states
+    SELECT source_states INTO tmp_source_states
     FROM materialization.materializables mz
-    JOIN materialization.type ON type.id = mz.type_id
     WHERE
-        mz.timestamp = %L AND mz.type_id = %L;',
-        "timestamp",
-        type.id
-    );
+        mz.timestamp = $2
+        AND
+        mz.type_id = $1.id;
 
-    data_query = format(
-        'SELECT %s FROM %I.%I WHERE timestamp = %L',
-        columns_part, trend_directory.view_schema(), view_name, timestamp
-    );
-
-    replicated_server_conn = system.get_setting('replicated_server_conn');
-
-    IF replicated_server_conn IS NULL THEN
-        -- Local materialization
-        EXECUTE sources_query INTO tmp_source_states;
-        EXECUTE format(
-            'INSERT INTO %I.%I (%s) %s',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name(dst_partition),
-            columns_part,
-            data_query
-        );
-    ELSE
-        -- Remote materialization
-        conn_str = replicated_server_conn.value;
-
-        SELECT
-            array_to_string(array_agg(format('%I %s', col.name, col.data_type)), ', ') INTO column_defs_part
-        FROM
-            trend_directory.table_columns(trend_directory.base_table_schema(), view_name) col;
-
-        SELECT sources INTO tmp_source_states
-        FROM public.dblink(conn_str, sources_query) AS r (sources materialization.source_fragment_state[]);
-
-        EXECUTE format(
-            'INSERT INTO %I.%I (%s) SELECT * FROM public.dblink(%L, %L) AS rel (%s)',
-            trend_directory.partition_table_name(),
-            trend_directory.table_name(dst_partition),
-            columns_part,
-            conn_str,
-            data_query,
-            column_defs_part
-        );
-    END IF;
-
-    GET DIAGNOSTICS row_count = ROW_COUNT;
+    row_count = materialization.transfer(type, timestamp);
 
     UPDATE materialization.state
     SET processed_states = tmp_source_states
