@@ -412,19 +412,36 @@ $$ LANGUAGE plpgsql STABLE STRICT;
 
 
 CREATE OR REPLACE FUNCTION directory.tag_entity(entity_id integer, tag character varying)
-    RETURNS integer 
+    RETURNS integer
 AS $$
-    INSERT INTO directory.entitytaglink(tag_id, entity_id) SELECT id, $1 FROM directory.tag WHERE name = $2 RETURNING $1;
+    INSERT INTO directory.entitytaglink(tag_id, entity_id)
+    SELECT id, $1
+    FROM directory.tag
+    LEFT JOIN directory.entitytaglink ON entitytaglink.tag_id = tag.id AND entitytaglink.entity_id = $1
+    WHERE name = $2 AND entitytaglink.entity_id IS NULL;
+
+    SELECT $1;
 $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION directory.tag_entity(dn character varying, tag character varying)
-    RETURNS character varying 
+    RETURNS character varying
 AS $$
     INSERT INTO directory.entitytaglink(tag_id, entity_id)
-    SELECT tag.id, entity.id
-    FROM directory.tag, directory.entity
-    WHERE tag.name = $2 AND entity.dn = $1 RETURNING $1;
+    SELECT
+        f.tag_id,
+        f.entity_id
+    FROM (
+        SELECT
+            tag.id AS tag_id,
+            entity.id AS entity_id
+        FROM directory.tag, directory.entity
+        WHERE tag.name = $2 AND entity.dn = $1
+    ) f
+    LEFT JOIN directory.entitytaglink ON entitytaglink.tag_id = f.tag_id AND entitytaglink.entity_id = f.entity_id
+    WHERE entitytaglink.entity_id IS NULL;
+
+    SELECT $1;
 $$ LANGUAGE SQL VOLATILE;
 
 
