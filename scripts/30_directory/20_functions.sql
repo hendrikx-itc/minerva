@@ -223,8 +223,8 @@ $$ LANGUAGE SQL VOLATILE STRICT;
 CREATE OR REPLACE FUNCTION directory.get_alias(entity_id integer, aliastype_name character varying)
     RETURNS character varying
 AS $$
-    SELECT a.name 
-      FROM directory.alias a 
+    SELECT a.name
+      FROM directory.alias a
       JOIN directory.aliastype at on at.id = a.type_id
      WHERE a.entity_id = $1 and at.name = $2;
 $$ LANGUAGE sql STABLE;
