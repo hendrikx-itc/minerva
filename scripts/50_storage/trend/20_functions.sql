@@ -1370,3 +1370,152 @@ CREATE OR REPLACE FUNCTION trend.show_trends(trendstore_id integer)
 AS $$
     SELECT trend.show_trends(trendstore) FROM trend.trendstore WHERE id = $1;
 $$ LANGUAGE sql STABLE;
+
+-- attribute-at logic
+
+CREATE FUNCTION trend.attribute_at_trend_ptr_table_name(attribute_directory.attributestore, granularity text)
+    RETURNS name
+AS $$
+    SELECT ('attribute_' || $1::text || '_ptr_' || trend.granularity_to_text($2))::name;
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.attribute_at_trend_view_name(attribute_directory.attributestore, granularity text)
+    RETURNS name
+AS $$
+    SELECT ('attribute_' || $1::text || '_' || trend.granularity_to_text($2))::name;
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.create_attribute_at_trend_ptr_table(attribute_directory.attributestore, granularity text)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT public.action(
+        $1,
+        format(
+            $create_table$
+            CREATE TABLE trend.%I
+            (
+                entity_id integer NOT NULL,
+                timestamp timestamp with time zone NOT NULL,
+                attribute_timestamp timestamp with time zone NOT NULL,
+                PRIMARY KEY (entity_id, timestamp)
+            )
+            $create_table$,
+            trend.attribute_at_trend_ptr_table_name($1, $2)
+        )
+    );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.drop_attribute_at_trend_ptr_table(attribute_directory.attributestore, granularity text)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT public.action(
+        $1,
+        format(
+            'DROP TABLE trend.%I',
+            trend.attribute_at_trend_ptr_table_name($1, $2)
+        )
+    );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.populate_attribute_at_ptr(attribute_directory.attributestore, granularity text, timestamp with time zone)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT public.action(
+        $1,
+        format(
+            $query$
+            INSERT INTO trend.%I (entity_id, timestamp, attribute_timestamp)
+            SELECT entity_id, %L, timestamp FROM attribute_history.%I(%L);
+            $query$,
+            trend.attribute_at_trend_ptr_table_name($1, $2),
+            $3,
+            attribute_directory.at_ptr_function_name($1),
+            $3
+        )
+    );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.attribute_at_trend_view_sql(attribute_directory.attributestore, granularity text)
+    RETURNS text
+AS $$
+    SELECT format(
+        $view_query$
+        SELECT ptr.entity_id, ptr.timestamp, %s
+        FROM trend.%I ptr
+        JOIN attribute_history.%I attr ON attr.entity_id = ptr.entity_id AND attr.timestamp = ptr.attribute_timestamp
+        $view_query$,
+        (
+            SELECT array_to_string(array_agg(format('attr.%I', name)), ', ')
+            FROM attribute_directory.attribute
+            WHERE attributestore_id = $1.id
+        ),
+        trend.attribute_at_trend_ptr_table_name($1, $2),
+        $1::text
+    );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.create_attribute_at_trend_view_sql(attribute_directory.attributestore, granularity text)
+    RETURNS text
+AS $$
+    SELECT format(
+        $view_query$
+        CREATE VIEW trend.%I AS
+        %s
+        $view_query$,
+        trend.attribute_at_trend_view_name($1, $2),
+        trend.attribute_at_trend_view_sql($1, $2)
+    );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.create_attribute_at_trend_view(attribute_directory.attributestore, granularity text)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT public.action(
+        $1,
+        trend.create_attribute_at_trend_view_sql($1, $2)
+    );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.drop_attribute_at_trend_view_sql(attribute_directory.attributestore, granularity text)
+    RETURNS text
+AS $$
+    SELECT format(
+        'DROP VIEW trend.%I',
+        trend.attribute_at_trend_view_name($1, $2),
+    );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.drop_attribute_at_trend_view(attribute_directory.attributestore, granularity text)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT public.action(
+        $1,
+        trend.drop_attribute_at_trend_view_sql($1, $2)
+    );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.create_attribute_at_trendstore(attribute_directory.attributestore, granularity text)
+    RETURNS trend.view
+AS $$
+    SELECT trend.create_attribute_at_trend_ptr_table($1, $2);
+
+    SELECT trend.create_view(
+        trend.define_view(
+            trend.attributes_to_view_trendstore('attribute_' || datasource.name, entitytype.name, $2),
+            trend.attribute_at_trend_view_sql($1, $2)
+        )
+    )
+    FROM directory.datasource, directory.entitytype
+    WHERE datasource.id = $1.datasource_id AND entitytype.id = $1.entitytype_id;
+$$ LANGUAGE sql;
+
