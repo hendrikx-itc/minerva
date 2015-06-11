@@ -540,14 +540,32 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE OR REPLACE FUNCTION directory.transfer_existence(timestamp with time zone)
-    RETURNS timestamp with time zone
-AS $$
-INSERT INTO directory.existence(timestamp, exists, entity_id, entitytype_id)
-(
-    SELECT * FROM directory.new_existence_state($1)
-);
+  RETURNS timestamp with time zone AS
+$$
+DECLARE
+  et_id integer;
+  tablename name;
+BEGIN
 
-TRUNCATE directory.existence_staging;
+  FOR et_id in SELECT distinct t.id
+	FROM directory.entitytype t
+	JOIN directory.entity e ON e.entitytype_id = t.id
+	JOIN directory.existence_staging es ON es.dn = e.dn
+  LOOP
+	tablename = attribute_directory.to_table_name(
+		attribute_directory.get_attributestore((directory.get_datasource('existence')).id, et_id) );
 
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+	execute FORMAT(
+		'INSERT INTO attribute_staging.%I(timestamp, exists, entity_id) (
+			SELECT s.timestamp, s.exists, s.entity_id
+			FROM directory.new_existence_state($1) s
+			WHERE s.entitytype_id = $2 )', tablename ) USING $1, et_id;
+  END LOOP;
+
+  TRUNCATE directory.existence_staging;
+
+  RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
