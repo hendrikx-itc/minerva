@@ -116,16 +116,6 @@ ALTER TABLE relation."all" OWNER TO minerva_admin;
 ALTER TABLE ONLY relation."all"
     ADD PRIMARY KEY (source_id, target_id);
 
-ALTER TABLE ONLY relation."all"
-    ADD CONSTRAINT source_id_fkey
-    FOREIGN KEY (source_id) REFERENCES directory.entity(id)
-    ON DELETE CASCADE;
-
-ALTER TABLE ONLY relation."all"
-    ADD CONSTRAINT target_id_fkey
-    FOREIGN KEY (target_id) REFERENCES directory.entity(id)
-    ON DELETE CASCADE;
-
 GRANT ALL ON TABLE relation."all" TO minerva_admin;
 GRANT SELECT ON TABLE relation."all" TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE relation."all" TO minerva_writer;
