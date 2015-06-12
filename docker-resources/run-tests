@@ -1,0 +1,2 @@
+#!/bin/bash
+find /tests -name '*.sql' | PGUSER=postgres PGDATABASE=minerva xargs pg_prove --verbose

@@ -1,0 +1,8 @@
+minervadb:
+  build: ./
+  dockerfile: develop.dockerfile
+  ports:
+  - "15432:5432"
+  volumes:
+  - tests:/tests
+  - scripts:/minerva
