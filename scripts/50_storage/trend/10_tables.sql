@@ -286,3 +286,29 @@ ALTER TABLE trend.to_be_vacuumed OWNER TO minerva_admin;
 GRANT SELECT ON TABLE trend.to_be_vacuumed TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE trend.to_be_vacuumed TO minerva_writer;
 
+
+-- Table 'trend.attribute_to_trend'
+
+CREATE TABLE trend.attribute_to_trend (
+    id serial PRIMARY KEY,
+    attributestore_id integer REFERENCES attribute_directory.attributestore(id),
+    granularity varchar not null
+);
+
+ALTER TABLE trend.attribute_to_trend OWNER TO minerva_admin;
+GRANT SELECT ON TABLE trend.attribute_to_trend TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE trend.attribute_to_trend TO minerva_writer;
+
+
+-- Table 'trend.attribute_to_trend_state'
+
+CREATE TABLE trend.attribute_to_trend_state (
+    attribute_to_trend_id integer REFERENCES trend.attribute_to_trend(id) PRIMARY KEY,
+    timestamp timestamp with time zone not null,
+    processed_modified timestamp with time zone not null
+);
+
+ALTER TABLE trend.attribute_to_trend_state OWNER TO minerva_admin;
+GRANT SELECT ON TABLE trend.attribute_to_trend_state TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE trend.attribute_to_trend_state TO minerva_writer;
+
