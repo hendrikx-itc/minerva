@@ -1633,3 +1633,12 @@ AS $$
     );
 $$ LANGUAGE sql;
 
+
+CREATE FUNCTION trend.to_char(trend.attribute_to_trend)
+    RETURNS text
+AS $$
+    SELECT attributestore::text || ' -> ' || 'attribute_' || attributestore::text || '_' || $1.granularity
+    FROM attribute_directory.attributestore
+    WHERE id = $1.attributestore_id;
+$$ LANGUAGE sql;
+
