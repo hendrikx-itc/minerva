@@ -203,7 +203,7 @@ AS $$
     ) RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
-COMMENT ON FUNCTION trend.define_trendstore(character varying, character varying, character varying) IS 
+COMMENT ON FUNCTION trend.define_trendstore(character varying, character varying, character varying) IS
 'Add a new trendstore record, initialize the trendstore base table, and return
 the new record.\n
 Later on, the definition and initialization will be split into separate steps,
