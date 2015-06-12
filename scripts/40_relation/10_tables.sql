@@ -82,16 +82,6 @@ CREATE TABLE relation."all" (
 ALTER TABLE ONLY relation."all"
     ADD PRIMARY KEY (source_id, target_id);
 
-ALTER TABLE ONLY relation."all"
-    ADD CONSTRAINT source_id_fkey
-    FOREIGN KEY (source_id) REFERENCES directory.entity(id)
-    ON DELETE CASCADE;
-
-ALTER TABLE ONLY relation."all"
-    ADD CONSTRAINT target_id_fkey
-    FOREIGN KEY (target_id) REFERENCES directory.entity(id)
-    ON DELETE CASCADE;
-
 GRANT SELECT ON TABLE relation."all" TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE relation."all" TO minerva_writer;
 
