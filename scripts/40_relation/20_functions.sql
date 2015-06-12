@@ -18,7 +18,6 @@ BEGIN
     EXECUTE format('GRANT SELECT ON TABLE %I.%I TO minerva;', 'relation', name);
     EXECUTE format('GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;', 'relation', name);
 
-    EXECUTE format('CREATE INDEX %I ON %I.%I USING btree (source_id);', 'ix_' || name || '_source_id', 'relation', name);
     EXECUTE format('CREATE INDEX %I ON %I.%I USING btree (target_id);', 'ix_' || name || '_target_id', 'relation', name);
 END;
 $$ LANGUAGE plpgsql VOLATILE STRICT;
