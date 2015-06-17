@@ -2,7 +2,7 @@ CREATE FUNCTION relation_directory.create_relation_table_on_insert()
     RETURNS TRIGGER
 AS $$
 BEGIN
-    PERFORM relation_directory.create_relation_table(NEW.name, NEW.id);
+    PERFORM relation_directory.create_relation_table(NEW);
 
     RETURN NEW;
 END;
@@ -20,12 +20,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+SELECT relation_directory.define('self');
+
+
 CREATE FUNCTION relation_directory.create_self_relation()
     RETURNS TRIGGER
 AS $$
 BEGIN
-    INSERT INTO relation.self (source_id, target_id, type_id)
-    SELECT NEW.id, NEW.id, "type".id FROM relation_directory."type" WHERE name = 'self';
+    INSERT INTO relation.self (source_id, target_id)
+    VALUES (NEW.id, NEW.id);
 
     RETURN NEW;
 END;

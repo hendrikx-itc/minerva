@@ -12,74 +12,74 @@ AS $$
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION relation_directory.create_relation_table_sql(name text, type_id int)
+CREATE FUNCTION relation_directory.create_relation_table_sql(relation_directory.type)
     RETURNS text[]
 AS $$
     SELECT ARRAY[
         format(
-            'CREATE TABLE %I.%I (
-    CHECK (type_id=%L)
-    ) INHERITS (%I."all");',
+            'CREATE TABLE %I.%I ('
+            'PRIMARY KEY(source_id, target_id)'
+            ') INHERITS (%I.base);',
             relation_directory.table_schema(),
-            name,
-            type_id,
+            $1.name,
             relation_directory.table_schema()
-        ),
-        format(
-            'ALTER TABLE ONLY %I.%I
-    ADD CONSTRAINT %I
-    PRIMARY KEY (source_id, target_id);',
-            relation_directory.table_schema(),
-            name,
-            name || '_pkey'
         ),
         format(
             'GRANT SELECT ON TABLE %I.%I TO minerva;',
             relation_directory.table_schema(),
-            name
+            $1.name
         ),
         format(
             'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
             relation_directory.table_schema(),
-            name
-        ),
-        format(
-            'CREATE INDEX %I ON %I.%I USING btree (source_id);',
-            'ix_' || name || '_source_id',
-            relation_directory.table_schema(), name
+            $1.name
         ),
         format(
             'CREATE INDEX %I ON %I.%I USING btree (target_id);',
-            'ix_' || name || '_target_id',
+            'ix_' || $1.name || '_target_id',
             relation_directory.table_schema(),
-            name
+            $1.name
         )
     ];
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION relation_directory.create_relation_table(name name, type_id int)
-    RETURNS name
+CREATE FUNCTION relation_directory.create_relation_table(relation_directory.type)
+    RETURNS relation_directory.type
 AS $$
-    SELECT public.action($1, relation_directory.create_relation_table_sql($1, $2));
+    SELECT public.action($1, relation_directory.create_relation_table_sql($1));
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
-CREATE FUNCTION relation_directory.get_type(character varying)
+CREATE FUNCTION relation_directory.drop_relation_table_sql(relation_directory.type)
+    RETURNS text
+AS $$
+    SELECT format('DROP TABLE %I.%I', relation_directory.table_schema(), $1);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION relation_directory.drop_relation_table(relation_directory.type)
+    RETURNS relation_directory.type
+AS $$
+    SELECT public.action($1, relation_directory.drop_relation_table_sql($1));
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+
+CREATE FUNCTION relation_directory.get_type(name)
     RETURNS relation_directory.type
 AS $$
     SELECT type FROM relation_directory.type WHERE name = $1;
 $$ LANGUAGE SQL STABLE STRICT;
 
 
-CREATE FUNCTION relation_directory.create_type(character varying)
+CREATE FUNCTION relation_directory.create_type(name)
     RETURNS relation_directory.type
 AS $$
     INSERT INTO relation_directory.type (name) VALUES ($1) RETURNING type;
 $$ LANGUAGE SQL VOLATILE STRICT;
 
 
-CREATE FUNCTION relation_directory.name_to_type(character varying)
+CREATE FUNCTION relation_directory.name_to_type(name)
     RETURNS relation_directory.type
 AS $$
     SELECT COALESCE(
@@ -90,11 +90,14 @@ $$ LANGUAGE sql VOLATILE STRICT;
 
 
 CREATE FUNCTION relation_directory.create_relation_view_sql(relation_directory.type, text)
-    RETURNS text[]
+    RETURNS text
 AS $$
-    SELECT ARRAY[
-        format('CREATE VIEW %I.%I AS %s', relation_directory.view_schema(), $1.name, $2)
-    ];
+    SELECT format(
+        'CREATE VIEW %I.%I AS %s',
+        relation_directory.view_schema(),
+        $1.name,
+        $2
+    );
 $$ LANGUAGE sql STABLE;
 
 
@@ -108,13 +111,63 @@ AS $$
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
-CREATE FUNCTION relation_directory.define(name, text)
+CREATE FUNCTION relation_directory.drop_relation_view_sql(relation_directory.type)
+    RETURNS text
+AS $$
+    SELECT format(
+        'DROP VIEW IF EXISTS %I.%I',
+        relation_directory.view_schema(),
+        $1.name
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION relation_directory.drop_relation_view(relation_directory.type)
+    RETURNS relation_directory.type
+AS $$
+    SELECT public.action(
+        $1,
+        relation_directory.drop_relation_view_sql($1)
+    );
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+
+CREATE FUNCTION relation_directory.define(name)
+    RETURNS relation_directory.type
+AS $$
+    SELECT relation_directory.create_relation_table(
+        relation_directory.create_type($1)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION relation_directory.define(name) IS
+'Defines a new relation type, creates the corresponding table and then returns
+the new type record';
+
+
+CREATE FUNCTION relation_directory.define(name, view_sql text)
     RETURNS relation_directory.type
 AS $$
     SELECT relation_directory.create_relation_view(
-        relation_directory.name_to_type($1::character varying),
+        relation_directory.define($1),
         $2
     );
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION relation_directory.define(name, view_sql text) IS
+'Defines a new relation type (just like relation_directory.define(name)),
+including a view that will be used to populate the relation table.';
+
+
+CREATE FUNCTION relation_directory.remove(name)
+    RETURNS void
+AS $$
+    SELECT relation_directory.drop_relation_view(
+        relation_directory.drop_relation_table(type)
+    )
+    FROM relation_directory.type WHERE name = $1;
+
+    DELETE FROM relation_directory.type WHERE name = $1;
 $$ LANGUAGE sql VOLATILE;
 
 

@@ -19,34 +19,15 @@ CREATE TYPE relation_directory.type_cardinality_enum AS ENUM (
 );
 
 CREATE TABLE relation_directory."type" (
-    id integer NOT NULL,
-    name character varying NOT NULL,
-    cardinality relation_directory.type_cardinality_enum DEFAULT NULL
+    id serial,
+    name name NOT NULL,
+    cardinality relation_directory.type_cardinality_enum DEFAULT NULL,
+    PRIMARY KEY (id),
+    UNIQUE(name)
 );
-
-ALTER TABLE ONLY relation_directory."type"
-    ADD CONSTRAINT type_pkey PRIMARY KEY (id);
 
 GRANT SELECT ON TABLE relation_directory."type" TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE relation_directory."type" TO minerva_writer;
-
-CREATE SEQUENCE relation_directory.type_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-ALTER SEQUENCE relation_directory.type_id_seq OWNED BY relation_directory."type".id;
-
-ALTER TABLE relation_directory."type"
-    ALTER COLUMN id
-    SET DEFAULT nextval('relation_directory.type_id_seq'::regclass);
-
-GRANT SELECT ON SEQUENCE relation_directory.type_id_seq TO minerva;
-GRANT UPDATE ON SEQUENCE relation_directory.type_id_seq TO minerva_writer;
-
-CREATE UNIQUE INDEX ix_type_name ON relation_directory."type" (name);
 
 ------------------------
 -- Schema 'relation_def'
@@ -57,6 +38,9 @@ CREATE SCHEMA relation_def;
 GRANT ALL ON SCHEMA relation_def TO minerva_writer;
 GRANT USAGE ON SCHEMA relation_def TO minerva;
 
+COMMENT ON SCHEMA relation_def IS
+'Stores definitions of relations in the form of views. These views are used to
+populate the corresponding tables in the relation schema';
 
 ------------------------------
 -- Schema 'relation'
@@ -71,41 +55,16 @@ GRANT ALL ON SCHEMA relation TO minerva_writer;
 GRANT USAGE ON SCHEMA relation TO minerva;
 
 
--- Table 'relation.all'
+-- Table 'relation.base'
 
-CREATE TABLE relation."all" (
+CREATE TABLE relation."base" (
     source_id integer NOT NULL,
-    target_id integer NOT NULL,
-    type_id integer NOT NULL
+    target_id integer NOT NULL
 );
 
-ALTER TABLE ONLY relation."all"
-    ADD PRIMARY KEY (source_id, target_id);
+COMMENT ON TABLE relation."base" IS
+'This table is used as the parent/base table for all relation tables and
+therefore can be queried to include all relations of all types.';
 
-GRANT SELECT ON TABLE relation."all" TO minerva;
-GRANT INSERT,DELETE,UPDATE ON TABLE relation."all" TO minerva_writer;
+GRANT SELECT ON TABLE relation."base" TO minerva;
 
-ALTER TABLE ONLY relation."all"
-    ADD CONSTRAINT type_id_fkey
-    FOREIGN KEY (type_id) REFERENCES relation_directory."type"(id)
-    ON DELETE CASCADE;
-
-CREATE INDEX ON relation."all" USING btree (target_id);
-CREATE INDEX ON relation."all" USING btree (type_id);
-
--- Table 'relation.all_materialized'
-
-CREATE TABLE relation.all_materialized (
-    source_id integer NOT NULL,
-    target_id integer NOT NULL,
-    type_id integer NOT NULL
-);
-
-ALTER TABLE relation."all_materialized"
-    ADD PRIMARY KEY (source_id, target_id, type_id);
-
-GRANT SELECT ON TABLE relation."all_materialized" TO minerva;
-GRANT INSERT,DELETE,UPDATE ON TABLE relation."all_materialized" TO minerva_writer;
-
-CREATE INDEX ON relation."all_materialized" USING btree (target_id);
-CREATE INDEX ON relation."all_materialized" USING btree (type_id);
