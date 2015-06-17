@@ -118,6 +118,29 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION relation_directory.create_or_replace_relation_view_sql(
+        relation_directory.type, text)
+    RETURNS text
+AS $$
+    SELECT format(
+        'CREATE OR REPLACE VIEW %I.%I AS %s',
+        relation_directory.view_schema(),
+        $1.name,
+        $2
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION relation_directory.update(relation_directory.type, text)
+    RETURNS relation_directory.type
+AS $$
+    SELECT public.action(
+        $1,
+        relation_directory.create_or_replace_relation_view_sql($1, $2)
+    );
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+
 CREATE FUNCTION relation_directory.define_reverse(reverse name, original name)
     RETURNS relation_directory.type
 AS $$
