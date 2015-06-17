@@ -54,7 +54,7 @@ $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 CREATE FUNCTION relation_directory.drop_relation_table_sql(relation_directory.type)
     RETURNS text
 AS $$
-    SELECT format('DROP TABLE %I.%I', relation_directory.table_schema(), $1);
+    SELECT format('DROP TABLE %I.%I', relation_directory.table_schema(), $1.name);
 $$ LANGUAGE sql STABLE;
 
 
