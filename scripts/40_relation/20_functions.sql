@@ -228,7 +228,7 @@ FROM %I.%I$query$,
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION relation_directory.materialize_relation(type relation_directory.type)
+CREATE FUNCTION relation_directory.materialize_relation(type relation_directory.type)
   RETURNS integer AS
 $$
 DECLARE
