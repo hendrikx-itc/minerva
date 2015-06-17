@@ -4,5 +4,5 @@ set -e
 psql -d postgres -c "CREATE DATABASE $MINERVA_DB_NAME;"
 psql -c "CREATE EXTENSION pgtap"
 
-find /db-deps/scripts/ -name '*.sql' | sort | xargs cat | psql
-find /minerva/ -name '*.sql' | sort | xargs cat | psql
+find /db-deps/scripts/ -name '*.sql' | sort | xargs cat | psql -v ON_ERROR_STOP=1
+find /minerva/ -name '*.sql' | sort | xargs cat | psql -v ON_ERROR_STOP=1
