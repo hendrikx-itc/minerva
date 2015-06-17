@@ -21,6 +21,3 @@ COPY docker-resources/drop-minerva-database /usr/bin/
 COPY docker-resources/recreate-minerva-database /usr/bin/
 
 ADD init-minerva-db.sh /docker-entrypoint-initdb.d/
-
-ADD scripts /minerva
-ADD tests /tests
