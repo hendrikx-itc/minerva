@@ -1,29 +1,3 @@
-CREATE OR REPLACE FUNCTION trigger.action(anyelement, sql text)
-    RETURNS anyelement
-AS $$
-BEGIN
-    EXECUTE sql;
-
-    RETURN $1;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION trigger.action(anyelement, sql text[])
-    RETURNS anyelement
-AS $$
-DECLARE
-    statement text;
-BEGIN
-    FOREACH statement IN ARRAY sql LOOP
-        EXECUTE statement;
-    END LOOP;
-
-    RETURN $1;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE OR REPLACE FUNCTION trigger.with_threshold_view_name(trigger.rule)
     RETURNS name
 AS $$
@@ -131,7 +105,7 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION trigger.create_rule_view(trigger.rule, rule_view_sql text)
     RETURNS trigger.rule
 AS $$
-SELECT trigger.action($1, trigger.create_rule_view_sql($1, $2));
+SELECT public.action($1, trigger.create_rule_view_sql($1, $2));
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -185,14 +159,14 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION trigger.create_kpi_view(trigger.rule, sql text)
     RETURNS trigger.rule
 AS $$
-SELECT trigger.action($1, trigger.create_kpi_view_sql($1, $2));
+SELECT public.action($1, trigger.create_kpi_view_sql($1, $2));
 $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trigger.update_kpi_view(trigger.rule, sql text)
     RETURNS trigger.rule
 AS $$
-SELECT trigger.action($1, trigger.kpi_view_sql($1, $2));
+SELECT public.action($1, trigger.kpi_view_sql($1, $2));
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -248,9 +222,14 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.create_notification_fn(trigger.rule, expression text)
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.action($1, trigger.create_notification_fn_sql($1, $2));
-    SELECT trigger.action($1, format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.notification_fn_name($1), $1.name));
-    SELECT trigger.action($1, format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.notification_fn_name($1), $1.name));
+    SELECT public.action(
+        $1,
+        ARRAY[
+            trigger.create_notification_fn_sql($1, $2),
+            format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.notification_fn_name($1), $1.name),
+            format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.notification_fn_name($1), $1.name)
+        ]
+    );
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -308,7 +287,7 @@ $$ LANGUAGE SQL VOLATILE;
 CREATE OR REPLACE FUNCTION trigger.create_notification_view(trigger.rule)
     RETURNS trigger.rule
 AS $$
-SELECT trigger.action($1, trigger.create_notification_view_sql($1));
+SELECT public.action($1, trigger.create_notification_view_sql($1));
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -393,9 +372,14 @@ $$ LANGUAGE SQL STABLE;
 CREATE OR REPLACE FUNCTION trigger.create_with_threshold_view(trigger.rule)
     RETURNS trigger.rule
 AS $$
-SELECT trigger.action($1, format('CREATE OR REPLACE VIEW trigger_rule.%I AS %s', trigger.with_threshold_view_name($1), trigger.with_threshold_view_sql($1)));
-SELECT trigger.action($1, format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.with_threshold_view_name($1)));
-SELECT trigger.action($1, format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.with_threshold_view_name($1)));
+SELECT public.action(
+    $1,
+    ARRAY[
+        format('CREATE OR REPLACE VIEW trigger_rule.%I AS %s', trigger.with_threshold_view_name($1), trigger.with_threshold_view_sql($1)),
+        format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.with_threshold_view_name($1)),
+        format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.with_threshold_view_name($1))
+    ]
+);
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -466,16 +450,18 @@ $function$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.create_exception_weight_table(trigger.rule)
     RETURNS trigger.rule AS
 $$
-SELECT trigger.action($1, trigger.exception_weight_table_sql($1));
-SELECT trigger.action($1, format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_weight_table_name($1)));
-SELECT trigger.action($1, format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_weight_table_name($1)));
-SELECT trigger.action($1, format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_weight_table_name($1)));
-SELECT trigger.action(
-	$1,
-	format(
-		'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
-		pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_weight_table_name($1)), 'id')
-	)
+SELECT public.action(
+    $1,
+    ARRAY[
+        trigger.exception_weight_table_sql($1),
+        format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_weight_table_name($1)),
+        format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_weight_table_name($1)),
+        format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_weight_table_name($1)),
+        format(
+            'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
+            pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_weight_table_name($1)), 'id')
+        )
+    ]
 );
 $$ LANGUAGE SQL VOLATILE;
 
@@ -522,7 +508,7 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.create_notification_type(trigger.rule)
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.action(
+    SELECT public.action(
         $1,
         trigger.create_notification_type_sql($1)
     );
@@ -595,16 +581,18 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.create_exception_threshold_table(trigger.rule, name[])
     RETURNS trigger.rule AS
 $$
-SELECT "trigger".action($1, trigger.create_exception_threshold_table_sql($1, $2));
-SELECT trigger.action($1, format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_threshold_table_name($1)));
-SELECT trigger.action($1, format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_threshold_table_name($1)));
-SELECT trigger.action($1, format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_threshold_table_name($1)));
-SELECT trigger.action(
-	$1,
-	format(
-		'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
-		pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_threshold_table_name($1)), 'id')
-	)
+SELECT public.action(
+    $1,
+    ARRAY[
+        trigger.create_exception_threshold_table_sql($1, $2),
+        format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_threshold_table_name($1)),
+        format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_threshold_table_name($1)),
+        format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_threshold_table_name($1)),
+        format(
+            'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
+            pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_threshold_table_name($1)), 'id')
+        )
+    ]
 );
 $$ LANGUAGE SQL VOLATILE;
 
@@ -638,20 +626,25 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.set_thresholds(trigger.rule, exprs text)
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.action($1, format(
-        'CREATE OR REPLACE VIEW trigger_rule.%I AS '
-        'SELECT %s',
-        trigger.threshold_view_name($1),
-        $2
-    ));
-    SELECT trigger.action($1, format(
-        'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.threshold_view_name($1)
-    ));
-    SELECT trigger.action($1, format(
-        'GRANT SELECT ON trigger_rule.%I TO minerva', trigger.threshold_view_name($1)
-    ));
-
-    SELECT $1;
+    SELECT public.action(
+        $1,
+        ARRAY[
+            format(
+                'CREATE OR REPLACE VIEW trigger_rule.%I AS '
+                'SELECT %s',
+                trigger.threshold_view_name($1),
+                $2
+            ),
+            format(
+                'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin',
+                trigger.threshold_view_name($1)
+            ),
+            format(
+                'GRANT SELECT ON trigger_rule.%I TO minerva',
+                trigger.threshold_view_name($1)
+            )
+        ]
+    );
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
@@ -678,7 +671,7 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.create_set_thresholds_fn(trigger.rule)
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.action($1, trigger.create_set_thresholds_fn_sql($1));
+    SELECT public.action($1, trigger.create_set_thresholds_fn_sql($1));
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -723,9 +716,14 @@ $$ LANGUAGE SQL VOLATILE;
 CREATE OR REPLACE FUNCTION trigger.set_weight(trigger.rule, expression text)
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.action($1, trigger.weight_fn_sql($1, $2));
-    SELECT trigger.action($1, format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.weight_fn_name($1), $1.name));
-    SELECT trigger.action($1, format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.weight_fn_name($1), $1.name));
+    SELECT public.action(
+        $1,
+        ARRAY[
+            trigger.weight_fn_sql($1, $2),
+            format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.weight_fn_name($1), $1.name),
+            format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.weight_fn_name($1), $1.name)
+        ]
+    );
 $$ LANGUAGE SQL VOLATILE;
 
 
