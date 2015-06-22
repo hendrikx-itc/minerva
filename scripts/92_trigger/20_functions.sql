@@ -1,27 +1,3 @@
-CREATE OR REPLACE FUNCTION trigger.table_exists(schema_name name, table_name name)
-    RETURNS boolean
-AS $$
-    SELECT exists(
-        SELECT 1
-        FROM pg_class
-        JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
-        WHERE relname = $2 AND relkind = 'r' AND pg_namespace.nspname = $1
-    );
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.view_exists(schema_name name, table_name name)
-    RETURNS boolean
-AS $$
-    SELECT exists(
-        SELECT 1
-        FROM pg_class
-        JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
-        WHERE relname = $2 AND relkind = 'v' AND pg_namespace.nspname = $1
-    );
-$$ LANGUAGE SQL STABLE;
-
-
 CREATE OR REPLACE FUNCTION trigger.action(anyelement, sql text)
     RETURNS anyelement
 AS $$
