@@ -26,6 +26,13 @@ AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 
+CREATE OR REPLACE FUNCTION trigger.runnable_fn_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_runnable')::name;
+$$ LANGUAGE SQL IMMUTABLE;
+
+
 CREATE OR REPLACE FUNCTION trigger.get_rule(name)
     RETURNS trigger.rule
 AS $$
@@ -174,6 +181,51 @@ CREATE OR REPLACE FUNCTION trigger.update_kpi_view(name, sql text)
     RETURNS trigger.rule
 AS $$
 SELECT trigger.update_kpi_view(rule, $2) FROM trigger.rule WHERE name = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+--- Function <rule>_runnable
+
+CREATE OR REPLACE FUNCTION trigger.create_runnable_fn_sql(trigger.rule, fn_body text)
+    RETURNS text
+AS $$
+    SELECT format(
+        $fn$CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone)
+    RETURNS boolean
+AS $function$
+%s
+$function$ LANGUAGE sql STABLE$fn$,
+        trigger.runnable_fn_name($1),
+        $2
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_runnable_fn_sql(trigger.rule)
+    RETURNS text
+AS $$
+    SELECT trigger.create_runnable_fn_sql($1, 'SELECT TRUE;');
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_runnable_fn(trigger.rule)
+    RETURNS trigger.rule
+AS $$
+    SELECT public.action($1, trigger.create_runnable_fn_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.drop_runnable_fn_sql(trigger.rule)
+    RETURNS text
+AS $$
+SELECT format('DROP FUNCTION trigger.%I(timestamp with time zone)', trigger.runnable_fn_name($1));
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.set_runnable(trigger.rule, fn_sql text)
+    RETURNS trigger.rule
+AS $$
+    SELECT public.action($1, trigger.create_runnable_fn_sql($1, $2));
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -903,6 +955,7 @@ AS $$
     SELECT trigger.create_dummy_notification_fn($1);
     SELECT trigger.create_notification_view($1);
     SELECT trigger.create_set_thresholds_fn($1);
+    SELECT trigger.create_runnable_fn($1);
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -916,22 +969,24 @@ $$ LANGUAGE SQL VOLATILE;
 CREATE OR REPLACE FUNCTION trigger.cleanup_rule(trigger.rule)
     RETURNS trigger.rule
 AS $$
-BEGIN
-    EXECUTE trigger.drop_set_thresholds_fn_sql($1);
-    EXECUTE trigger.drop_rule_view_sql($1);
-    EXECUTE trigger.drop_kpi_view_sql($1);
-    --EXECUTE trigger.drop_notification_fn_sql($1);
-    --EXECUTE trigger.drop_notification_view_sql($1);
-    --EXECUTE trigger.drop_with_threshold_view_sql($1);
-    --EXECUTE trigger.drop_weight_fn_sql($1);
-    EXECUTE trigger.drop_exception_weight_table_sql($1);
-    EXECUTE trigger.drop_thresholds_view_sql($1);
-    EXECUTE trigger.drop_exception_threshold_table_sql($1);
-    EXECUTE trigger.drop_notification_type_sql($1);
-
-    RETURN $1;
-END;
-$$ LANGUAGE plpgsql;
+    SELECT public.action(
+        $1,
+        ARRAY[
+            trigger.drop_set_thresholds_fn_sql($1),
+            trigger.drop_rule_view_sql($1),
+            trigger.drop_kpi_view_sql($1),
+            -- trigger.drop_notification_fn_sql($1),
+            -- trigger.drop_notification_view_sql($1),
+            -- trigger.drop_with_threshold_view_sql($1),
+            -- trigger.drop_weight_fn_sql($1),
+            trigger.drop_exception_weight_table_sql($1),
+            trigger.drop_thresholds_view_sql($1),
+            trigger.drop_exception_threshold_table_sql($1),
+            trigger.drop_notification_type_sql($1),
+            trigger.drop_runnable_fn_sql($1)
+        ]
+    );
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trigger.tag(tag_name character varying, rule_id integer)
