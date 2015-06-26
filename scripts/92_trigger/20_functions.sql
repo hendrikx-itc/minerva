@@ -218,7 +218,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE OR REPLACE FUNCTION trigger.drop_runnable_fn_sql(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP FUNCTION trigger.%I(timestamp with time zone)', trigger.runnable_fn_name($1));
+SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.runnable_fn_name($1));
 $$ LANGUAGE sql STABLE;
 
 
