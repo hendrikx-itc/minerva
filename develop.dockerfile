@@ -2,7 +2,7 @@ FROM postgres:9.4
 MAINTAINER Hendrikx ITC
 
 RUN apt-get update
-RUN apt-get install -y make patch libpq-dev postgresql-server-dev-9.4
+RUN apt-get install -y make patch libpq-dev postgresql-server-dev-9.4 postgis
 
 ADD https://github.com/hendrikx-itc/db-deps/archive/7cd7beb062093cff389eb6761fab84bab3f7e285.tar.gz /db-deps.tar.gz
 RUN mkdir /db-deps

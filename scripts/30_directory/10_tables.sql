@@ -349,3 +349,66 @@ CREATE INDEX ON directory.alias (lower(name));
 GRANT SELECT ON TABLE directory.alias TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE directory.alias TO minerva_writer;
 
+-- Table 'directory.existence'
+
+CREATE TABLE directory.existence
+(
+    timestamp timestamp with time zone NOT NULL,
+    exists boolean NOT NULL,
+    entity_id integer NOT NULL,
+    entitytype_id integer NOT NULL
+);
+
+ALTER TABLE directory.existence OWNER TO minerva_admin;
+
+ALTER TABLE ONLY directory.existence
+    ADD CONSTRAINT existence_pkey PRIMARY KEY (entity_id, timestamp);
+
+ALTER TABLE ONLY directory.existence
+    ADD CONSTRAINT existence_entity_id_fkey
+    FOREIGN KEY (entity_id) REFERENCES directory.entity(id)
+    ON DELETE CASCADE;
+
+ALTER TABLE ONLY directory.existence
+    ADD CONSTRAINT existence_entitytype_id_fkey
+    FOREIGN KEY (entitytype_id) REFERENCES directory.entitytype(id);
+
+CREATE INDEX ix_directory_existence_timestamp
+    ON directory.existence USING btree (timestamp);
+
+GRANT SELECT ON TABLE directory.existence TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE directory.existence TO minerva_writer;
+
+
+-- View 'directory.existence_curr'
+
+CREATE VIEW directory.existence_curr AS
+SELECT
+    entity_id,
+    entitytype_id,
+    public.first("timestamp" ORDER BY "timestamp" DESC) AS "timestamp",
+    public.first("exists" ORDER BY "timestamp" DESC) AS "exists"
+FROM directory.existence GROUP BY entity_id, entitytype_id;
+
+
+-- Table 'directory.existence_staging'
+
+CREATE UNLOGGED TABLE directory.existence_staging
+(
+    dn character varying NOT NULL UNIQUE
+);
+
+ALTER TABLE directory.existence_staging OWNER TO minerva_admin;
+
+GRANT SELECT ON TABLE directory.existence_staging TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE directory.existence_staging TO minerva_writer;
+
+
+CREATE VIEW directory.existence_staging_entitytype_ids AS
+SELECT entity.entitytype_id
+FROM directory.existence_staging JOIN directory.entity
+ON entity.dn = existence_staging.dn
+GROUP BY entitytype_id;
+
+GRANT SELECT ON TABLE directory.existence_staging_entitytype_ids TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE directory.existence_staging_entitytype_ids TO minerva_writer;
