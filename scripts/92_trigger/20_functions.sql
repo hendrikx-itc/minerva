@@ -26,6 +26,13 @@ AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 
+CREATE OR REPLACE FUNCTION trigger.fingerprint_fn_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_fingerprint')::name;
+$$ LANGUAGE SQL IMMUTABLE;
+
+
 CREATE OR REPLACE FUNCTION trigger.runnable_fn_name(trigger.rule)
     RETURNS name
 AS $$
@@ -182,6 +189,36 @@ CREATE OR REPLACE FUNCTION trigger.update_kpi_view(name, sql text)
 AS $$
 SELECT trigger.update_kpi_view(rule, $2) FROM trigger.rule WHERE name = $1;
 $$ LANGUAGE sql VOLATILE;
+
+
+--- Function <rule>_fingerprint
+
+CREATE OR REPLACE FUNCTION trigger.create_fingerprint_fn_sql(trigger.rule)
+    RETURNS text
+AS $$
+    SELECT format(
+        $fn$CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone)
+    RETURNS text
+AS $function$
+SELECT 'stub'::text;
+$function$ LANGUAGE sql STABLE$fn$,
+        trigger.fingerprint_fn_name($1)
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_fingerprint_fn(trigger.rule)
+    RETURNS trigger.rule
+AS $$
+    SELECT public.action($1, trigger.create_fingerprint_fn_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.drop_fingerprint_fn_sql(trigger.rule)
+    RETURNS text
+AS $$
+SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.fingerprint_fn_name($1));
+$$ LANGUAGE sql STABLE;
 
 
 --- Function <rule>_runnable
@@ -502,19 +539,14 @@ $function$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.create_exception_weight_table(trigger.rule)
     RETURNS trigger.rule AS
 $$
-SELECT public.action(
-    $1,
-    ARRAY[
-        trigger.exception_weight_table_sql($1),
-        format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_weight_table_name($1)),
-        format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_weight_table_name($1)),
-        format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_weight_table_name($1)),
-        format(
-            'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
-            pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_weight_table_name($1)), 'id')
-        )
-    ]
-);
+SELECT public.action($1, trigger.exception_weight_table_sql($1));
+SELECT public.action($1, format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_weight_table_name($1)));
+SELECT public.action($1, format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_weight_table_name($1)));
+SELECT public.action($1, format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_weight_table_name($1)));
+SELECT public.action($1, format(
+    'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
+    pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_weight_table_name($1)), 'id')
+));
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -633,19 +665,14 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.create_exception_threshold_table(trigger.rule, name[])
     RETURNS trigger.rule AS
 $$
-SELECT public.action(
-    $1,
-    ARRAY[
-        trigger.create_exception_threshold_table_sql($1, $2),
-        format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_threshold_table_name($1)),
-        format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_threshold_table_name($1)),
-        format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_threshold_table_name($1)),
-        format(
-            'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
-            pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_threshold_table_name($1)), 'id')
-        )
-    ]
-);
+SELECT public.action($1, trigger.create_exception_threshold_table_sql($1, $2));
+SELECT public.action($1, format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_threshold_table_name($1)));
+SELECT public.action($1, format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_threshold_table_name($1)));
+SELECT public.action($1, format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_threshold_table_name($1)));
+SELECT public.action($1, format(
+    'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
+    pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_threshold_table_name($1)), 'id')
+));
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -837,6 +864,18 @@ AS $$
 DECLARE
     num_rows integer;
 BEGIN
+    IF $2 IS NULL THEN
+        RAISE EXCEPTION 'no notificationstore specified';
+    END IF;
+
+    EXECUTE format(
+$query$
+INSERT INTO trigger.rule_state(rule_id, timestamp, fingerprint)
+SELECT $1, $2, trigger_rule.%I($2);
+$query$,
+        trigger.fingerprint_fn_name($1)
+    ) USING $1.id, $3;
+
     EXECUTE format(
 $query$
 INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
@@ -915,7 +954,7 @@ CREATE OR REPLACE FUNCTION trigger.create_notifications(rule_name name, timestam
 AS $$
     SELECT trigger.create_notifications(rule, notificationstore, $2)
     FROM trigger.rule
-    JOIN notification.notificationstore ON notificationstore.id = rule.notificationstore_id
+    LEFT JOIN notification.notificationstore ON notificationstore.id = rule.notificationstore_id
     WHERE rule.name = $1;
 $$ LANGUAGE SQL VOLATILE;
 
@@ -955,6 +994,7 @@ AS $$
     SELECT trigger.create_dummy_notification_fn($1);
     SELECT trigger.create_notification_view($1);
     SELECT trigger.create_set_thresholds_fn($1);
+    SELECT trigger.create_fingerprint_fn($1);
     SELECT trigger.create_runnable_fn($1);
 $$ LANGUAGE SQL VOLATILE;
 
@@ -972,6 +1012,8 @@ AS $$
     SELECT public.action(
         $1,
         ARRAY[
+            trigger.drop_runnable_fn_sql($1),
+            trigger.drop_fingerprint_fn($1),
             trigger.drop_set_thresholds_fn_sql($1),
             trigger.drop_rule_view_sql($1),
             trigger.drop_kpi_view_sql($1),
@@ -982,8 +1024,7 @@ AS $$
             trigger.drop_exception_weight_table_sql($1),
             trigger.drop_thresholds_view_sql($1),
             trigger.drop_exception_threshold_table_sql($1),
-            trigger.drop_notification_type_sql($1),
-            trigger.drop_runnable_fn_sql($1)
+            trigger.drop_notification_type_sql($1)
         ]
     );
 $$ LANGUAGE sql VOLATILE;

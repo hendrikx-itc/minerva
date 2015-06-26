@@ -58,6 +58,21 @@ GRANT ALL ON TABLE trigger.rule_tag_link TO minerva_admin;
 GRANT SELECT ON TABLE trigger.rule_tag_link TO minerva;
 GRANT UPDATE ON TABLE trigger.rule_tag_link TO minerva_writer;
 
+-- Table 'rule_state'
+
+CREATE TABLE trigger.rule_state (
+    rule_id integer references trigger.rule(id) on delete cascade,
+    timestamp timestamp with time zone,
+    fingerprint text,
+    PRIMARY KEY (rule_id, timestamp)
+);
+
+ALTER TABLE trigger.rule_state OWNER TO minerva_admin;
+
+GRANT ALL ON TABLE trigger.rule_state TO minerva_admin;
+GRANT SELECT ON TABLE trigger.rule_state TO minerva;
+GRANT UPDATE ON TABLE trigger.rule_state TO minerva_writer;
+
 -- Schema trigger_rule
 
 CREATE SCHEMA trigger_rule;
