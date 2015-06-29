@@ -858,6 +858,48 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION trigger.insert_state(integer, timestamp with time zone, text)
+    RETURNS trigger.rule_state
+AS $$
+    INSERT INTO trigger.rule_state (rule_id, timestamp, fingerprint)
+    VALUES ($1, $2, $3)
+    RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.update_state(integer, timestamp with time zone, text)
+    RETURNS trigger.rule_state
+AS $$
+    UPDATE trigger.rule_state SET fingerprint = $3
+    WHERE rule_id = $1 AND timestamp = $2
+    RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.set_state(integer, timestamp with time zone, text)
+    RETURNS trigger.rule_state
+AS $$
+    SELECT coalesce(
+        trigger.update_state($1, $2, $3),
+        trigger.insert_state($1, $2, $3)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.update_state(trigger.rule, timestamp with time zone)
+    RETURNS trigger.rule
+AS $$
+BEGIN
+    EXECUTE format(
+        'SELECT trigger.update_state($1, $2, trigger_rule.%I($2))',
+        trigger.fingerprint_fn_name($1)
+    ) USING $1.id, $2;
+
+    RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, notification.notificationstore, timestamp with time zone)
     RETURNS integer
 AS $$
@@ -868,13 +910,7 @@ BEGIN
         RAISE EXCEPTION 'no notificationstore specified';
     END IF;
 
-    EXECUTE format(
-$query$
-INSERT INTO trigger.rule_state(rule_id, timestamp, fingerprint)
-SELECT $1, $2, trigger_rule.%I($2);
-$query$,
-        trigger.fingerprint_fn_name($1)
-    ) USING $1.id, $3;
+    PERFORM trigger.update_state($1, $3);
 
     EXECUTE format(
 $query$
