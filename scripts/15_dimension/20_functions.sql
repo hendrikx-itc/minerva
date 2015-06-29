@@ -123,7 +123,7 @@ CREATE OR REPLACE FUNCTION dimension.update_month_15m()
 AS $$
     TRUNCATE dimension.month_15m;
     INSERT INTO dimension.month_15m SELECT
-        date_trunc('month', timestamp_15m) as timestamp,
+        date_trunc('month', timestamp_15m) + '1 month'::interval as timestamp,
         timestamp_15m
     FROM 
         generate_series(
@@ -139,7 +139,7 @@ CREATE OR REPLACE FUNCTION dimension.update_week_15m()
 AS $$
     TRUNCATE dimension.week_15m;
     INSERT INTO dimension.week_15m SELECT
-        date_trunc('week', timestamp_15m) as timestamp,
+        date_trunc('week', timestamp_15m) + '1 week'::interval as timestamp,
         timestamp_15m
     FROM 
         generate_series(
@@ -155,7 +155,7 @@ CREATE OR REPLACE FUNCTION dimension.update_day_15m()
 AS $$
     TRUNCATE dimension.day_15m;
     INSERT INTO dimension.day_15m SELECT
-        date_trunc('day', timestamp),
+        date_trunc('day', timestamp) + '1 day'::interval,
         timestamp
     FROM (
         SELECT generate_series(
