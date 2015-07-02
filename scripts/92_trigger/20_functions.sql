@@ -886,12 +886,12 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.update_state(trigger.rule, timestamp with time zone)
+CREATE OR REPLACE FUNCTION trigger.set_state(trigger.rule, timestamp with time zone)
     RETURNS trigger.rule
 AS $$
 BEGIN
     EXECUTE format(
-        'SELECT trigger.update_state($1, $2, trigger_rule.%I($2))',
+        'SELECT trigger.set_state($1, $2, trigger_rule.%I($2))',
         trigger.fingerprint_fn_name($1)
     ) USING $1.id, $2;
 
@@ -910,7 +910,7 @@ BEGIN
         RAISE EXCEPTION 'no notificationstore specified';
     END IF;
 
-    PERFORM trigger.update_state($1, $3);
+    PERFORM trigger.set_state($1, $3);
 
     EXECUTE format(
 $query$
