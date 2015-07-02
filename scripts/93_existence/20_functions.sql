@@ -78,29 +78,31 @@ CREATE OR REPLACE FUNCTION directory.transfer_existence(timestamp with time zone
 $$
 DECLARE
   et_id integer;
-  astore attribute_directory.attributestore;
   tablename name;
+  astore attribute_directory.attributestore;
 BEGIN
 
   FOR et_id in SELECT distinct t.id
-    FROM directory.entitytype t
-    JOIN directory.entity e ON e.entitytype_id = t.id
-    JOIN directory.existence_staging es ON es.dn = e.dn
+	FROM directory.entitytype t
+	JOIN directory.entity e ON e.entitytype_id = t.id
+	JOIN directory.existence_staging es ON es.dn = e.dn
   LOOP
-    astore = attribute_directory.get_attributestore((directory.get_datasource('existence')).id, et_id);
+	astore = attribute_directory.get_attributestore((directory.get_datasource('existence')).id, et_id);
 
-    tablename = attribute_directory.to_table_name( astore );
+	tablename = attribute_directory.to_table_name( astore );
 
-    execute FORMAT(
-        'INSERT INTO attribute_staging.%I(timestamp, exists, entity_id) ( SELECT s.timestamp, s.exists, s.entity_id
-         FROM directory.new_existence_state($1) s WHERE s.entitytype_id = $2 )', tablename ) USING $1, et_id;
+	EXECUTE FORMAT(
+		'INSERT INTO attribute_staging.%I(timestamp, exists, entity_id) (
+			SELECT s.timestamp, s.exists, s.entity_id
+			FROM directory.new_existence_state($1) s
+			WHERE s.entitytype_id = $2 )', tablename ) USING $1, et_id;
 
-    astore = attribute_directory.transfer_staged( astore );
+	astore = attribute_directory.transfer_staged( astore );
+
   END LOOP;
 
   TRUNCATE directory.existence_staging;
 
   RETURN $1;
 END;
-$$ LANGUAGE plpgsql VOLATILE;
-
+$$ LANGUAGE plpgsql VOLATILE
