@@ -60,6 +60,19 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION relation.update(relation.type, text)
+    RETURNS relation.type
+AS $$
+    SELECT public.action(
+        $1,
+        ARRAY[
+            format('CREATE OR REPLACE VIEW relation_def.%I AS %s', $1.name, $2),
+            format('ALTER VIEW relation_def.%I OWNER TO minerva_admin', $1.name)
+        ]::text[]
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION relation.define_reverse(reverse name, original name)
     RETURNS relation.type
 AS $$

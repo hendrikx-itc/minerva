@@ -1477,22 +1477,6 @@ AS $$
 $$ LANGUAGE sql;
 
 
-CREATE FUNCTION trend.populate_attribute_at_ptr(trend.attribute_to_trend, timestamp with time zone)
-    RETURNS trend.attribute_to_trend
-AS $$
-    SELECT public.action(
-        $1,
-        trend.populate_attribute_at_ptr_sql($1, $2)
-    );
-
-    SELECT trend.mark_attribute_to_trend_as_processed($1, $2, modified)
-    FROM attribute_directory.attributestore_modified
-    WHERE attributestore_modified.attributestore_id = $1.attributestore_id;
-
-    SELECT $1;
-$$ LANGUAGE sql;
-
-
 CREATE FUNCTION trend.update_attribute_to_trend_state(trend.attribute_to_trend, timestamp with time zone, timestamp with time zone)
     RETURNS trend.attribute_to_trend_state
 AS $$
@@ -1518,6 +1502,22 @@ AS $$
         trend.update_attribute_to_trend_state($1, $2, $3),
         trend.insert_attribute_to_trend_state($1, $2, $3)
     );
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.populate_attribute_at_ptr(trend.attribute_to_trend, timestamp with time zone)
+    RETURNS trend.attribute_to_trend
+AS $$
+    SELECT public.action(
+        $1,
+        trend.populate_attribute_at_ptr_sql($1, $2)
+    );
+
+    SELECT trend.mark_attribute_to_trend_as_processed($1, $2, modified)
+    FROM attribute_directory.attributestore_modified
+    WHERE attributestore_modified.attributestore_id = $1.attributestore_id;
+
+    SELECT $1;
 $$ LANGUAGE sql;
 
 
@@ -1581,7 +1581,7 @@ CREATE FUNCTION trend.drop_attribute_at_trend_view_sql(trend.attribute_to_trend)
 AS $$
     SELECT format(
         'DROP VIEW trend.%I',
-        trend.attribute_at_trend_view_name($1),
+        trend.attribute_at_trend_view_name($1)
     );
 $$ LANGUAGE sql;
 
