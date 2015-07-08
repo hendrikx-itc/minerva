@@ -405,10 +405,10 @@ GRANT INSERT,DELETE,UPDATE ON TABLE directory.existence_staging TO minerva_write
 
 
 CREATE VIEW directory.existence_staging_entitytype_ids AS
-SELECT entity.entitytype_id
-FROM directory.existence_staging JOIN directory.entity
-ON entity.dn = existence_staging.dn
-GROUP BY entitytype_id;
+    SELECT entity.entitytype_id
+        FROM directory.existence_staging
+        JOIN directory.entity ON entity.dn = existence_staging.dn
+        GROUP BY entitytype_id;
 
 GRANT SELECT ON TABLE directory.existence_staging_entitytype_ids TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE directory.existence_staging_entitytype_ids TO minerva_writer;

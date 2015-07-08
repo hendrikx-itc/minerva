@@ -59,18 +59,27 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE OR REPLACE FUNCTION directory.new_existence_state(timestamp with time zone)
+CREATE OR REPLACE FUNCTION directory.new_existence_state(timestamp with time zone, entitytype_id integer)
     RETURNS SETOF directory.existence
 AS $$
-SELECT
-    staging_state.timestamp,
-    staging_state.exists,
-    staging_state.entity_id,
-    staging_state.entitytype_id
-FROM directory.existence_staging_state($1) staging_state
-LEFT JOIN directory.existence_at($1) existence_at ON existence_at.entity_id = staging_state.entity_id
-WHERE existence_at.entity_id IS NULL OR (existence_at.exists <> staging_state.exists AND existence_at.timestamp < staging_state.timestamp);
-$$ LANGUAGE sql STABLE;
+DECLARE
+    store attribute_directory.attributestore;
+    functionname text;
+BEGIN
+    store = attribute_directory.get_attributestore((directory.get_datasource('existence')).id, entitytype_id);
+    functionname = attribute_directory.at_function_name(store);
+
+    EXECUTE format('
+
+        SELECT staging_state.timestamp, staging_state.exists, staging_state.entity_id, staging_state.entitytype_id
+        FROM directory.existence_staging_state($1) staging_state
+        LEFT JOIN attribute_history.%I($1) existence_at
+            ON existence_at.entity_id = staging_state.entity_id
+        WHERE existence_at.entity_id IS NULL
+            OR (existence_at.exists <> staging_state.exists AND existence_at.timestamp < staging_state.timestamp)',
+        functionname ) USING $1;
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 
 CREATE OR REPLACE FUNCTION directory.transfer_existence(timestamp with time zone)
@@ -94,7 +103,7 @@ BEGIN
 	EXECUTE FORMAT(
 		'INSERT INTO attribute_staging.%I(timestamp, exists, entity_id) (
 			SELECT s.timestamp, s.exists, s.entity_id
-			FROM directory.new_existence_state($1) s
+			FROM directory.new_existence_state($1, $2) s
 			WHERE s.entitytype_id = $2 )', tablename ) USING $1, et_id;
 
 	astore = attribute_directory.transfer_staged( astore );
@@ -105,4 +114,4 @@ BEGIN
 
   RETURN $1;
 END;
-$$ LANGUAGE plpgsql VOLATILE
+$$ LANGUAGE plpgsql VOLATILE;
