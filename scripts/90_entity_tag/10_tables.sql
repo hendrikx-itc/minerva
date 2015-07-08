@@ -8,6 +8,8 @@ CREATE TABLE entity_tag.type (
 
 ALTER TABLE entity_tag.type OWNER TO minerva_admin;
 
+GRANT SELECT ON TABLE entity_tag.type TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE entity_tag.type TO minerva_writer;
 
 -- Table 'entitytaglink_staging'
 
@@ -20,4 +22,4 @@ CREATE UNLOGGED TABLE entity_tag.entitytaglink_staging (
 ALTER TABLE entity_tag.entitytaglink_staging OWNER TO minerva_admin;
 
 GRANT SELECT ON TABLE entity_tag.entitytaglink_staging TO minerva;
-GRANT INSERT,DELETE,UPDATE ON TABLE entity_tag.entitytaglink_staging TO minerva_writer;
+GRANT INSERT,DELETE,UPDATE,TRUNCATE ON TABLE entity_tag.entitytaglink_staging TO minerva_writer;
