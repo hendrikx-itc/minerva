@@ -83,27 +83,6 @@ GRANT ALL ON TABLE gis.vhandover_relation TO minerva_admin;
 GRANT SELECT ON TABLE gis.vhandover_relation TO minerva;
 
 
--- ============================
---  existence_HandoverRelation
--- ============================
--- The existence records for HandoverRelation (virtual) entities based
---  on existence records of the real_handover relations.
-
-CREATE TABLE gis."existence_HandoverRelation"
-(
-  "timestamp" timestamp with time zone NOT NULL,
-  "exists" boolean NOT NULL,
-  entity_id integer NOT NULL,
-  entitytype_id integer NOT NULL,
-  CONSTRAINT existence_pkey PRIMARY KEY (entity_id, "timestamp")
-) WITH ( OIDS=FALSE );
-ALTER TABLE gis."existence_HandoverRelation" OWNER TO minerva_admin;
-GRANT ALL ON TABLE gis."existence_HandoverRelation" TO minerva_admin;
-GRANT SELECT ON TABLE gis."existence_HandoverRelation" TO minerva;
-GRANT UPDATE, INSERT, DELETE ON TABLE gis."existence_HandoverRelation" TO minerva_writer;
-
-CREATE INDEX ix_gis_existence_timestamp ON gis."existence_HandoverRelation" USING btree ("timestamp");
-
 
 -- ============================
 --  handover_relation_existence
