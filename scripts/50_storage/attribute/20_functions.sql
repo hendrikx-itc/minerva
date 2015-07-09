@@ -1708,35 +1708,25 @@ DECLARE
 BEGIN
     tablename = attribute_directory.to_table_name(store);
 
-    EXECUTE format('SELECT true FROM attribute_history.%I WHERE timestamp < $1 LIMIT 1', tablename)
-        USING ts
-        INTO exist;
+    SELECT  array_to_string(array_agg(format('%I', name)), ', '),
+            array_to_string(array_agg(format('last(%I ORDER BY timestamp)', name)), ', ')
+        INTO columns_part, values_part
+        FROM attribute_directory.attribute
+        WHERE attributestore_id = $1.id;
 
-    IF exist
-    THEN
+    EXECUTE format('
+        INSERT INTO attribute_staging.%1$I (entity_id, timestamp, %2$s) (
+            SELECT entity_id, $1, %3$s
+            FROM attribute_history.%1$I
+            WHERE timestamp < $1 GROUP BY entity_id
+    )', tablename, columns_part, values_part) USING ts;
 
-        SELECT  array_to_string(array_agg(format('%I', name)), ', '),
-                array_to_string(array_agg(format('last(%I ORDER BY timestamp)', name)), ', ')
-            INTO columns_part, values_part
-            FROM attribute_directory.attribute
-            WHERE attributestore_id = $1.id;
+    store = attribute_directory.transfer_staged(store);
 
-        EXECUTE format('
-            INSERT INTO attribute_staging.%1$I (entity_id, timestamp, %2$s) (
-                SELECT entity_id, $1, %3$s
-                FROM attribute_history.%1$I
-                WHERE timestamp < $1 GROUP BY entity_id
-        )', tablename, columns_part, values_part) USING ts;
+    EXECUTE format('DELETE FROM attribute_history.%I WHERE timestamp < $1', tablename) USING ts;
 
-        store = attribute_directory.transfer_staged(store);
-
-        EXECUTE format('DELETE FROM attribute_history.%I WHERE timestamp < $1', tablename) USING ts;
-
-        GET DIAGNOSTICS row_count = ROW_COUNT;
-            RETURN row_count;
-        ELSE
-            RETURN 0::bigint;
-    END IF;
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+    RETURN row_count;
 END;
 $$ language 'plpgsql' volatile;
 
