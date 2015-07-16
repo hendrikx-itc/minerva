@@ -1731,3 +1731,39 @@ END;
 $$ language 'plpgsql' volatile;
 
 
+CREATE TABLE attribute_directory.attributestore_materialization
+(
+  attributestore_id integer NOT NULL,
+  last_modified timestamp with time zone,
+  CONSTRAINT attributestore_materialization_pkey PRIMARY KEY (attributestore_id)
+);
+ALTER TABLE attribute_directory.attributestore_materialization OWNER TO minerva_admin;
+GRANT SELECT ON TABLE attribute_directory.attributestore_compacted TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE attribute_directory.attributestore_compacted TO minerva_writer;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.materialize(store attribute_directory.attributestore)
+    RETURNS attribute_directory.attributestore AS
+$$
+DECLARE
+    ts timestamp with time zone;
+    tablename text;
+BEGIN
+    tablename = attribute_directory.to_table_name(store);
+
+    SELECT last_modified INTO ts
+        FROM attribute_directory.attributestore_materialization
+        WHERE attributestore_id = store.id;
+
+    EXECUTE
+        format(
+            'INSERT INTO attribute_history.%1$I SELECT * FROM attribute_history."v%1$s" WHERE timestamp > $1',
+            tablename ) USING ts;
+
+    EXECUTE
+        format(
+            'UPDATE attribute_directory.attributestore_materialization SET last_modified = t.lm FROM (SELECT modified as lm FROM attribute_history."v%1$s" ORDER BY modified DESC LIMIT 1) t WHERE attributestore_id = $1',
+          tablename) USING store.id;
+
+    RETURN store;
+END; $$ LANGUAGE plpgsql VOLATILE;

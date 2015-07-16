@@ -12,7 +12,7 @@ AS $$
         $1, True, entity.id
     FROM directory.existence_staging
     JOIN directory.entity ON entity.dn = existence_staging.dn
-        AND entity.entitytype_id = entitytype_id;
+        AND entity.entitytype_id = $2;
 $$ LANGUAGE sql STABLE;
 
 
@@ -22,7 +22,7 @@ AS $$
     SELECT $1, False, entity.id
     FROM directory.entity
     LEFT JOIN directory.existence_staging ON existence_staging.dn = entity.dn
-    WHERE existence_staging.dn IS NULL AND entity.entitytype_id = entitytype_id;
+    WHERE existence_staging.dn IS NULL AND entity.entitytype_id = $2;
 $$ LANGUAGE sql STABLE;
 
 
@@ -66,20 +66,20 @@ DECLARE
   astore attribute_directory.attributestore;
 BEGIN
   FOR et_id in SELECT distinct t.id
-	FROM directory.entitytype t
-	JOIN directory.entity e ON e.entitytype_id = t.id
-	JOIN directory.existence_staging es ON es.dn = e.dn
+    FROM directory.entitytype t
+    JOIN directory.entity e ON e.entitytype_id = t.id
+    JOIN directory.existence_staging es ON es.dn::text = e.dn::text
   LOOP
-	astore = attribute_directory.get_attributestore((directory.get_datasource('existence')).id, et_id);
+    astore = attribute_directory.get_attributestore((directory.get_datasource('existence')).id, et_id);
 
-	tablename = attribute_directory.to_table_name( astore );
+    tablename = attribute_directory.to_table_name( astore );
 
-	EXECUTE FORMAT(
-		'INSERT INTO attribute_staging.%I(timestamp, exists, entity_id) (
-		   SELECT timestamp, exists, entity_id FROM directory.new_existence_state($1, $2)
-		 )', tablename ) USING $1, et_id;
+    EXECUTE FORMAT(
+        'INSERT INTO attribute_staging.%I(timestamp, exists, entity_id) (
+           SELECT timestamp, exists, entity_id FROM directory.new_existence_state($1, $2)
+         )', tablename ) USING $1, et_id;
 
-	astore = attribute_directory.transfer_staged( astore );
+    astore = attribute_directory.transfer_staged( astore );
 
   END LOOP;
 

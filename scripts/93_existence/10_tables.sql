@@ -2,7 +2,7 @@
 
 CREATE UNLOGGED TABLE directory.existence_staging
 (
-    dn character varying NOT NULL UNIQUE
+    dn character varying NOT NULL
 );
 
 ALTER TABLE directory.existence_staging OWNER TO minerva_admin;
@@ -19,3 +19,5 @@ CREATE VIEW directory.existence_staging_entitytype_ids AS
 
 GRANT SELECT ON TABLE directory.existence_staging_entitytype_ids TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE directory.existence_staging_entitytype_ids TO minerva_writer;
+
+
