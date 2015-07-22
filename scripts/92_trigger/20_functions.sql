@@ -1083,6 +1083,8 @@ CREATE OR REPLACE FUNCTION trigger.truncate(timestamp with time zone, interval)
     RETURNS timestamp with time zone
 AS $$
     SELECT CASE
+        WHEN $2 = '1 week' THEN
+            date_trunc('week', $1)
         WHEN $2 = '1 day' THEN
             date_trunc('day', $1)
         ELSE
