@@ -170,6 +170,7 @@ DECLARE
 	result materialization.materialization_result;
 	replicated_server_conn system.setting;
 	tmp_source_states materialization.source_fragment_state[];
+    materialization_type materialization.type;
 BEGIN
 	schema_name = 'trend';
 	table_name = trend.to_base_table_name(src);
@@ -186,13 +187,17 @@ BEGIN
 	FROM
 		trend.table_columns(schema_name, table_name);
 
-	sources_query = format('SELECT source_states
-	FROM materialization.materializables mz
-	JOIN materialization.type ON type.id = mz.type_id
-	WHERE
-		mz.timestamp = %L AND
-		type.src_trendstore_id = %L AND
-		type.dst_trendstore_id = %L;', $3, src.id, dst.id);
+    SELECT * INTO materialization_type FROM materialization.type where src_trendstore_id = $1.id AND dst_trendstore_id = $2.id;
+
+	sources_query = format(
+        'SELECT source_states '
+	    'FROM materialization.materializables '
+        'WHERE '
+            'timestamp = %L AND '
+            'type_id = %s',
+        $3,
+        materialization_type.id
+    );
 
 	data_query = format('SELECT %s FROM %I.%I WHERE timestamp = %L',
 		columns_part, schema_name, table_name, timestamp);
