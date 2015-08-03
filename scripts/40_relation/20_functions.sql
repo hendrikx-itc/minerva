@@ -44,22 +44,6 @@ AS $$
 $$ LANGUAGE SQL VOLATILE STRICT;
 
 
-CREATE OR REPLACE FUNCTION relation.define(name, text)
-    RETURNS relation.type
-AS $$
-DECLARE
-    result relation.type;
-BEGIN
-    result = relation.name_to_type($1::character varying);
-
-    EXECUTE format('CREATE OR REPLACE VIEW relation_def.%I AS %s', $1, $2);
-    EXECUTE format('ALTER VIEW relation_def.%I OWNER TO minerva_admin', $1);
-
-    return result;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE OR REPLACE FUNCTION relation.update(relation.type, text)
     RETURNS relation.type
 AS $$
@@ -69,6 +53,27 @@ AS $$
             format('CREATE OR REPLACE VIEW relation_def.%I AS %s', $1.name, $2),
             format('ALTER VIEW relation_def.%I OWNER TO minerva_admin', $1.name)
         ]::text[]
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION relation.set_view_permissions(relation.type)
+    RETURNS relation.type
+AS $$
+    SELECT public.action(
+        $1, format('GRANT SELECT ON relation_def.%I TO minerva', $1.name)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION relation.define(name, text)
+    RETURNS relation.type
+AS $$
+    SELECT set_view_permissions(
+        relation.update(
+            relation.name_to_type($1::character varying),
+            $2
+        )
     );
 $$ LANGUAGE sql VOLATILE;
 
