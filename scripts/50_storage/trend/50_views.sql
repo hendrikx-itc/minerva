@@ -12,3 +12,4 @@ FROM (
         LEFT JOIN attribute_directory.attributestore_modified m ON m.attributestore_id = s.attributestore_id
 ) foo;
 
+GRANT SELECT ON trend.attribute_to_trend_todo TO minerva;
