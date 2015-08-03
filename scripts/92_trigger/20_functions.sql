@@ -1098,9 +1098,10 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION trigger.timestamps(trigger.rule)
     RETURNS SETOF timestamp with time zone
 AS $$
-    SELECT generate_series(
+    SELECT ts FROM generate_series(
         trigger.truncate(now(), $1.granularity),
         trigger.truncate(now(), $1.granularity) - $1.default_interval,
         - $1.granularity
-    );
+    ) gs(ts)
+    WHERE ts >= now() - $1.default_interval;
 $$ LANGUAGE sql STABLE;
