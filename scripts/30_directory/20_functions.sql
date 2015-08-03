@@ -446,7 +446,7 @@ $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION directory.update_denormalized_entity_tags(entity_id integer)
-    RETURNS directory.entity_link_denorm
+    RETURNS text[]
 AS $$
 DELETE FROM directory.entity_link_denorm WHERE entity_id = $1;
 INSERT INTO directory.entity_link_denorm
@@ -459,6 +459,107 @@ JOIN directory.entitytaglink etl ON etl.entity_id = entity.id
 JOIN directory.tag ON tag.id = etl.tag_id
 WHERE entity.id = $1
 GROUP BY entity.id
-RETURNING *;
+RETURNING tags;
 $$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION directory.create_entity_tag_denorm_sql(name)
+    RETURNS text[]
+AS $$
+    SELECT ARRAY[
+        format(
+            'CREATE TABLE directory.%I ('
+            'entity_id integer primary key not null, '
+            'tags text[] not null, '
+            'name text not null'
+            ');',
+            $1
+        ),
+
+        format('ALTER TABLE directory.%I OWNER TO minerva_admin;', $1),
+        format('GRANT SELECT ON TABLE directory.%I TO minerva;', $1),
+        format(
+            'GRANT UPDATE, INSERT, DELETE ON TABLE directory.%I '
+            'TO minerva_writer;',
+            $1
+        )
+    ];
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION directory.create_entity_tag_denorm(name)
+    RETURNS name
+AS $$
+    SELECT public.action($1, directory.create_entity_tag_denorm_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION directory.create_entity_tag_denorm_indexes(name)
+    RETURNS name
+AS $$
+    SELECT public.action($1, ARRAY[
+        format('CREATE INDEX "%s_tags_idx" ON directory.%I USING gin (tags);', $1),
+        format('CREATE INDEX "%s_name_idx" ON directory.%I (name);', $1, $1)
+    ]);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION directory.populate_entity_tag_denorm(name)
+    RETURNS name
+AS $$
+    SELECT public.action($1, format(
+        'INSERT INTO directory.%I '
+        'SELECT '
+        'entity.id, '
+        'array_agg(lower(tag.name)), '
+        'lower(entity.name) '
+        'FROM directory.entity '
+        'JOIN directory.entitytaglink etl ON etl.entity_id = entity.id '
+        'JOIN directory.tag ON tag.id = etl.tag_id '
+        'GROUP BY entity.id;',
+        $1
+    ));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION directory.cluster_entity_tag_denorm(name)
+    RETURNS name
+AS $$
+    SELECT public.action($1, ARRAY[
+        format(
+            'CLUSTER directory.%I '
+            'USING "%s_name_idx";',
+            $1, $1
+        ),
+        format('ANALYZE directory.%I', $1)
+    ]);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION directory.replace_entity_tag_denorm(name)
+    RETURNS name
+AS $$
+    SELECT public.action($1, ARRAY[
+        'DROP TABLE directory.entity_link_denorm',
+        format('ALTER INDEX directory."%s_name_idx" RENAME TO "entity_link_denorm_name_idx"', $1),
+        format('ALTER INDEX directory."%s_tags_idx" RENAME TO "entity_link_denorm_tags_idx"', $1),
+        format('ALTER TABLE directory.%I RENAME TO entity_link_denorm', $1)
+    ]);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION directory.rebuild_entity_tag_denorm(name DEFAULT 'entity_tag_denorm_new')
+    RETURNS name
+AS $$
+    SELECT directory.create_entity_tag_denorm($1);
+    SELECT directory.populate_entity_tag_denorm($1);
+    SELECT directory.create_entity_tag_denorm_indexes($1);
+    SELECT directory.cluster_entity_tag_denorm($1);
+    SELECT directory.replace_entity_tag_denorm($1);
+$$ LANGUAGE sql VOLATILE;
+
+
+COMMENT ON FUNCTION directory.rebuild_entity_tag_denorm(name) IS
+'Build a new denormalized entity tags table, populate it and replace the old
+one by using drop/rename to avoid blocking other users';
 
