@@ -141,3 +141,83 @@ FROM (
 ) foo
 ORDER BY depth DESC;
 
+GRANT SELECT ON relation.materialization_order TO minerva;
+
+
+CREATE OR REPLACE FUNCTION relation.create_all_materialized(name)
+    RETURNS name
+AS $$
+    SELECT public.action(
+        $1,
+        ARRAY[
+            format(
+                'CREATE TABLE relation.%I ('
+                'source_id integer NOT NULL, '
+                'target_id integer NOT NULL, '
+                'type_id integer NOT NULL'
+                ');',
+                $1
+            ),
+
+            format('ALTER TABLE relation.%I OWNER TO minerva_admin;', $1),
+
+            format('GRANT ALL ON TABLE relation.%I TO minerva_admin;', $1),
+            format('GRANT SELECT ON TABLE relation.%I TO minerva;', $1),
+            format('GRANT INSERT,DELETE,UPDATE ON TABLE relation.%I TO minerva_writer;', $1)
+        ]
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION relation.create_all_materialized_indexes(name)
+    RETURNS name
+AS $$
+    SELECT public.action(
+        $1,
+        ARRAY[
+            format(
+                'ALTER TABLE relation.%I
+                ADD PRIMARY KEY (source_id, target_id, type_id);',
+                $1
+            ),
+            format('CREATE INDEX ON relation.%I USING btree (target_id);', $1),
+            format('CREATE INDEX ON relation."all_materialized" USING btree (type_id);', $1)
+        ]
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION relation.replace_all_materialized(name)
+    RETURNS name
+AS $$
+    SELECT public.action($1, ARRAY[
+        'DROP TABLE relation.all_materialized',
+        format('ALTER TABLE relation.%I RENAME TO all_materialized', $1)
+    ]);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION relation.populate_all_materialized(name)
+    RETURNS name
+AS $$
+    SELECT public.action(
+        $1,
+        format(
+            'INSERT INTO relation.%I(source_id, target_id, type_id) '
+            'SELECT source_id, target_id, type_id '
+            'FROM relation.all',
+            $1
+        )
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION relation.update_all_materialized(intermediate_name name)
+    RETURNS name
+AS $$
+    SELECT relation.create_all_materialized($1);
+    SELECT relation.populate_all_materialized($1);
+    SELECT relation.replace_all_materialized($1);
+    SELECT relation.create_all_materialized_indexes('all_materialized');
+$$ LANGUAGE sql VOLATILE;
+
