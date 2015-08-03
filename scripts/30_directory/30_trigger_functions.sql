@@ -50,7 +50,9 @@ CREATE OR REPLACE FUNCTION directory.update_entity_link_denorm_for_insert()
     RETURNS trigger
 AS $$
 BEGIN
-    PERFORM directory.update_denormalized_entity_tags(NEW.entity_id);
+    IF current_setting('minerva.trigger_entity_tag_denorm_update') = 'on' THEN
+        PERFORM directory.update_denormalized_entity_tags(NEW.entity_id);
+    END IF;
 
     RETURN NEW;
 END;
@@ -61,7 +63,9 @@ CREATE OR REPLACE FUNCTION directory.update_entity_link_denorm_for_delete()
     RETURNS trigger
 AS $$
 BEGIN
-    PERFORM directory.update_denormalized_entity_tags(OLD.entity_id);
+    IF current_setting('minerva.trigger_entity_tag_denorm_update') = 'on' THEN
+        PERFORM directory.update_denormalized_entity_tags(OLD.entity_id);
+    END IF;
 
     RETURN OLD;
 END;
