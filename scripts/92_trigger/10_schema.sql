@@ -7,7 +7,23 @@ GRANT ALL ON SCHEMA trigger TO minerva_writer;
 GRANT USAGE ON SCHEMA trigger TO minerva;
 
 
-CREATE TYPE trigger.kpi_def AS (name name, data_type name);
+CREATE TYPE trigger.kpi_def AS (
+    name name,
+    data_type name
+);
+
+CREATE TYPE trigger.threshold_def AS (
+    name name,
+    data_type name
+);
+
+
+CREATE TYPE trigger.notification AS (
+    entity_id integer,
+    timestamp timestamp with time zone,
+    weight integer,
+    details text
+);
 
 
 -- Table 'rule'
@@ -71,7 +87,7 @@ ALTER TABLE trigger.rule_state OWNER TO minerva_admin;
 
 GRANT ALL ON TABLE trigger.rule_state TO minerva_admin;
 GRANT SELECT ON TABLE trigger.rule_state TO minerva;
-GRANT UPDATE ON TABLE trigger.rule_state TO minerva_writer;
+GRANT UPDATE,INSERT ON TABLE trigger.rule_state TO minerva_writer;
 
 -- Schema trigger_rule
 

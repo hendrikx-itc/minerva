@@ -1,4 +1,6 @@
-CREATE OR REPLACE FUNCTION trigger.with_threshold_view_name(trigger.rule)
+-- Type names
+
+CREATE OR REPLACE FUNCTION trigger.with_threshold_fn_name(trigger.rule)
     RETURNS name
 AS $$
     SELECT ($1.name || '_with_threshold')::name;
@@ -9,6 +11,13 @@ CREATE OR REPLACE FUNCTION trigger.weight_fn_name(trigger.rule)
     RETURNS name
 AS $$
     SELECT ($1.name || '_weight')::name;
+$$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.rule_fn_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT $1.name;
 $$ LANGUAGE SQL IMMUTABLE;
 
 
@@ -26,6 +35,20 @@ AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 
+CREATE OR REPLACE FUNCTION trigger.notification_message_fn_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_notification_message')::name;
+$$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.notification_fn_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_notification')::name;
+$$ LANGUAGE SQL IMMUTABLE;
+
+
 CREATE OR REPLACE FUNCTION trigger.fingerprint_fn_name(trigger.rule)
     RETURNS name
 AS $$
@@ -38,6 +61,23 @@ CREATE OR REPLACE FUNCTION trigger.runnable_fn_name(trigger.rule)
 AS $$
     SELECT ($1.name || '_runnable')::name;
 $$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.kpi_type_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_kpi')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.details_type_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_details')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+-- Convenience functions
 
 
 CREATE OR REPLACE FUNCTION trigger.get_rule(name)
@@ -69,140 +109,87 @@ AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 
---- View <rule>
-
-CREATE OR REPLACE FUNCTION trigger.rule_view_name(trigger.rule)
-    RETURNS name
-AS $$
-    SELECT $1.name;
-$$ LANGUAGE SQL IMMUTABLE;
+--- Function <rule>
 
 
-CREATE OR REPLACE FUNCTION trigger.get_rule_view_sql(trigger.rule)
-    RETURNS text
-AS $$
-SELECT
-	pg_get_viewdef(oid, true)
-FROM pg_class
-WHERE relname = trigger.rule_view_name($1);
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.rule_view_sql(trigger.rule, where_clause text)
+CREATE OR REPLACE FUNCTION trigger.rule_fn_sql(trigger.rule, where_clause text)
     RETURNS text
 AS $$
 SELECT format(
-    'SELECT * FROM trigger_rule.%I WHERE %s;',
-    trigger.with_threshold_view_name($1), $2
+    'SELECT * FROM trigger_rule.%I($1) WHERE %s;',
+    trigger.with_threshold_fn_name($1), $2
 );
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.drop_rule_view_sql(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.drop_rule_fn_sql(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP VIEW trigger_rule.%I CASCADE', $1.name);
+SELECT format('DROP FUNCTION IF EXISTS trigger_rule.%I(timestamp with time zone)', trigger.rule_fn_name($1));
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_rule_view_sql(trigger.rule, rule_view_sql text)
+CREATE OR REPLACE FUNCTION trigger.create_rule_fn_sql(trigger.rule, rule_view_sql text)
     RETURNS text[]
 AS $$
 SELECT ARRAY[
-    format('CREATE OR REPLACE VIEW trigger_rule.%I AS %s', trigger.rule_view_name($1), $2),
-    format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.rule_view_name($1)),
-    format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.rule_view_name($1))
+    format(
+        'CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone) RETURNS SETOF trigger_rule.%I AS $fn$ %s $fn$ LANGUAGE sql STABLE',
+        trigger.rule_fn_name($1),
+        trigger.details_type_name($1),
+        $2
+    ),
+    format(
+        'ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin',
+        trigger.rule_fn_name($1)
+    ),
+    format(
+        'GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva',
+        trigger.rule_fn_name($1)
+    )
 ];
 $$ LANGUAGE sql STABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_rule_view(trigger.rule, rule_view_sql text)
+CREATE OR REPLACE FUNCTION trigger.create_rule_fn(trigger.rule, rule_view_sql text)
     RETURNS trigger.rule
 AS $$
-SELECT public.action($1, trigger.create_rule_view_sql($1, $2));
+SELECT public.action($1, trigger.create_rule_fn_sql($1, $2));
 $$ LANGUAGE SQL VOLATILE;
 
 
---- View <rule>_kpi
+--- Function <rule>_kpi
 
-CREATE OR REPLACE FUNCTION trigger.kpi_view_name(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.kpi_fn_name(trigger.rule)
     RETURNS name
 AS $$
     SELECT ($1.name || '_kpi')::name;
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.get_kpi_view_sql(trigger.rule)
-    RETURNS text
-AS $$
-SELECT
-	pg_get_viewdef(oid, true)
-FROM pg_class
-WHERE relname = trigger.kpi_view_name($1);
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.kpi_view_sql(trigger.rule, sql text)
-    RETURNS text
-AS $$
-SELECT format(
-    'CREATE OR REPLACE VIEW trigger_rule.%I AS %s',
-    "trigger".kpi_view_name($1), $2
-);
-$$ LANGUAGE SQL IMMUTABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.drop_kpi_view_sql(trigger.rule)
-    RETURNS text
-AS $$
-SELECT format('DROP VIEW trigger_rule.%I CASCADE', "trigger".kpi_view_name($1));
-$$ LANGUAGE SQL IMMUTABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.create_kpi_view_sql(trigger.rule, sql text)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    trigger.kpi_view_sql($1, $2),
-    format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.kpi_view_name($1)),
-    format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.kpi_view_name($1))
-];
-$$ LANGUAGE sql STABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.create_kpi_view(trigger.rule, sql text)
-    RETURNS trigger.rule
-AS $$
-SELECT public.action($1, trigger.create_kpi_view_sql($1, $2));
-$$ LANGUAGE SQL VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION trigger.update_kpi_view(trigger.rule, sql text)
-    RETURNS trigger.rule
-AS $$
-SELECT public.action($1, trigger.kpi_view_sql($1, $2));
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION trigger.update_kpi_view(name, sql text)
-    RETURNS trigger.rule
-AS $$
-SELECT trigger.update_kpi_view(rule, $2) FROM trigger.rule WHERE name = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 --- Function <rule>_fingerprint
 
-CREATE OR REPLACE FUNCTION trigger.create_fingerprint_fn_sql(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.create_fingerprint_fn_sql(trigger.rule, fn_sql text)
     RETURNS text
 AS $$
     SELECT format(
         $fn$CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone)
     RETURNS text
 AS $function$
-SELECT 'stub'::text;
+%s
 $function$ LANGUAGE sql STABLE$fn$,
-        trigger.fingerprint_fn_name($1)
+        trigger.fingerprint_fn_name($1),
+        $2
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_fingerprint_fn_sql(trigger.rule)
+    RETURNS text
+AS $$
+    SELECT trigger.create_fingerprint_fn_sql(
+        $1,
+        $fn_body$SELECT now()::text;$fn_body$
     );
 $$ LANGUAGE sql STABLE;
 
@@ -217,8 +204,32 @@ $$ LANGUAGE sql VOLATILE;
 CREATE OR REPLACE FUNCTION trigger.drop_fingerprint_fn_sql(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.fingerprint_fn_name($1));
+SELECT format('DROP FUNCTION IF EXISTS trigger_rule.%I(timestamp with time zone)', trigger.fingerprint_fn_name($1));
 $$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.drop_fingerprint_fn(trigger.rule)
+    RETURNS trigger.rule
+AS $$
+    SELECT public.action($1, trigger.drop_fingerprint_fn_sql($1));
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.set_fingerprint(trigger.rule, fn_sql text)
+    RETURNS trigger.rule
+AS $$
+    SELECT public.action($1, trigger.create_fingerprint_fn_sql($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.set_fingerprint(name, fn_sql text)
+    RETURNS name
+AS $$
+    SELECT
+        public.action($1, trigger.create_fingerprint_fn_sql(rule, $2))
+    FROM trigger.rule
+    WHERE name = $1;
+$$ LANGUAGE sql VOLATILE;
 
 
 --- Function <rule>_runnable
@@ -266,26 +277,28 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
---- Function <rule>_create_notification
-
-CREATE OR REPLACE FUNCTION trigger.notification_fn_name(trigger.rule)
-    RETURNS name
-AS $$
-    SELECT ($1.name || '_create_notification')::name;
-$$ LANGUAGE SQL IMMUTABLE;
+--- Function <rule>_notification_message
 
 
-CREATE OR REPLACE FUNCTION trigger.get_notification_fn_sql(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.get_function_def(schema_name name, fn_name name)
     RETURNS text
 AS $$
 SELECT
-	pg_get_functiondef(oid)
+	pg_get_functiondef(pg_proc.oid)
 FROM pg_proc
-WHERE proname = trigger.notification_fn_name($1);
-$$ LANGUAGE SQL STABLE;
+JOIN pg_namespace ON pg_namespace.oid = pg_proc.pronamespace
+WHERE pg_namespace.nspname = $1 AND proname = $2;
+$$ LANGUAGE sql STABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notification_fn_sql(trigger.rule, expression text)
+CREATE OR REPLACE FUNCTION trigger.get_notification_message_fn_sql(trigger.rule)
+    RETURNS text
+AS $$
+SELECT trigger.get_function_def('trigger_rule', trigger.notification_message_fn_name($1));
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.notification_message_fn_sql(trigger.rule, expression text)
     RETURNS text
 AS $$
 SELECT format(
@@ -294,89 +307,98 @@ SELECT format(
 AS $function$
 SELECT (%s)::text
 $function$ LANGUAGE SQL IMMUTABLE',
-    trigger.notification_fn_name($1),
-    $1.name,
+    trigger.notification_message_fn_name($1),
+    trigger.details_type_name($1),
     $2
 );
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.drop_notification_fn_sql(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.drop_notification_message_fn_sql(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.notification_fn_name($1), $1.name);
+SELECT format(
+    'DROP FUNCTION trigger_rule.%I(trigger_rule.%I)',
+    trigger.notification_message_fn_name($1),
+    trigger.details_type_name($1)
+);
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notification_fn(trigger.rule, expression text)
+CREATE OR REPLACE FUNCTION trigger.create_notification_message_fn(trigger.rule, expression text)
     RETURNS trigger.rule
 AS $$
     SELECT public.action(
         $1,
         ARRAY[
-            trigger.create_notification_fn_sql($1, $2),
-            format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.notification_fn_name($1), $1.name),
-            format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.notification_fn_name($1), $1.name)
+            trigger.notification_message_fn_sql($1, $2),
+            format(
+                'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
+                trigger.notification_message_fn_name($1),
+                trigger.details_type_name($1)
+            ),
+            format(
+                'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
+                trigger.notification_message_fn_name($1),
+                trigger.details_type_name($1)
+            )
         ]
     );
 $$ LANGUAGE SQL VOLATILE;
 
 
---- View <rule>_notification
-
-CREATE OR REPLACE FUNCTION trigger.notification_view_name(trigger.rule)
-    RETURNS name
-AS $$
-    SELECT ($1.name || '_notification')::name;
-$$ LANGUAGE SQL IMMUTABLE;
+--- Function <rule>_notification
 
 
-CREATE OR REPLACE FUNCTION trigger.notification_view_sql(trigger.rule)
+
+CREATE OR REPLACE FUNCTION trigger.notification_fn_sql(trigger.rule)
     RETURNS text
 AS $function$
 SELECT format(
-    'CREATE OR REPLACE VIEW trigger_rule.%I AS
+    'CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone)
+    RETURNS SETOF trigger.notification
+AS $fn$
 SELECT
     n.entity_id,
     n.timestamp,
     COALESCE(exc.weight, trigger_rule.%I(n)) AS weight,
     trigger_rule.%I(n) AS details
-FROM trigger_rule.%I AS n
+FROM trigger_rule.%I($1) AS n
 LEFT JOIN trigger_rule.%I AS exc ON
     exc.entity_id = n.entity_id AND
     exc.start <= n.timestamp AND
-    exc.expires > n.timestamp',
-    trigger.notification_view_name($1),
-    trigger.weight_fn_name($1),
+    exc.expires > n.timestamp $fn$ LANGUAGE sql STABLE',
     trigger.notification_fn_name($1),
+    trigger.weight_fn_name($1),
+    trigger.notification_message_fn_name($1),
     $1.name,
     trigger.exception_weight_table_name($1)
 );
 $function$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.drop_notification_view_sql(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.drop_notification_fn_sql(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP VIEW trigger_rule.%I', trigger.notification_view_name($1));
+SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.notification_fn_name($1));
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notification_view_sql(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.create_notification_fn_sql(trigger.rule)
     RETURNS text[]
 AS $$
 SELECT ARRAY[
-    trigger.notification_view_sql($1),
-    format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.notification_view_name($1)),
-    format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.notification_view_name($1))
+    trigger.notification_fn_sql($1),
+    format('ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin', trigger.notification_fn_name($1)),
+    format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva', trigger.notification_fn_name($1))
 ];
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notification_view(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.create_notification_fn(trigger.rule)
     RETURNS trigger.rule
 AS $$
-SELECT public.action($1, trigger.create_notification_view_sql($1));
+SELECT public.action($1, trigger.create_notification_fn_sql($1));
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -406,23 +428,13 @@ FROM trigger_rule.%I AS n',
 $function$ LANGUAGE SQL IMMUTABLE;
 
 
---- View <rule>_with_threshold
-
-
-CREATE OR REPLACE FUNCTION trigger.get_with_threshold_view_sql(trigger.rule)
-    RETURNS text
-AS $$
-SELECT
-	pg_get_viewdef(oid, true)
-FROM pg_class
-WHERE relname = trigger.with_threshold_view_name($1);
-$$ LANGUAGE SQL STABLE;
+--- Function <rule>_with_threshold
 
 
 CREATE OR REPLACE FUNCTION trigger.get_threshold_defs(trigger.rule)
-    RETURNS SETOF trigger.kpi_def AS
+    RETURNS SETOF trigger.threshold_def AS
 $$
-    SELECT (attname, typname)::trigger.kpi_def
+    SELECT (attname, typname)::trigger.threshold_def
     FROM pg_type
     JOIN pg_attribute ON pg_attribute.atttypid = pg_type.oid
     JOIN pg_class ON pg_class.oid = pg_attribute.attrelid
@@ -435,47 +447,94 @@ $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.with_threshold_view_sql(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.has_thresholds(trigger.rule)
+    RETURNS boolean
+AS $$
+    SELECT EXISTS(
+        SELECT 1
+        FROM pg_class
+        WHERE relname = trigger.threshold_view_name($1) AND relkind = 'v'
+    );
+$$ LANGUAGE sql STABLE;
+
+COMMENT ON FUNCTION trigger.has_thresholds(trigger.rule) IS
+'Return true if there is a view with thresholds for the specified rule';
+
+
+CREATE OR REPLACE FUNCTION trigger.with_threshold_fn_sql_normal(trigger.rule)
     RETURNS text
 AS $$
 SELECT format(
 $view$
-SELECT
-    kpi.*,
-    %s
-FROM trigger_rule.%I AS threshold, trigger_rule.%I AS kpi
+SELECT %s
+FROM trigger_rule.%I AS threshold, trigger_rule.%I($1) AS kpi
 LEFT JOIN trigger_rule.%I exc ON
     exc.entity_id = kpi.entity_id AND
     exc.start <= timestamp AND
     exc.expires > timestamp
 $view$,
-    array_to_string(array_agg(format('COALESCE(exc.%I, threshold.%I) AS %I', kpi.name, kpi.name, 'threshold_' || kpi.name)), ', '),
+    array_to_string(col_def, ','),
     trigger.threshold_view_name($1),
-    trigger.kpi_view_name($1),
+    trigger.kpi_fn_name($1),
     trigger.exception_threshold_table_name($1)
 )
-FROM trigger.get_threshold_defs($1) kpi;
+FROM (
+    SELECT
+        ARRAY['kpi.*']::text[] || array_agg(format('COALESCE(exc.%I, threshold.%I) AS %I', threshold.name, threshold.name, threshold.name)) AS col_def
+    FROM trigger.get_threshold_defs($1) threshold
+) c;
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION trigger.with_threshold_fn_sql_no_thresholds(trigger.rule)
+    RETURNS text
+AS $$
+SELECT format(
+    'SELECT * FROM trigger_rule.%I($1)',
+    trigger.kpi_fn_name($1)
+);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.with_threshold_fn_sql(trigger.rule)
+    RETURNS text
+AS $$
+SELECT CASE WHEN trigger.has_thresholds($1) THEN
+    trigger.with_threshold_fn_sql_normal($1)
+ELSE
+    trigger.with_threshold_fn_sql_no_thresholds($1)
+END;
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_with_threshold_view(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.create_with_threshold_fn(trigger.rule)
     RETURNS trigger.rule
 AS $$
 SELECT public.action(
     $1,
     ARRAY[
-        format('CREATE OR REPLACE VIEW trigger_rule.%I AS %s', trigger.with_threshold_view_name($1), trigger.with_threshold_view_sql($1)),
-        format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.with_threshold_view_name($1)),
-        format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.with_threshold_view_name($1))
+        format(
+            'CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone) RETURNS SETOF trigger_rule.%I AS $fn$%s$fn$ LANGUAGE sql STABLE',
+            trigger.with_threshold_fn_name($1),
+            trigger.details_type_name($1),
+            trigger.with_threshold_fn_sql($1)
+        ),
+        format(
+            'ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin',
+            trigger.with_threshold_fn_name($1)
+        ),
+        format(
+            'GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva',
+            trigger.with_threshold_fn_name($1)
+        )
     ]
 );
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.drop_with_threshold_view_sql(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.drop_with_threshold_fn_sql(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP VIEW trigger_rule.%I', trigger.with_threshold_view_name($1));
+SELECT format('DROP FUNCTION trigger_rule.%I', trigger.with_threshold_view_name($1));
 $$ LANGUAGE SQL IMMUTABLE;
 
 
@@ -502,7 +561,7 @@ CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
 $weight_fn$SELECT (%s)$weight_fn$ LANGUAGE SQL IMMUTABLE;
 $function$,
         trigger.weight_fn_name($1),
-        $1.name,
+        trigger.details_type_name($1),
         $2
     );
 $$ LANGUAGE SQL IMMUTABLE;
@@ -511,7 +570,11 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.drop_weight_fn_sql(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.weight_fn_name($1), $1.name);
+SELECT format(
+    'DROP FUNCTION trigger_rule.%I(trigger_rule.%I)',
+    trigger.weight_fn_name($1),
+    trigger.kpi_type_name($1)
+);
 $$ LANGUAGE SQL IMMUTABLE;
 
 
@@ -557,59 +620,20 @@ SELECT format('DROP TABLE IF EXISTS trigger_rule.%I', trigger.exception_weight_t
 $$ LANGUAGE SQL IMMUTABLE;
 
 
---- Type <rule>_notification_details
-
-CREATE OR REPLACE FUNCTION trigger.notification_type_name(trigger.rule)
-    RETURNS name
-AS $$
-    SELECT ($1.name || '_notification_details')::name;
-$$ LANGUAGE SQL IMMUTABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.create_notification_type_sql(trigger.rule)
-    RETURNS text
-AS $$
-SELECT format(
-    $type$
-    CREATE TYPE trigger_rule.%I AS (
-        entity_id integer,
-        timestamp timestamp with time zone,
-        details text
-    )
-    $type$,
-    trigger.notification_type_name($1)
-);
-$$ LANGUAGE SQL IMMUTABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.drop_notification_type_sql(trigger.rule)
-    RETURNS text
-AS $$
-SELECT format('DROP TYPE IF EXISTS trigger_rule.%I', trigger.notification_type_name($1));
-$$ LANGUAGE SQL IMMUTABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.create_notification_type(trigger.rule)
-    RETURNS trigger.rule
-AS $$
-    SELECT public.action(
-        $1,
-        trigger.create_notification_type_sql($1)
-    );
-$$ LANGUAGE SQL VOLATILE;
+--- Notification fn setting
 
 
 CREATE OR REPLACE FUNCTION trigger.define_notification(name, expression text)
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.create_notification_fn(trigger.get_rule($1), $2);
+    SELECT trigger.create_notification_message_fn(trigger.get_rule($1), $2);
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_dummy_notification_fn(trigger.rule)
+CREATE OR REPLACE FUNCTION trigger.create_dummy_notification_message_fn(trigger.rule)
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.create_notification_fn($1, quote_literal($1.name));
+    SELECT trigger.create_notification_message_fn($1, quote_literal($1.name));
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -632,26 +656,28 @@ $$ LANGUAGE plpgsql STABLE;
 
 --- Table <rule>_exception_threshold
 
-CREATE OR REPLACE FUNCTION trigger.create_exception_threshold_table_sql(trigger.rule, name[])
+CREATE OR REPLACE FUNCTION trigger.create_exception_threshold_table_sql(trigger.rule, trigger.threshold_def[])
     RETURNS text AS
 $$
 SELECT format(
-    'CREATE TABLE trigger_rule.%I
-    (
-        id serial,
-        entity_id integer references directory.entity(id),
-        created timestamp with time zone default now(),
-        start timestamp with time zone,
-        expires timestamp with time zone,
-        remark text,
-        %s
-    );',
+    'CREATE TABLE trigger_rule.%I(%s);',
     trigger.exception_threshold_table_name($1),
-    array_to_string(array_agg(quote_ident(kpi.name) || ' ' || kpi.data_type), ', ')
+    array_to_string(col_def, ',')
 )
 FROM (
-    SELECT (trigger.get_kpi_def($1, kpi_name)).* FROM unnest($2) kpi_name
-) kpi;
+    SELECT
+        ARRAY[
+            'id serial',
+            'entity_id integer',
+            'created timestamp with time zone default now()',
+            'start timestamp with time zone',
+            'expires timestamp with time zone',
+            'remark text'
+        ]::text[] ||
+        array_agg(quote_ident(threshold.name) || ' ' || threshold.data_type) AS col_def
+    FROM unnest($2) threshold
+) c;
+
 $$ LANGUAGE SQL STABLE;
 
 
@@ -662,7 +688,7 @@ SELECT format('DROP TABLE IF EXISTS trigger_rule.%I', trigger.exception_threshol
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_exception_threshold_table(trigger.rule, name[])
+CREATE OR REPLACE FUNCTION trigger.create_exception_threshold_table(trigger.rule, trigger.threshold_def[])
     RETURNS trigger.rule AS
 $$
 SELECT public.action($1, trigger.create_exception_threshold_table_sql($1, $2));
@@ -686,7 +712,7 @@ $$
     JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
     WHERE
     nspname = 'trigger_rule' AND
-    relname = "trigger".kpi_view_name($1) AND
+    relname = "trigger".kpi_type_name($1) AND
     attnum > 0 AND
     NOT attname IN ('entity_id', 'timestamp') AND
     NOT pg_attribute.attisdropped;
@@ -702,29 +728,6 @@ AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION trigger.set_thresholds(trigger.rule, exprs text)
-    RETURNS trigger.rule
-AS $$
-    SELECT public.action(
-        $1,
-        ARRAY[
-            format(
-                'CREATE OR REPLACE VIEW trigger_rule.%I AS '
-                'SELECT %s',
-                trigger.threshold_view_name($1),
-                $2
-            ),
-            format(
-                'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin',
-                trigger.threshold_view_name($1)
-            ),
-            format(
-                'GRANT SELECT ON trigger_rule.%I TO minerva',
-                trigger.threshold_view_name($1)
-            )
-        ]
-    );
-$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE OR REPLACE FUNCTION trigger.create_set_thresholds_fn_sql(trigger.rule)
@@ -758,7 +761,7 @@ CREATE OR REPLACE FUNCTION trigger.drop_set_thresholds_fn_sql(trigger.rule)
     RETURNS text
 AS $$
 SELECT format(
-    'DROP FUNCTION trigger_rule.%I(%s)',
+    'DROP FUNCTION IF EXISTS trigger_rule.%I(%s)',
     trigger.set_thresholds_fn_name($1),
     array_to_string(array_agg(format('%s', t.data_type)), ', ')
 )
@@ -769,8 +772,33 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.drop_thresholds_view_sql(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP VIEW trigger_rule.%I', trigger.threshold_view_name($1))
+SELECT format('DROP VIEW IF EXISTS trigger_rule.%I', trigger.threshold_view_name($1))
 $$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.set_thresholds(trigger.rule, exprs text)
+    RETURNS trigger.rule
+AS $$
+    SELECT public.action(
+        $1,
+        ARRAY[
+            format(
+                'CREATE OR REPLACE VIEW trigger_rule.%I AS '
+                'SELECT %s',
+                trigger.threshold_view_name($1),
+                $2
+            ),
+            format(
+                'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin',
+                trigger.threshold_view_name($1)
+            ),
+            format(
+                'GRANT SELECT ON trigger_rule.%I TO minerva',
+                trigger.threshold_view_name($1)
+            )
+        ]
+    );
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE OR REPLACE FUNCTION trigger.set_thresholds(name, exprs text)
@@ -780,15 +808,13 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_dummy_thresholds(trigger.rule, name[])
+CREATE OR REPLACE FUNCTION trigger.create_dummy_thresholds(trigger.rule, trigger.threshold_def[])
     RETURNS trigger.rule
 AS $$
     SELECT trigger.set_thresholds(
         $1,
-        array_to_string(array_agg(format('NULL::%I %I', kpi.data_type, kpi.name)), ', ')
-    ) FROM (
-        SELECT (trigger.get_kpi_def($1, kpi_name)).* FROM unnest($2) kpi_name
-    ) kpi;
+        array_to_string(array_agg(format('NULL::%s %I', threshold.data_type, threshold.name)), ', ')
+    ) FROM unnest($2) threshold;
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -799,8 +825,16 @@ AS $$
         $1,
         ARRAY[
             trigger.weight_fn_sql($1, $2),
-            format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.weight_fn_name($1), $1.name),
-            format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.weight_fn_name($1), $1.name)
+            format(
+                'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
+                trigger.weight_fn_name($1),
+                trigger.details_type_name($1)
+            ),
+            format(
+                'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
+                trigger.weight_fn_name($1),
+                trigger.details_type_name($1)
+            )
         ]
     );
 $$ LANGUAGE SQL VOLATILE;
@@ -900,7 +934,35 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, notification.notificationstore, timestamp with time zone)
+CREATE FUNCTION trigger.function_oid(
+        obj_schema name, obj_name name, signature text[])
+    RETURNS oid
+AS $$
+SELECT
+    bar.oid
+FROM (
+    SELECT foo.oid, array_agg(dep_recurse.type_to_char(foo.t)) sig
+    FROM (
+        SELECT pg_proc.oid, unnest(pg_proc.proargtypes) t
+        FROM pg_proc
+        JOIN pg_namespace ON pg_namespace.oid = pg_proc.pronamespace
+        WHERE nspname = $1 AND proname = $2
+    ) foo
+    JOIN pg_type ON foo.t = pg_type.oid
+    GROUP BY foo.oid
+) bar
+WHERE bar.sig = $3;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.has_notification_function(trigger.rule)
+    RETURNS boolean
+AS $$
+SELECT trigger.function_oid('trigger_rule', trigger.notification_fn_name($1), ARRAY['pg_catalog.timestamptz']::text[]) IS NOT NULL;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_notifications_classic(trigger.rule, notification.notificationstore, timestamp with time zone)
     RETURNS integer
 AS $$
 DECLARE
@@ -917,7 +979,7 @@ $query$
 INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
 (SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I WHERE timestamp = $2)
 $query$,
-        notification.staging_table_name($2), trigger.notification_view_name($1)
+        notification.staging_table_name($2), trigger.notification_fn_name($1)
     )
     USING $1.id, $3;
 
@@ -926,6 +988,45 @@ $query$,
     RETURN num_rows;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_notifications_new(trigger.rule, notification.notificationstore, timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    num_rows integer;
+BEGIN
+    IF $2 IS NULL THEN
+        RAISE EXCEPTION 'no notificationstore specified';
+    END IF;
+
+    PERFORM trigger.set_state($1, $3);
+
+    EXECUTE format(
+$query$
+INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
+(SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I($2))
+$query$,
+        notification.staging_table_name($2), trigger.notification_fn_name($1)
+    )
+    USING $1.id, $3;
+
+    SELECT trigger.transfer_notifications_from_staging($2) INTO num_rows;
+
+    RETURN num_rows;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, notification.notificationstore, timestamp with time zone)
+    RETURNS integer
+AS $$
+SELECT CASE WHEN trigger.has_notification_function($1) THEN
+    trigger.create_notifications_new($1, $2, $3)
+ELSE
+    trigger.create_notifications_classic($1, $2, $3)
+END;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, timestamp with time zone)
@@ -1016,30 +1117,153 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.setup_rule(trigger.rule, kpi_sql text, name[], sql text)
+-- Type <rule>_details
+
+CREATE OR REPLACE FUNCTION trigger.create_details_type_sql(trigger.rule, trigger.threshold_def[])
+    RETURNS text
+AS $$
+    SELECT format(
+        'CREATE TYPE trigger_rule.%I AS ('
+        '%s'
+        ');',
+        trigger.details_type_name($1),
+        array_to_string(
+            array_agg(format('%I %s', (c.col).name, (c.col).data_type)),
+            ','
+        )
+    ) FROM (
+        SELECT unnest(
+            ARRAY[
+                ('entity_id', 'integer'),
+                ('timestamp', 'timestamp with time zone')
+            ]::trigger.threshold_def[]
+        ) AS col
+        UNION ALL
+        SELECT (kpi.name, kpi.data_type)::trigger.threshold_def AS col
+        FROM trigger.get_kpi_defs($1) kpi
+        UNION ALL
+        SELECT unnest($2) AS col
+    ) c;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.drop_details_type_sql(trigger.rule)
+    RETURNS text
+AS $$
+    SELECT format('DROP TYPE IF EXISTS trigger_rule.%I;', trigger.details_type_name($1));
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_details_type(trigger.rule, trigger.threshold_def[])
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.create_kpi_view($1, $2);
-    SELECT trigger.create_dummy_thresholds($1, $3);
-    SELECT trigger.create_exception_threshold_table($1, $3);
-    SELECT trigger.create_with_threshold_view($1);
+SELECT public.action($1, trigger.create_details_type_sql($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.drop_details_type(trigger.rule)
+    RETURNS trigger.rule
+AS $$
+SELECT public.action($1, trigger.drop_details_type_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_kpi_type_sql(trigger.rule, trigger.kpi_def[])
+    RETURNS text
+AS $$
+    SELECT format(
+        'CREATE TYPE trigger_rule.%I AS ('
+        '%s'
+        ');',
+        trigger.kpi_type_name($1),
+        array_to_string(
+            array_agg(format('%I %s', col.name, col.data_type)),
+            ','
+        )
+    ) FROM unnest(
+        ARRAY[
+            ('entity_id', 'integer'),
+            ('timestamp', 'timestamp with time zone')
+        ]::trigger.kpi_def[] || $2
+    ) col;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.drop_kpi_type_sql(trigger.rule)
+    RETURNS text
+AS $$
+    SELECT format('DROP TYPE IF EXISTS trigger_rule.%I', trigger.kpi_type_name($1));
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.create_kpi_type(trigger.rule, trigger.kpi_def[])
+    RETURNS trigger.rule
+AS $$
+    SELECT public.action($1, trigger.create_kpi_type_sql($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+COMMENT ON FUNCTION trigger.create_kpi_type(trigger.rule, trigger.kpi_def[]) IS
+'Create a type for the function returning KPI records';
+
+
+CREATE OR REPLACE FUNCTION trigger.define_thresholds(trigger.rule, trigger.threshold_def[])
+    RETURNS trigger.rule
+AS $$
+    SELECT trigger.create_details_type($1, $2);
+    SELECT CASE WHEN array_length($2, 1) > 0 THEN
+        trigger.create_dummy_thresholds($1, $2)
+    END;
+    SELECT CASE WHEN array_length($2, 1) > 0 THEN
+        trigger.create_set_thresholds_fn($1)
+    END;
+    SELECT trigger.create_exception_threshold_table($1, $2);
+    SELECT trigger.create_with_threshold_fn($1);
+$$ LANGUAGE SQL VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.set_condition(trigger.rule, sql text)
+    RETURNS trigger.rule
+AS $$
+    SELECT trigger.create_rule_fn($1, trigger.rule_fn_sql($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.set_condition(name, sql text)
+    RETURNS trigger.rule
+AS $$
+    SELECT trigger.set_condition(rule, $2)
+    FROM trigger.rule WHERE name = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.setup_rule(trigger.rule, trigger.kpi_def[], trigger.threshold_def[])
+    RETURNS trigger.rule
+AS $$
+    SELECT trigger.create_kpi_type($1, $2);
+    SELECT trigger.define_thresholds($1, $3);
     SELECT trigger.create_exception_weight_table($1);
-    SELECT trigger.create_rule_view($1, trigger.rule_view_sql($1, $4));
-    SELECT trigger.create_notification_type($1);
     SELECT trigger.create_dummy_default_weight($1);
-    SELECT trigger.create_dummy_notification_fn($1);
-    SELECT trigger.create_notification_view($1);
-    SELECT trigger.create_set_thresholds_fn($1);
+    SELECT trigger.create_dummy_notification_message_fn($1);
+    SELECT trigger.set_condition($1, 'true');
+    SELECT trigger.create_notification_fn($1);
     SELECT trigger.create_fingerprint_fn($1);
     SELECT trigger.create_runnable_fn($1);
-$$ LANGUAGE SQL VOLATILE;
+$$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_rule(name, kpi_sql text, name[], sql text)
+CREATE OR REPLACE FUNCTION trigger.create_rule(name, trigger.kpi_def[], trigger.threshold_def[])
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.setup_rule(trigger.define($1), $2, $3, $4);
+    SELECT trigger.setup_rule(trigger.define($1), $2, $3);
 $$ LANGUAGE SQL VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.drop_kpi_fn_sql(trigger.rule)
+    RETURNS text
+AS $$
+    SELECT format('DROP FUNCTION IF EXISTS trigger_rule.%I(timestamp with time zone)', trigger.kpi_fn_name($1));
+$$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE OR REPLACE FUNCTION trigger.cleanup_rule(trigger.rule)
@@ -1049,10 +1273,11 @@ AS $$
         $1,
         ARRAY[
             trigger.drop_runnable_fn_sql($1),
-            trigger.drop_fingerprint_fn($1),
+            trigger.drop_fingerprint_fn_sql($1),
             trigger.drop_set_thresholds_fn_sql($1),
-            trigger.drop_rule_view_sql($1),
-            trigger.drop_kpi_view_sql($1),
+            trigger.drop_rule_fn_sql($1),
+            trigger.drop_kpi_fn_sql($1),
+            trigger.drop_kpi_type_sql($1),
             -- trigger.drop_notification_fn_sql($1),
             -- trigger.drop_notification_view_sql($1),
             -- trigger.drop_with_threshold_view_sql($1),
@@ -1060,7 +1285,8 @@ AS $$
             trigger.drop_exception_weight_table_sql($1),
             trigger.drop_thresholds_view_sql($1),
             trigger.drop_exception_threshold_table_sql($1),
-            trigger.drop_notification_type_sql($1)
+            trigger.drop_notification_type_sql($1),
+            trigger.drop_details_type_sql($1)
         ]
     );
 $$ LANGUAGE sql VOLATILE;
@@ -1077,6 +1303,15 @@ $$ LANGUAGE SQL VOLATILE;
 COMMENT ON FUNCTION trigger.tag(character varying, rule_id integer)
 IS 'Add tag with name tag_name to rule with id rule_id.
 The tag must already exist.';
+
+
+CREATE OR REPLACE FUNCTION trigger.tag(tag_name character varying, rule_name name)
+    RETURNS trigger.rule_tag_link
+AS $$
+    SELECT trigger.tag($1, rule.id)
+    FROM trigger.rule
+    WHERE name = $2;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trigger.truncate(timestamp with time zone, interval)
@@ -1105,3 +1340,44 @@ AS $$
     ) gs(ts)
     WHERE ts >= now() - $1.default_interval;
 $$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.contains_null(anyarray)
+    RETURNS boolean
+AS $$
+SELECT EXISTS (
+    SELECT 1
+    FROM unnest($1) x
+    WHERE x IS NULL
+);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.modified_to_fingerprint(timestamp with time zone[])
+    RETURNS text
+AS $$
+SELECT CASE
+WHEN trigger.contains_null($1) THEN
+    NULL
+WHEN array_length($1, 1) = 0 THEN
+    NULL
+ELSE
+    (
+        SELECT '[' || array_to_string(array_agg(format('"%s"', t)), ',') || ']' FROM unnest($1) t
+    )
+END;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.fingerprint(trigger.rule, timestamp with time zone)
+    RETURNS text
+AS $$
+DECLARE
+    result text;
+BEGIN
+    EXECUTE format('SELECT trigger_rule.%I($1)', trigger.fingerprint_fn_name($1)) INTO result USING $2;
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql STABLE;
+

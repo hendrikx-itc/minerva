@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(2);
+SELECT plan(3);
 
 SELECT notification.create_notificationstore(
     'test-source',
@@ -12,37 +12,45 @@ SELECT notification.create_notificationstore(
     ]::notification.attr_def[]
 );
 
+CREATE FUNCTION trigger_rule."simple-trigger_kpi"(timestamp with time zone)
+    RETURNS TABLE(entity_id integer, "timestamp" timestamp with time zone, x integer)
+AS $$
+SELECT * FROM (
+    SELECT
+        entity_id::integer,
+        timestamp::timestamp with time zone,
+        x::integer
+    FROM (VALUES
+        (10, '2015-06-21 00:00+00', 44),
+        (11, '2015-06-21 00:00+00', 45),
+        (12, '2015-06-21 00:00+00', 46),
+        (10, '2015-06-22 00:00+00', 41),
+        (11, '2015-06-22 00:00+00', 42),
+        (12, '2015-06-22 00:00+00', 43)
+    ) AS t(entity_id, timestamp, x)
+) foo WHERE timestamp = $1;
+$$ LANGUAGE sql STABLE;
+
+
 SELECT trigger.create_rule(
     'simple-trigger',
-$$
-SELECT
-    entity_id::integer,
-    timestamp::timestamp with time zone,
-    x::integer
-FROM (VALUES
-    (9,  '2015-06-21 00:00+00', 45),
-    (10, '2015-06-22 00:00+00', 42)
-) AS t(entity_id, timestamp, x)
-$$,
-ARRAY['x'],
-$$
-    x > threshold_x
-$$);
+    ARRAY[('x', 'integer')]::trigger.kpi_def[],
+    ARRAY[('max_x', 'integer')]::trigger.threshold_def[]
+);
+
+SELECT trigger.set_condition(rule, 'x <= max_x') FROM trigger.rule WHERE name = 'simple-trigger';
 
 SELECT trigger_rule."simple-trigger_set_thresholds"(42);
 
-UPDATE trigger.rule SET notificationstore_id = (SELECT id FROM notification.notificationstore WHERE notificationstore::text = 'test-source')
-WHERE name = 'simple-trigger';
+SELECT is(count(*), 2::bigint) FROM trigger_rule."simple-trigger_notification"('2015-06-22 00:00+00'::timestamptz);
 
-SELECT is(count(*), 1::bigint)
-FROM trigger_rule."simple-trigger_notification";
+SELECT ok(now() - trigger.fingerprint(rule, '2015-07-02 16:00')::timestamptz < interval '1 minute')
+FROM trigger.rule WHERE name = 'simple-trigger';
 
-SELECT trigger.create_notifications('simple-trigger', '2015-06-21 00:00+00'::timestamp with time zone);
+UPDATE trigger.rule SET notificationstore_id = notificationstore.id FROM notification.notificationstore WHERE name = 'simple-trigger' AND notificationstore::text = 'test-source';
 
-SELECT is(fingerprint, 'stub')
-FROM trigger.rule_state
-JOIN trigger.rule ON rule.id = rule_state.rule_id
-WHERE rule.name = 'simple-trigger';
+SELECT is(2, trigger.create_notifications('simple-trigger', '2015-06-22 00:00+00'::timestamptz));
 
 SELECT * FROM finish();
 ROLLBACK;
+
