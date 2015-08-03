@@ -10,6 +10,7 @@ FROM (
         FROM trend.attribute_to_trend s
         LEFT JOIN trend.attribute_to_trend_state att ON att.attribute_to_trend_id = s.id AND att.timestamp = trend.get_most_recent_timestamp(s.granularity, now())
         LEFT JOIN attribute_directory.attributestore_modified m ON m.attributestore_id = s.attributestore_id
+        WHERE s.enabled
 ) foo;
 
 GRANT SELECT ON trend.attribute_to_trend_todo TO minerva;
