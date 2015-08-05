@@ -175,3 +175,30 @@ ALTER TABLE ONLY attribute_directory.attributestore_compacted
 
 GRANT SELECT ON TABLE attribute_directory.attributestore_compacted TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE attribute_directory.attributestore_compacted TO minerva_writer;
+
+
+-- Table 'attribute_directory.sampled_view_materialization'
+
+CREATE TABLE attribute_directory.sampled_view_materialization (
+    id serial PRIMARY KEY,
+    attributestore_id integer references attribute_directory.attributestore(id) ON DELETE CASCADE,
+    view_class oid,
+    fingerprint_proc oid
+);
+
+ALTER TABLE attribute_directory.sampled_view_materialization OWNER TO minerva_admin;
+
+GRANT SELECT ON TABLE attribute_directory.sampled_view_materialization TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE attribute_directory.sampled_view_materialization TO minerva_writer;
+
+
+-- Table 'attribute_directory.sampled_view_materialization_state'
+
+CREATE TABLE attribute_directory.sampled_view_materialization_state (
+    materialization_id integer references attribute_directory.sampled_view_materialization(id) ON DELETE CASCADE PRIMARY KEY,
+    fingerprint text
+);
+
+GRANT SELECT ON TABLE attribute_directory.sampled_view_materialization_state TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE attribute_directory.sampled_view_materialization_state TO minerva_writer;
+

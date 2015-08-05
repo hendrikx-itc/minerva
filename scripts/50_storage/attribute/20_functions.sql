@@ -13,6 +13,15 @@ AS $$
 $$ LANGUAGE SQL STABLE STRICT;
 
 
+CREATE OR REPLACE FUNCTION attribute_directory.to_char(attribute_directory.sampled_view_materialization)
+    RETURNS text
+AS $$
+    SELECT $1.view_class::regclass::text || ' -> ' || attributestore::text
+    FROM attribute_directory.attributestore
+    WHERE id = $1.attributestore_id;
+$$ LANGUAGE SQL STABLE STRICT;
+
+
 CREATE OR REPLACE FUNCTION attribute_directory.to_table_name(attribute_directory.attributestore)
     RETURNS name
 AS $$
@@ -509,7 +518,7 @@ BEGIN
             'ALTER TABLE attribute_history.%I '
             'OWNER TO minerva_writer',
             view_name
-        ), 
+        ),
         format('GRANT SELECT ON TABLE attribute_history.%I TO minerva', view_name)
     ];
 END;
@@ -1088,18 +1097,22 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION attribute_directory.add_attribute(attribute_directory.attributestore, name name, datatype character varying, description text)
+    RETURNS attribute_directory.attribute
+AS $$
+    INSERT INTO attribute_directory.attribute(attributestore_id, name, datatype, description)
+    VALUES ($1.id, $2, $3, $4) RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION attribute_directory.add_attributes(attribute_directory.attributestore, attributes attribute_directory.attribute_descr[])
     RETURNS attribute_directory.attributestore
 AS $$
-BEGIN
-    INSERT INTO attribute_directory.attribute(attributestore_id, name, datatype, description) (
-        SELECT $1.id, name, datatype, description
-	FROM unnest($2) atts
-    );
+    SELECT attribute_directory.add_attribute($1, name, datatype, description)
+    FROM unnest($2);
 
-    RETURN $1;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION attribute_directory.create_attributestore(datasource_name text, entitytype_name text, attributes attribute_directory.attribute_descr[])
@@ -1243,7 +1256,7 @@ BEGIN
 
     EXECUTE format('UPDATE attribute_history.%I a SET modified = now(), %s FROM attribute_staging.%I m WHERE m.entity_id = a.entity_id AND m.timestamp = a.timestamp', table_name, set_columns_part, table_name || '_modified');
 
-    EXECUTE format('TRUNCATE attribute_staging.%I', table_name);
+    EXECUTE format('DELETE FROM attribute_staging.%I', table_name);
 
     RETURN $1;
 END;
@@ -1475,7 +1488,7 @@ CREATE OR REPLACE FUNCTION attribute_directory.dependers(name name, level intege
 AS $$
     SELECT (d.dependers).* FROM (
         SELECT attribute_directory.dependers(depender, $2 + 1)
-        FROM attribute_directory.direct_dependers($1) depender 
+        FROM attribute_directory.direct_dependers($1) depender
     ) d
     UNION ALL
     SELECT depender, $2
@@ -1767,3 +1780,185 @@ BEGIN
 
     RETURN store;
 END; $$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.get_attributes(oid)
+    RETURNS SETOF attribute_directory.attribute_descr
+AS $$
+    SELECT (attname, format_type(atttypid, atttypmod), 'description')::attribute_directory.attribute_descr
+    FROM pg_attribute
+    WHERE attrelid = $1::oid AND NOT attname = ANY(ARRAY['entity_id', 'timestamp'])
+    ORDER BY attnum;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.create_attributestore_from_view(
+        oid, datasource_name text, entitytype_name text)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT attribute_directory.create_attributestore(
+        $2,
+        $3,
+        array_agg(attribute)
+    ) FROM attribute_directory.get_attributes($1) attribute;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.define_sampled_view_materialization(attributestore_id integer, view_class oid, fingerprint_proc oid)
+    RETURNS attribute_directory.sampled_view_materialization
+AS $$
+    INSERT INTO attribute_directory.sampled_view_materialization(attributestore_id, view_class, fingerprint_proc)
+    VALUES ($1, $2, $3) RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.create_sampled_view_materialization(oid, datasource_name text, entitytype_name text)
+    RETURNS attribute_directory.sampled_view_materialization
+AS $$
+    SELECT attribute_directory.define_sampled_view_materialization(
+        (attribute_directory.create_attributestore_from_view($1, $2, $3)).id,
+        $1
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.get_attributes(attribute_directory.attributestore)
+    RETURNS SETOF attribute_directory.attribute
+AS $$
+    SELECT * FROM attribute_directory.attribute WHERE attributestore_id = $1.id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.view_to_attribute_staging_sql(oid, attribute_directory.attributestore)
+    RETURNS text
+AS $$
+    SELECT format(
+        'INSERT INTO attribute_staging.%1$I(%2$s) SELECT %2$s FROM %3$s',
+        $2::text,
+        array_to_string(ARRAY['entity_id', 'timestamp']::text[] || array_agg(quote_ident(attribute.name)), ', '),
+        $1::regclass::text
+    )
+    FROM attribute_directory.attribute
+    WHERE attributestore_id = $2.id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.stage_sample(attribute_directory.sampled_view_materialization)
+    RETURNS attribute_directory.sampled_view_materialization
+AS $$
+    SELECT public.action(
+        $1,
+        attribute_directory.view_to_attribute_staging_sql($1.view_class, attributestore)
+    )
+    FROM attribute_directory.attributestore
+    WHERE id = $1.attributestore_id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.get_attributestore(attribute_directory.sampled_view_materialization)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT *
+    FROM attribute_directory.attributestore
+    WHERE id = $1.attributestore_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.attributestore_modified(attributestore_name text)
+    RETURNS timestamp with time zone
+AS $$
+SELECT modified
+FROM attribute_directory.attributestore_modified m
+JOIN attribute_directory.attributestore s ON s.id = m.attributestore_id
+WHERE s::text = $1;
+$$ LANGUAGE sql STABLE;
+
+COMMENT ON FUNCTION attribute_directory.attributestore_modified(attributestore_name text) IS
+'Return modified timestamp of attributestore as recorded in
+attribute_directory.attributestore_modified table';
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.attributestore_fingerprint(attributestore_name text)
+    RETURNS text
+AS $$
+    SELECT format(
+        '%s: %s', $1, attribute_directory.attributestore_modified($1)
+    );
+$$ LANGUAGE sql STABLE;
+
+COMMENT ON FUNCTION attribute_directory.attributestore_fingerprint(attributestore_name text) IS
+'Return easily readable fingerprint text containing the name of the
+attributestore and the modified timestamp';
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.insert_state(attribute_directory.sampled_view_materialization, text)
+    RETURNS text
+AS $$
+    INSERT INTO attribute_directory.sampled_view_materialization_state(materialization_id, fingerprint)
+    VALUES ($1.id, $2)
+    RETURNING fingerprint;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.update_state(attribute_directory.sampled_view_materialization, text)
+    RETURNS text
+AS $$
+    UPDATE attribute_directory.sampled_view_materialization_state
+    SET fingerprint = $2
+    WHERE materialization_id = $1.id
+    RETURNING fingerprint;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.store_state(attribute_directory.sampled_view_materialization, text)
+    RETURNS text
+AS $$
+    SELECT COALESCE(
+        attribute_directory.update_state($1, $2), attribute_directory.insert_state($1, $2)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.fingerprint(attribute_directory.sampled_view_materialization)
+    RETURNS text
+AS $$
+DECLARE
+    fingerprint text;
+BEGIN
+    EXECUTE format('SELECT %s()', $1.fingerprint_proc::regproc::text) INTO fingerprint;
+
+    RETURN fingerprint;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.store_state(attribute_directory.sampled_view_materialization)
+    RETURNS attribute_directory.sampled_view_materialization
+AS $$
+    SELECT attribute_directory.store_state($1, attribute_directory.fingerprint($1));
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.materialize(attribute_directory.sampled_view_materialization)
+    RETURNS attribute_directory.sampled_view_materialization
+AS $$
+    SELECT attribute_directory.transfer_staged(
+        attribute_directory.get_attributestore(
+            attribute_directory.store_state(
+                attribute_directory.stage_sample($1)
+            )
+        )
+    );
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE VIEW attribute_directory.sampled_view_materialization_runnable AS
+SELECT svam.*
+FROM attribute_directory.sampled_view_materialization svam
+LEFT JOIN attribute_directory.sampled_view_materialization_state state ON svam.id = state.materialization_id
+WHERE state.fingerprint IS NULL OR state.fingerprint <> attribute_directory.fingerprint(svam);
+
