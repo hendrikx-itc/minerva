@@ -1977,13 +1977,6 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE VIEW attribute_directory.sampled_view_materialization_runnable AS
-SELECT svam.*
-FROM attribute_directory.sampled_view_materialization svam
-LEFT JOIN attribute_directory.sampled_view_materialization_state state ON svam.id = state.materialization_id
-WHERE state.fingerprint IS NULL OR state.fingerprint <> attribute_directory.fingerprint(svam);
-
-
 CREATE OR REPLACE FUNCTION attribute_directory.remove_attribute(attribute_directory.attributestore, name)
     RETURNS dep_recurse.obj_ref
 AS $$
