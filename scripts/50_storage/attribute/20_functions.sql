@@ -1054,6 +1054,27 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION attribute_directory.remove_attribute_column(attribute_directory.attributestore, name)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT public.action(
+        $1,
+        ARRAY[
+            format('SELECT attribute_directory.drop_dependees(attributestore) FROM attribute_directory.attributestore WHERE id = %s', $1.id),
+            format('ALTER TABLE attribute_base.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+            format('SELECT attribute_directory.create_dependees(attributestore) FROM attribute_directory.attributestore WHERE id = %s', $1.id)
+        ]
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+COMMENT ON FUNCTION attribute_directory.remove_attribute_column(attribute_directory.attributestore, name) IS
+'Remove named column from the attributestore and update all attributestore '
+'system functions dependent on the columns (e.g.: hash function). Possible '
+'other/user defined functions dependent on the columns in the attributestore '
+'are outside of the scope of this function.';
+
+
 CREATE OR REPLACE FUNCTION attribute_directory.get_attributestore(datasource_id integer, entitytype_id integer)
     RETURNS attribute_directory.attributestore
 AS $$
@@ -1961,4 +1982,35 @@ SELECT svam.*
 FROM attribute_directory.sampled_view_materialization svam
 LEFT JOIN attribute_directory.sampled_view_materialization_state state ON svam.id = state.materialization_id
 WHERE state.fingerprint IS NULL OR state.fingerprint <> attribute_directory.fingerprint(svam);
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.remove_attribute(attribute_directory.attributestore, name)
+    RETURNS dep_recurse.obj_ref
+AS $$
+    DELETE FROM attribute_directory.attribute WHERE attributestore_id = $1.id AND name = $2;
+
+    SELECT dep_recurse.alter(
+        dep_recurse.table_ref('attribute_base', $1::text::name),
+        ARRAY[
+            format('SELECT attribute_directory.remove_attribute_column(attributestore, %L) FROM attribute_directory.attributestore WHERE id = %s', $2, $1.id)
+        ],
+        attribute_directory.dependees($1)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.remove_attribute(attribute_directory.attribute)
+    RETURNS dep_recurse.obj_ref
+AS $$
+    DELETE FROM attribute_directory.attribute WHERE id = $1.id;
+
+    SELECT dep_recurse.alter(
+        dep_recurse.table_ref('attribute_base', attributestore::text::name),
+        ARRAY[
+            format('SELECT attribute_directory.remove_attribute_column(attributestore, %L) FROM attribute_directory.attributestore WHERE id = %s', $1.name, $1.attributestore_id)
+        ],
+        attribute_directory.dependees(attributestore)
+    )
+    FROM attribute_directory.attributestore WHERE id = $1.attributestore_id;
+$$ LANGUAGE sql VOLATILE;
 
