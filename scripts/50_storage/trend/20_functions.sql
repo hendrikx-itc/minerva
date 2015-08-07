@@ -1410,6 +1410,14 @@ AS $$
         format(
             'GRANT SELECT ON trend.%I TO minerva',
             trend.attribute_at_trend_ptr_table_name($1)
+        ),
+        format(
+            'GRANT INSERT, DELETE, UPDATE ON trend.%I TO minerva_writer',
+            trend.attribute_at_trend_ptr_table_name($1)
+        ),
+        format(
+            'CREATE INDEX ON trend.%I (timestamp, entity_id)',
+            trend.attribute_at_trend_ptr_table_name($1)
         )
     ];
 $$ LANGUAGE sql STABLE;
@@ -1519,6 +1527,43 @@ AS $$
 
     SELECT $1;
 $$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.attribute_at_updated(attribute_to_trend_id integer, "timestamp" timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+    SELECT processed_modified
+    FROM trend.attribute_to_trend_state
+    WHERE attribute_to_trend_id = $1 AND timestamp = $2;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend.get_trendstore(trend.attribute_to_trend)
+    RETURNS trend.trendstore
+AS $$
+    SELECT trendstore
+    FROM attribute_directory.attributestore
+    JOIN directory.datasource ON datasource.id = attributestore.datasource_id
+    JOIN directory.datasource trendstore_datasource ON trendstore_datasource.name = ('attribute_' || datasource.name)
+    JOIN trend.trendstore ON trendstore.entitytype_id = attributestore.entitytype_id AND trendstore.datasource_id = trendstore_datasource.id AND trendstore.granularity = $1.granularity
+    WHERE attributestore.id = $1.attributestore_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend.get_attribute_to_trend(trend.trendstore)
+    RETURNS trend.attribute_to_trend
+AS $$
+    SELECT attribute_to_trend
+    FROM trend.attribute_to_trend
+    WHERE (trend.get_trendstore(attribute_to_trend)).id = $1.id
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend.attribute_at_updated(trend.trendstore, "timestamp" timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+    SELECT trend.attribute_at_updated((trend.get_attribute_to_trend($1)).id, $2);
+$$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION trend.update_attribute_at_ptr(trend.attribute_to_trend, timestamp with time zone)
@@ -1640,5 +1685,25 @@ AS $$
     SELECT attributestore::text || ' -> ' || 'attribute_' || attributestore::text || '_' || $1.granularity
     FROM attribute_directory.attributestore
     WHERE id = $1.attributestore_id;
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.modified(trend.trendstore, timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+    select "end"
+    from trend.modified
+    join trend.partition p on p.table_name = modified.table_name
+    where
+        p.trendstore_id = $1.id
+        and
+        modified.timestamp = $2
+$$ LANGUAGE sql;
+
+
+CREATE FUNCTION trend.to_trendstore(text)
+    RETURNS trend.trendstore
+AS $$
+SELECT * FROM trend.trendstore WHERE trendstore::text = $1;
 $$ LANGUAGE sql;
 

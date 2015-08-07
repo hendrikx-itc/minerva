@@ -292,7 +292,8 @@ GRANT INSERT,DELETE,UPDATE ON TABLE trend.to_be_vacuumed TO minerva_writer;
 CREATE TABLE trend.attribute_to_trend (
     id serial PRIMARY KEY,
     attributestore_id integer REFERENCES attribute_directory.attributestore(id),
-    granularity varchar not null
+    granularity varchar not null,
+    enabled boolean not null default true
 );
 
 ALTER TABLE trend.attribute_to_trend OWNER TO minerva_admin;
