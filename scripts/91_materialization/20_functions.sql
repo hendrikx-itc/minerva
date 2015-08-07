@@ -546,7 +546,7 @@ again';
 
 
 CREATE OR REPLACE FUNCTION reset(type_id integer, timestamp with time zone)
-	RETURNS materialization.state 
+	RETURNS materialization.state
 AS $$
 	UPDATE materialization.state SET processed_states = NULL
 	WHERE type_id = $1 AND timestamp = $2
@@ -555,7 +555,7 @@ $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION reset(materialization.type, timestamp with time zone)
-	RETURNS materialization.state 
+	RETURNS materialization.state
 AS $$
 	SELECT reset($1.id, $2);
 $$ LANGUAGE SQL VOLATILE;

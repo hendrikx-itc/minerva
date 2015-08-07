@@ -115,7 +115,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE TYPE entity_tag.process_staged_links_result AS (
 	tags_added bigint,
 	links_added bigint,
-	links_removed bigint 
+	links_removed bigint
 );
 
 
@@ -140,7 +140,7 @@ CREATE TYPE entity_tag.update_result AS (
 	staged bigint,
 	tags_added bigint,
 	links_added bigint,
-	links_removed bigint 
+	links_removed bigint
 );
 
 
