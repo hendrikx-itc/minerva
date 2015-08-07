@@ -1833,12 +1833,13 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION attribute_directory.create_sampled_view_materialization(oid, datasource_name text, entitytype_name text)
+CREATE OR REPLACE FUNCTION attribute_directory.create_sampled_view_materialization(view_class oid, fingerprint_proc oid, datasource_name text, entitytype_name text)
     RETURNS attribute_directory.sampled_view_materialization
 AS $$
     SELECT attribute_directory.define_sampled_view_materialization(
-        (attribute_directory.create_attributestore_from_view($1, $2, $3)).id,
-        $1
+        (attribute_directory.create_attributestore_from_view($1, $3, $4)).id,
+        $1,
+        $2
     );
 $$ LANGUAGE sql VOLATILE;
 
