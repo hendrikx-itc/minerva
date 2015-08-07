@@ -69,7 +69,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE OR REPLACE FUNCTION relation.define(name, text)
     RETURNS relation.type
 AS $$
-    SELECT set_view_permissions(
+    SELECT relation.set_view_permissions(
         relation.update(
             relation.name_to_type($1::character varying),
             $2
