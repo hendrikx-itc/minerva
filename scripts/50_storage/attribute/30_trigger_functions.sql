@@ -21,6 +21,11 @@ BEGIN
 
     EXECUTE format('DROP TABLE IF EXISTS attribute_history.%I', attribute_directory.to_table_name(OLD) || '_curr_ptr');
 
+    -- TODO:
+    -- Cleanup function ..._at_ptr(integer, timestamp with time zone)
+    -- Cleanup function ..._at_ptr(timestamp with time zone)
+    -- Cleanup table ..._curr_ptr
+
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
