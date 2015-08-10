@@ -1986,7 +1986,13 @@ AS $$
     SELECT dep_recurse.alter(
         dep_recurse.table_ref('attribute_base', attributestore::text::name),
         ARRAY[
-            format('SELECT attribute_directory.remove_attribute_column(attributestore, %L) FROM attribute_directory.attributestore WHERE id = %s', $1.name, $1.attributestore_id)
+            format(
+                'SELECT attribute_directory.remove_attribute_column(attributestore, %L) '
+                'FROM attribute_directory.attributestore '
+                'WHERE id = %s',
+                $1.name,
+                $1.attributestore_id
+            )
         ],
         attribute_directory.dependees(attributestore)
     )
