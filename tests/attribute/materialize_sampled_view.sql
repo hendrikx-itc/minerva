@@ -9,16 +9,23 @@ SELECT
     42 AS x,
     16 AS y;
 
+CREATE FUNCTION attribute.vsystem_state_fingerprint()
+    RETURNS text
+AS $$
+    SELECT 'static_fingerprint'::text
+$$ LANGUAGE sql IMMUTABLE;
 
-SELECT attribute_directory.create_sampled_view_attributestore_materialization(
-    'attribute.vsystem_state'::regclass,
+
+SELECT attribute_directory.create_sampled_view_materialization(
+    'attribute.vsystem_state'::regclass::oid,
+    'attribute.vsystem_state_fingerprint()'::regprocedure::oid,
     'system-info',
     'engine'
 );
 
 
 SELECT attribute_directory.materialize(svam)
-FROM attribute_directory.sampled_view_attributestore_materialization svam
+FROM attribute_directory.sampled_view_materialization svam
 WHERE svam::text = 'attribute.vsystem_state -> system-info_engine';
 
 

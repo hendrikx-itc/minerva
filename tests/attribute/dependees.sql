@@ -16,6 +16,7 @@ SELECT results_eq(
     FROM (
         SELECT unnest(attribute_directory.dependees(attributestore)) d
         FROM attribute_directory.attributestore
+        WHERE attributestore::text = 'test_Node'
     ) foo
 ) bar$$,
     ARRAY[

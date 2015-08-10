@@ -15,7 +15,11 @@ AS $$
     ) AS t(entity_id, timestamp, x)
 $$ LANGUAGE sql STABLE;
 
-SELECT trigger.create_rule('simple-trigger', ARRAY[('x', 'integer')]::trigger.kpi_def[]);
+SELECT trigger.create_rule(
+    'simple-trigger',
+    ARRAY[('x', 'integer')]::trigger.kpi_def[],
+    ARRAY[]::trigger.threshold_def[]
+);
 
 SELECT has_function('trigger_rule', 'simple-trigger_runnable', ARRAY['timestamp with time zone']);
 SELECT has_function('trigger_rule', 'simple-trigger_fingerprint', ARRAY['timestamp with time zone']);
