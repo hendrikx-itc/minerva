@@ -1978,21 +1978,6 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION attribute_directory.remove_attribute(attribute_directory.attributestore, name)
-    RETURNS dep_recurse.obj_ref
-AS $$
-    DELETE FROM attribute_directory.attribute WHERE attributestore_id = $1.id AND name = $2;
-
-    SELECT dep_recurse.alter(
-        dep_recurse.table_ref('attribute_base', $1::text::name),
-        ARRAY[
-            format('SELECT attribute_directory.remove_attribute_column(attributestore, %L) FROM attribute_directory.attributestore WHERE id = %s', $2, $1.id)
-        ],
-        attribute_directory.dependees($1)
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE OR REPLACE FUNCTION attribute_directory.remove_attribute(attribute_directory.attribute)
     RETURNS dep_recurse.obj_ref
 AS $$
@@ -2006,5 +1991,14 @@ AS $$
         attribute_directory.dependees(attributestore)
     )
     FROM attribute_directory.attributestore WHERE id = $1.attributestore_id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.remove_attribute(attribute_directory.attributestore, name)
+    RETURNS dep_recurse.obj_ref
+AS $$
+    SELECT attribute_directory.remove_attribute(attribute)
+    FROM attribute_directory.attribute
+    WHERE attributestore_id = $1.id AND name = $2;
 $$ LANGUAGE sql VOLATILE;
 
