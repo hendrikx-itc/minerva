@@ -1825,15 +1825,15 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION attribute_directory.define_sampled_view_materialization(attributestore_id integer, view_class oid, fingerprint_proc oid)
+CREATE OR REPLACE FUNCTION attribute_directory.define_sampled_view_materialization(attributestore_id integer, view_class oid, source_modified_proc oid)
     RETURNS attribute_directory.sampled_view_materialization
 AS $$
-    INSERT INTO attribute_directory.sampled_view_materialization(attributestore_id, view_class, fingerprint_proc)
+    INSERT INTO attribute_directory.sampled_view_materialization(attributestore_id, view_class, source_modified_proc)
     VALUES ($1, $2, $3) RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION attribute_directory.create_sampled_view_materialization(view_class oid, fingerprint_proc oid, datasource_name text, entitytype_name text)
+CREATE OR REPLACE FUNCTION attribute_directory.create_sampled_view_materialization(view_class oid, source_modified_proc oid, datasource_name text, entitytype_name text)
     RETURNS attribute_directory.sampled_view_materialization
 AS $$
     SELECT attribute_directory.define_sampled_view_materialization(
@@ -1947,9 +1947,32 @@ AS $$
 DECLARE
     fingerprint text;
 BEGIN
-    EXECUTE format('SELECT %s()', $1.fingerprint_proc::regproc::text) INTO fingerprint;
+    EXECUTE format(
+        $query$SELECT array_to_string(
+            array_agg(source_modified.source_name || ': ' || source_modified.modified),
+            E'\n'
+        ) FROM %s AS source_modified$query$,
+        $1.source_modified_proc::regprocedure::text
+    ) INTO fingerprint;
 
     RETURN fingerprint;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.max_modified(attribute_directory.sampled_view_materialization)
+    RETURNS timestamp with time zone
+AS $$
+DECLARE
+    max_modified timestamp with time zone;
+BEGIN
+    EXECUTE format(
+        $query$SELECT max(source_modified.modified)
+        FROM %s AS source_modified$query$,
+        $1.source_modified_proc::regprocedure::text
+    ) INTO max_modified;
+
+    RETURN max_modified;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
@@ -2007,4 +2030,19 @@ AS $$
     FROM attribute_directory.attribute
     WHERE attributestore_id = $1.id AND name = $2;
 $$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.sampled_view_materialization_runnable(timestamp with time zone)
+    RETURNS attribute_directory.sampled_view_materialization
+AS $$
+SELECT svm.*
+FROM attribute_directory.sampled_view_materialization svm
+LEFT JOIN attribute_directory.sampled_view_materialization_state state ON svm.id = state.materialization_id
+WHERE
+    $1 - svm.stability_delay > attribute_directory.max_modified(svm) AND
+    (
+        state.fingerprint IS NULL OR
+        state.fingerprint <> attribute_directory.fingerprint(svm)
+    );
+$$ LANGUAGE sql STABLE;
 

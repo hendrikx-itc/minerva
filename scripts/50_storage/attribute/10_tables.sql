@@ -183,7 +183,8 @@ CREATE TABLE attribute_directory.sampled_view_materialization (
     id serial PRIMARY KEY,
     attributestore_id integer references attribute_directory.attributestore(id) ON DELETE CASCADE,
     view_class oid,
-    fingerprint_proc oid
+    source_modified_proc oid,
+    stability_delay interval NOT NULL DEFAULT '5 minutes'
 );
 
 ALTER TABLE attribute_directory.sampled_view_materialization OWNER TO minerva_admin;
@@ -201,4 +202,12 @@ CREATE TABLE attribute_directory.sampled_view_materialization_state (
 
 GRANT SELECT ON TABLE attribute_directory.sampled_view_materialization_state TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE attribute_directory.sampled_view_materialization_state TO minerva_writer;
+
+
+-- Type 'attribute_directory.source_modified'
+
+CREATE TYPE attribute_directory.source_modified AS (
+    source_name text,
+    modified timestamp with time zone
+);
 

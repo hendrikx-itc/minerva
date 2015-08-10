@@ -17,10 +17,7 @@ GRANT SELECT ON TABLE attribute_directory.dependencies TO minerva;
 
 
 CREATE OR REPLACE VIEW attribute_directory.sampled_view_materialization_runnable AS
-SELECT svam.*
-FROM attribute_directory.sampled_view_materialization svam
-LEFT JOIN attribute_directory.sampled_view_materialization_state state ON svam.id = state.materialization_id
-WHERE state.fingerprint IS NULL OR state.fingerprint <> attribute_directory.fingerprint(svam);
+SELECT * FROM attribute_directory.sampled_view_materialization_runnable(now());
 
 ALTER VIEW attribute_directory.sampled_view_materialization_runnable OWNER TO minerva_admin;
 

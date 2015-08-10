@@ -9,16 +9,16 @@ SELECT
     42 AS x,
     16 AS y;
 
-CREATE FUNCTION attribute.vsystem_state_fingerprint()
-    RETURNS text
+CREATE FUNCTION attribute.vsystem_state_source_modified()
+    RETURNS SETOF attribute_directory.source_modified
 AS $$
-    SELECT 'static_fingerprint'::text
+    SELECT ('test_source'::text, '2015-07-30 14:00+02')::attribute_directory.source_modified;
 $$ LANGUAGE sql IMMUTABLE;
 
 
 SELECT attribute_directory.create_sampled_view_materialization(
     'attribute.vsystem_state'::regclass::oid,
-    'attribute.vsystem_state_fingerprint()'::regprocedure::oid,
+    'attribute.vsystem_state_source_modified()'::regprocedure::oid,
     'system-info',
     'engine'
 );
