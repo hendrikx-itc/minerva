@@ -2033,7 +2033,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION attribute_directory.sampled_view_materialization_runnable(timestamp with time zone)
-    RETURNS attribute_directory.sampled_view_materialization
+    RETURNS SETOF attribute_directory.sampled_view_materialization
 AS $$
 SELECT svm.*
 FROM attribute_directory.sampled_view_materialization svm
