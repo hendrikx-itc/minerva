@@ -5,13 +5,19 @@
 -- All cell relations based on relation records of HandoverRelation and Cell.
 
 CREATE OR REPLACE VIEW gis.vhandover_relation AS
-         SELECT cell_ho.source_id AS cell_entity_id, 'OUT'::text AS direction, ho_cell.target_id AS neighbour_entity_id, cell_ho.source_id AS source_entity_id, ho_cell.target_id AS target_entity_id, cell_ho.target_id AS ho_entity_id
-           FROM relation."Cell->HandoverRelation" cell_ho
-      JOIN relation."HandoverRelation->Cell" ho_cell ON cell_ho.target_id = ho_cell.source_id
-UNION ALL
-         SELECT ho_cell.target_id AS cell_entity_id, 'IN'::text AS direction, cell_ho.source_id AS neighbour_entity_id, cell_ho.source_id AS source_entity_id, ho_cell.target_id AS target_entity_id, cell_ho.target_id AS ho_entity_id
-           FROM relation."Cell->HandoverRelation" cell_ho
-      JOIN relation."HandoverRelation->Cell" ho_cell ON cell_ho.target_id = ho_cell.source_id;
+select
+	case when direction_in then source_id else target_id end cell_entity_id,
+	case when direction_in then 'OUT' else 'IN' end direction,
+	case when direction_in then target_id else source_id end neighbour_entity_id,
+	source_id source_entity_id,
+	target_id target_entity_id,
+	entity_id ho_entity_id
+from (
+	select
+		source_id, entity_id, target_id,
+		unnest(array[true, false]) direction_in
+	from relation."Cell->HandoverRelation->Cell"
+) "HandoverRelation";
 ALTER TABLE gis.vhandover_relation OWNER TO minerva_admin;
 GRANT ALL ON TABLE gis.vhandover_relation TO minerva_admin;
 GRANT SELECT ON TABLE gis.vhandover_relation TO minerva;
