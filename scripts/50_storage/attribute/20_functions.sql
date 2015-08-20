@@ -1791,7 +1791,7 @@ BEGIN
 
     EXECUTE
         format(
-            'INSERT INTO attribute_history.%1$I SELECT * FROM attribute_history."v%1$s" WHERE timestamp > $1',
+            'INSERT INTO attribute_history.%1$I SELECT * FROM attribute_history."v%1$s" WHERE modified > $1',
             tablename ) USING ts;
 
     EXECUTE
