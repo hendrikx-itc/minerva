@@ -206,3 +206,14 @@ BEGIN
     RETURN $1;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION public.view_exists(name, name)
+    RETURNS boolean
+AS $$
+SELECT relkind = 'v'
+FROM pg_class
+JOIN pg_namespace ON relnamespace = pg_namespace.oid
+WHERE nspname = $1 AND relname = $2;
+$$ LANGUAGE sql STABLE;
+
