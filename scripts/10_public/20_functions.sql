@@ -159,7 +159,25 @@ SELECT array_agg(arr1 * arr2) FROM
 $$ LANGUAGE SQL STABLE STRICT;
 
 
-CREATE OR REPLACE FUNCTION public.array_sum(anyarray) RETURNS anyelement
+CREATE OR REPLACE FUNCTION public.array_sum(int[]) RETURNS bigint
+AS $$
+SELECT sum(t) FROM unnest($1) t;
+$$ LANGUAGE SQL IMMUTABLE STRICT;
+
+
+CREATE OR REPLACE FUNCTION public.array_sum(bigint[]) RETURNS numeric
+AS $$
+SELECT sum(t) FROM unnest($1) t;
+$$ LANGUAGE SQL IMMUTABLE STRICT;
+
+
+CREATE OR REPLACE FUNCTION public.array_sum(numeric[]) RETURNS numeric
+AS $$
+SELECT sum(t) FROM unnest($1) t;
+$$ LANGUAGE SQL IMMUTABLE STRICT;
+
+
+CREATE OR REPLACE FUNCTION public.array_sum(double precision[]) RETURNS double precision
 AS $$
 SELECT sum(t) FROM unnest($1) t;
 $$ LANGUAGE SQL IMMUTABLE STRICT;
