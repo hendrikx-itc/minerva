@@ -1382,3 +1382,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
+
+CREATE OR REPLACE FUNCTION trigger.kpi_def_arr_from_type(namespace name, "type" name)
+    RETURNS trigger.kpi_def[]
+AS $$
+    SELECT array_agg((col.name, col.data_type)::trigger.kpi_def)
+    FROM public.type_columns($1, $2) col
+    WHERE col.name NOT IN ('entity_id', 'timestamp');
+$$ LANGUAGE sql STABLE;
+

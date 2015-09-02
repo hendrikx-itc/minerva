@@ -235,3 +235,29 @@ JOIN pg_namespace ON relnamespace = pg_namespace.oid
 WHERE nspname = $1 AND relname = $2;
 $$ LANGUAGE sql STABLE;
 
+
+CREATE TYPE public.column_info AS (
+    name name,
+    data_type text
+);
+
+
+CREATE OR REPLACE FUNCTION public.type_columns(namespace name, "type" name)
+    RETURNS SETOF public.column_info
+AS $$
+    SELECT
+        a.attname, format_type(a.atttypid, a.atttypmod)
+    FROM
+        pg_catalog.pg_class c
+    JOIN
+        pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+    JOIN
+        pg_catalog.pg_attribute a ON a.attrelid = c.oid
+    WHERE
+        n.nspname = $1 AND
+        c.relname = $2 AND
+        a.attisdropped = false AND
+        a.attnum > 0 AND
+        c.relkind = 'c';
+$$ LANGUAGE sql STABLE;
+

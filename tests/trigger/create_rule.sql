@@ -2,8 +2,14 @@ BEGIN;
 
 SELECT plan(2);
 
+CREATE TYPE trigger_rule."simple-trigger_kpi_data" AS (
+    entity_id integer,
+    "timestamp" timestamp with time zone,
+    x integer
+);
+
 CREATE FUNCTION trigger_rule."simple-trigger_kpi"(timestamp with time zone)
-    RETURNS TABLE(entity_id integer, "timestamp" timestamp with time zone, x integer)
+    RETURNS SETOF trigger_rule."simple-trigger_kpi_data"
 AS $$
     SELECT
         entity_id::integer,
@@ -17,7 +23,7 @@ $$ LANGUAGE sql STABLE;
 
 SELECT trigger.create_rule(
     'simple-trigger',
-    ARRAY[('x', 'integer')]::trigger.kpi_def[],
+    trigger.kpi_def_arr_from_type('trigger_rule', 'simple-trigger_kpi_data'),
     ARRAY[]::trigger.threshold_def[]
 );
 
