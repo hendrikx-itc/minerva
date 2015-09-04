@@ -66,7 +66,12 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.kpi_type_name(trigger.rule)
     RETURNS name
 AS $$
-    SELECT ($1.name || '_kpi')::name;
+    SELECT typname FROM pg_type WHERE oid = public.prorettype(
+        format(
+            'trigger_rule.%I(timestamp with time zone)',
+            trigger.kpi_fn_name($1)
+        )::regprocedure::oid
+    );
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -1169,45 +1174,6 @@ SELECT public.action($1, trigger.drop_details_type_sql($1));
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_kpi_type_sql(trigger.rule, trigger.kpi_def[])
-    RETURNS text
-AS $$
-    SELECT format(
-        'CREATE TYPE trigger_rule.%I AS ('
-        '%s'
-        ');',
-        trigger.kpi_type_name($1),
-        array_to_string(
-            array_agg(format('%I %s', col.name, col.data_type)),
-            ','
-        )
-    ) FROM unnest(
-        ARRAY[
-            ('entity_id', 'integer'),
-            ('timestamp', 'timestamp with time zone')
-        ]::trigger.kpi_def[] || $2
-    ) col;
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.drop_kpi_type_sql(trigger.rule)
-    RETURNS text
-AS $$
-    SELECT format('DROP TYPE IF EXISTS trigger_rule.%I', trigger.kpi_type_name($1));
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE OR REPLACE FUNCTION trigger.create_kpi_type(trigger.rule, trigger.kpi_def[])
-    RETURNS trigger.rule
-AS $$
-    SELECT public.action($1, trigger.create_kpi_type_sql($1, $2));
-$$ LANGUAGE sql VOLATILE;
-
-
-COMMENT ON FUNCTION trigger.create_kpi_type(trigger.rule, trigger.kpi_def[]) IS
-'Create a type for the function returning KPI records';
-
-
 CREATE OR REPLACE FUNCTION trigger.define_thresholds(trigger.rule, trigger.threshold_def[])
     RETURNS trigger.rule
 AS $$
@@ -1238,11 +1204,10 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.setup_rule(trigger.rule, trigger.kpi_def[], trigger.threshold_def[])
+CREATE OR REPLACE FUNCTION trigger.setup_rule(trigger.rule, trigger.threshold_def[])
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.create_kpi_type($1, $2);
-    SELECT trigger.define_thresholds($1, $3);
+    SELECT trigger.define_thresholds($1, $2);
     SELECT trigger.create_exception_weight_table($1);
     SELECT trigger.create_dummy_default_weight($1);
     SELECT trigger.create_dummy_notification_message_fn($1);
@@ -1253,10 +1218,10 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trigger.create_rule(name, trigger.kpi_def[], trigger.threshold_def[])
+CREATE OR REPLACE FUNCTION trigger.create_rule(name, trigger.threshold_def[])
     RETURNS trigger.rule
 AS $$
-    SELECT trigger.setup_rule(trigger.define($1), $2, $3);
+    SELECT trigger.setup_rule(trigger.define($1), $2);
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -1388,6 +1353,15 @@ CREATE OR REPLACE FUNCTION trigger.kpi_def_arr_from_type(namespace name, "type" 
 AS $$
     SELECT array_agg((col.name, col.data_type)::trigger.kpi_def)
     FROM public.type_columns($1, $2) col
+    WHERE col.name NOT IN ('entity_id', 'timestamp');
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.kpi_def_arr_from_proc(oid)
+    RETURNS trigger.kpi_def[]
+AS $$
+    SELECT array_agg((col.name, col.data_type)::trigger.kpi_def)
+    FROM public.type_columns(public.prorettype($1)) col
     WHERE col.name NOT IN ('entity_id', 'timestamp');
 $$ LANGUAGE sql STABLE;
 

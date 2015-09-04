@@ -242,22 +242,34 @@ CREATE TYPE public.column_info AS (
 );
 
 
-CREATE OR REPLACE FUNCTION public.type_columns(namespace name, "type" name)
+CREATE OR REPLACE FUNCTION public.type_columns(oid)
     RETURNS SETOF public.column_info
 AS $$
     SELECT
-        a.attname, format_type(a.atttypid, a.atttypmod)
-    FROM
-        pg_catalog.pg_class c
-    JOIN
-        pg_catalog.pg_namespace n ON c.relnamespace = n.oid
-    JOIN
-        pg_catalog.pg_attribute a ON a.attrelid = c.oid
+        attname,
+        format_type(atttypid, atttypmod)
+    FROM pg_type
+    JOIN pg_catalog.pg_attribute a ON a.attrelid = pg_type.typrelid
     WHERE
-        n.nspname = $1 AND
-        c.relname = $2 AND
+        pg_type.oid = $1 AND
         a.attisdropped = false AND
-        a.attnum > 0 AND
-        c.relkind = 'c';
+        a.attnum > 0
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION public.type_columns(namespace name, "type" name)
+    RETURNS SETOF public.column_info
+AS $$
+    SELECT public.type_columns(t.oid)
+    FROM pg_catalog.pg_type t
+    JOIN pg_catalog.pg_namespace n ON t.typnamespace = n.oid
+    WHERE n.nspname = $1 AND t.typname = $2
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION public.prorettype(oid)
+    RETURNS oid
+AS $$
+    SELECT prorettype FROM pg_proc WHERE oid = $1;
 $$ LANGUAGE sql STABLE;
 

@@ -23,7 +23,6 @@ $$ LANGUAGE sql STABLE;
 
 SELECT trigger.create_rule(
     'simple-trigger',
-    trigger.kpi_def_arr_from_type('trigger_rule', 'simple-trigger_kpi_data'),
     ARRAY[]::trigger.threshold_def[]
 );
 

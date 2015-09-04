@@ -12,8 +12,14 @@ SELECT notification.create_notificationstore(
     ]::notification.attr_def[]
 );
 
+CREATE TYPE trigger_rule."simple-trigger_kpi_data" AS (
+    entity_id integer,
+    "timestamp" timestamp with time zone,
+    x integer
+);
+
 CREATE FUNCTION trigger_rule."simple-trigger_kpi"(timestamp with time zone)
-    RETURNS TABLE(entity_id integer, "timestamp" timestamp with time zone, x integer)
+    RETURNS SETOF trigger_rule."simple-trigger_kpi_data"
 AS $$
 SELECT * FROM (
     SELECT
@@ -34,7 +40,6 @@ $$ LANGUAGE sql STABLE;
 
 SELECT trigger.create_rule(
     'simple-trigger',
-    ARRAY[('x', 'integer')]::trigger.kpi_def[],
     ARRAY[('max_x', 'integer')]::trigger.threshold_def[]
 );
 
