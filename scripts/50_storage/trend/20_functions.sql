@@ -205,7 +205,8 @@ $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION trend.define_trendstore(character varying, character varying, character varying) IS
 'Add a new trendstore record, initialize the trendstore base table, and return
-the new record.\n
+the new record.
+
 Later on, the definition and initialization will be split into separate steps,
 but the old mechanism still uses triggers that automatically initialize the trendstore.';
 

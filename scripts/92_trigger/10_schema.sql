@@ -92,10 +92,15 @@ GRANT UPDATE,INSERT ON TABLE trigger.rule_state TO minerva_writer;
 -- Schema trigger_rule
 
 CREATE SCHEMA trigger_rule;
+
+COMMENT ON SCHEMA trigger_rule IS
+'Holds trigger specific auto-generated code.
+
+This schema is mostly automatically and dynamically populated when creating
+rules.';
+
 ALTER SCHEMA trigger_rule OWNER TO minerva_admin;
 
 GRANT ALL ON SCHEMA trigger_rule TO minerva_writer;
 GRANT USAGE ON SCHEMA trigger_rule TO minerva;
 
--- This schema is dynamically populated with rule specific tables, views and
--- functions.

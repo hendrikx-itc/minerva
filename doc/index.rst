@@ -9,11 +9,11 @@ Welcome to Minerva Schema's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   storage/index
-   storage/attribute
-
+   introduction
+   user_guide/index
+   schema/index
 
 
 Indices and tables
