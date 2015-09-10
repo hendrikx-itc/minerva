@@ -40,8 +40,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Minerva Schema'
-copyright = u'2013, Hendrikx ITC'
+project = u'Minerva'
+copyright = u'2013-2015, Hendrikx ITC'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -183,7 +183,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'MinervaSchema.tex', u'Minerva Schema Documentation',
+  ('index', 'Minerva.tex', u'Minerva Documentation',
    u'Hendrikx ITC', 'manual'),
 ]
 
@@ -213,7 +213,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'minervaschema', u'Minerva Schema Documentation',
+    ('index', 'minerva', u'Minerva Documentation',
      [u'Hendrikx ITC'], 1)
 ]
 
@@ -227,8 +227,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'MinervaSchema', u'Minerva Schema Documentation',
-   u'Hendrikx ITC', 'MinervaSchema', 'One line description of project.',
+  ('index', 'Minerva', u'Minerva Documentation',
+   u'Hendrikx ITC', 'Minerva', 'The Minerva PostgreSQL ETL framework.',
    'Miscellaneous'),
 ]
 
