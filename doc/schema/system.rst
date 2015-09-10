@@ -6,6 +6,8 @@ system
 Tables
 ------
 
+.. _system.job:
+
 job
 ```
 
@@ -34,6 +36,8 @@ job
 +---------------+--------------------------+---------------+
 
 
+.. _system.job_error_log:
+
 job_error_log
 `````````````
 
@@ -48,6 +52,8 @@ job_error_log
 +---------+-------------------+---------------+
 
 
+.. _system.job_queue:
+
 job_queue
 `````````
 
@@ -59,6 +65,8 @@ job_queue
 | job_id | integer |               |
 +--------+---------+---------------+
 
+
+.. _system.job_source:
 
 job_source
 ``````````
@@ -77,6 +85,8 @@ job_source
 | config   | character varying     |               |
 +----------+-----------------------+---------------+
 
+
+.. _system.setting:
 
 setting
 ```````
@@ -135,3 +145,112 @@ Functions
 +-------------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------+---------------+
 | version_gtlt_version(system.version_tuple, system.version_tuple)                                      | boolean                                                                             |               |
 +-------------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------+---------------+
+
+.. _system.add_job_source(character varying, character varying, character varying):
+
+add_job_source(character varying, character varying, character varying) -> integer
+``````````````````````````````````````````````````````````````````````````````````
+
+
+.. _system.add_setting(name text, value text):
+
+add_setting(name text, value text) -> system.setting
+````````````````````````````````````````````````````
+
+
+.. _system.create_job(type character varying, description character varying, size bigint, job_source_id integer):
+
+create_job(type character varying, description character varying, size bigint, job_source_id integer) -> integer
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _system.fail_job(job_id integer):
+
+fail_job(job_id integer) -> void
+````````````````````````````````
+
+
+.. _system.fail_job(job_id integer, message character varying):
+
+fail_job(job_id integer, message character varying) -> void
+```````````````````````````````````````````````````````````
+
+
+.. _system.finish_job(job_id integer):
+
+finish_job(job_id integer) -> void
+``````````````````````````````````
+
+
+.. _system.get_job():
+
+get_job() -> system.job_type
+````````````````````````````
+
+
+.. _system.get_job_source(integer):
+
+get_job_source(integer) -> TABLE(name character varying, job_type character varying, config character varying)
+``````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _system.get_setting(name text):
+
+get_setting(name text) -> system.setting
+````````````````````````````````````````
+
+
+.. _system.get_setting_value(name text, "default" text):
+
+get_setting_value(name text, "default" text) -> text
+````````````````````````````````````````````````````
+
+
+.. _system.get_setting_value(name text):
+
+get_setting_value(name text) -> text
+````````````````````````````````````
+
+
+.. _system.remove_jobs(before timestamp with time zone):
+
+remove_jobs(before timestamp with time zone) -> integer
+```````````````````````````````````````````````````````
+
+
+.. _system.set_setting(name text, value text):
+
+set_setting(name text, value text) -> system.setting
+````````````````````````````````````````````````````
+
+
+.. _system.set_version(system.version_tuple):
+
+set_version(system.version_tuple) -> system.version_tuple
+`````````````````````````````````````````````````````````
+
+
+.. _system.set_version(integer, integer, integer):
+
+set_version(integer, integer, integer) -> system.version_tuple
+``````````````````````````````````````````````````````````````
+
+
+.. _system.update_setting(name text, value text):
+
+update_setting(name text, value text) -> system.setting
+```````````````````````````````````````````````````````
+
+
+.. _system.version():
+
+version() -> system.version_tuple
+`````````````````````````````````
+
+
+.. _system.version_gtlt_version(system.version_tuple, system.version_tuple):
+
+version_gtlt_version(system.version_tuple, system.version_tuple) -> boolean
+```````````````````````````````````````````````````````````````````````````
+
+

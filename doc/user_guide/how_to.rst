@@ -1,39 +1,50 @@
 How To
 ======
 
+Examples are executed on a psql prompt.
+
 Create Entities
 ---------------
 
 Before any data is stored, entities have to be created to which the data
 belongs. Basic information about entities is stored in the tables
-`directory.entitytype` and `directory.entity`. These tables are automatically
-populated when the appropriate functions are used to create the entities.
+:ref:`directory.entitytype` and :ref:`directory.entity`. These tables are
+automatically populated when the appropriate functions are used to create the
+entities.
 
-Create an entity using directory.create_entity::
+Create an entity using :ref:`create_entity<directory.create_entity(character varying)>`:
+
+.. code-block:: none
 
     minerva=# select directory.create_entity('Node=root');
                          create_entity
     -------------------------------------------------------
      (1,"2015-09-07 12:21:01.594337+00",root,2,Node=root,)
 
-The directory.create_entity function returns a value of type directory.entity
-and this is exactly the record you will find in the table directory.entity::
+The directory.create_entity function returns a value of type :ref:`directory.entity`
+and this is exactly the record you will find in the table :ref:`directory.entity`:
+
+.. code-block:: none
 
     minerva=# select * from directory.entity where id = 1;
      id |       first_appearance        | name | entitytype_id |    dn     | parent_id
     ----+-------------------------------+------+---------------+-----------+-----------
       1 | 2015-09-07 12:21:01.594337+00 | root |             2 | Node=root |
 
-The function directory.create_entity will also define new entitytypes if
-required. So the previous example will have resulted in a new record in the
-directory.entitytype table::
+The function :ref:`create_entity<directory.create_entity(character varying)>`
+will also define new entitytypes if required. So the previous example will
+have resulted in a new record in the :ref:`directory.entitytype` table:
+
+.. code-block:: none
 
     minerva=# select * from directory.entitytype where id = 2;
      id |       name       | description
     ----+------------------+-------------
       2 | Node             |
 
-Any required intermediate entities are also automatically created::
+Any required intermediate entities are also automatically created:
+
+.. code-block:: none
 
     minerva=# select directory.create_entity('Node=root,Slot=c1,Port=12');
                                  create_entity
@@ -60,21 +71,25 @@ This solves the problem of having conflicting facts about entities when they
 have the same name, but come from different sources and have different values
 and meanings.
 
-To create a data source, use the function directory.create_datasource::
+To create a data source, use the function
+:ref:`create_datasource<directory.create_datasource(character varying)>`:
+
+.. code-block:: none
 
     minerva=# select directory.create_datasource('network-conf');
           create_datasource
     ------------------------------
      (2,network-conf,default,UTC)
 
-The function returns a value of type directory.datasource, and is the record
-inserted into the directory.datasource table::
+The function returns a value of type :ref:`directory.datasource`, and is the
+record inserted into the :ref:`directory.datasource` table:
+
+.. code-block:: none
 
     minerva=# select * from directory.datasource where id = 2;
      id |     name     | description | timezone
     ----+--------------+-------------+----------
       2 | network-conf | default     | UTC
-
 
 Store Attributes
 ----------------
@@ -88,7 +103,9 @@ Create the attribute store
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Create an attribute store to hold data for the entity type 'Port' of data
-source 'network-conf'::
+source 'network-conf':
+
+.. code-block:: none
 
     minerva=# select attribute_directory.create_attributestore('network-conf', 'Port', ARRAY[('speed','integer', '')]::attribute_directory.attribute_descr[]);
      create_attributestore
@@ -97,8 +114,10 @@ source 'network-conf'::
 
 Like the functions mentioned in the previous sections, this function also
 returns a value of its corresponding type
-`attribute_directory.attributestore`, which is the record inserted into the
-table `attribute_directory.attributestore`::
+:ref:`attribute_directory.attributestore`, which is the record inserted into the
+table :ref:`attribute_directory.attributestore`:
+
+.. code-block:: none
 
     minerva=# select * from attribute_directory.attributestore where id = 2;
      id | datasource_id | entitytype_id
@@ -108,7 +127,9 @@ table `attribute_directory.attributestore`::
 Now this record doesn't read as easily as the records seen in the previous
 sections about entities and data sources because there is no textual component
 in the attributestore record. An easy way to make this more readable is by
-using the to-text-cast to obtain the 'name' of the attribute store::
+using the to-text-cast to obtain the 'name' of the attribute store:
+
+.. code-block:: none
 
     minerva=# select *, attributestore::text from attribute_directory.attributestore where id = 2;
      id | datasource_id | entitytype_id |  attributestore
@@ -123,7 +144,10 @@ Store attribute data
 ~~~~~~~~~~~~~~~~~~~~
 
 Now the attribute store is ready to hold data, add an initial value. First
-insert the data into the staging table::
+insert the data into the staging table:
+
+.. code-block:: none
+
 
     minerva=# insert into attribute_staging."network-conf_Port"(entity_id, timestamp, speed) values (2, now(), 1000);
     INSERT 0 1
@@ -142,7 +166,7 @@ And then transfer the staged data to the history table::
 
 It can be difficult to script the insertion of attribute data when the entity
 Id is not yet known. For this reason, there is a convenience function to
-lookup the entity by its Distinguished Name, named directory.dn_to_entity.
+lookup the entity by its Distinguished Name, named :ref:`directory.dn_to_entity(character varying)`.
 This function returns an existing entity or creates a new one and returns
 that. Now to combine that with adding a new attribute record that updates
 the 'current' state::
@@ -182,8 +206,9 @@ The return value is of type `trend.trendstore` and holds the record inserted int
     ----+---------------+---------------+-------------+----------------+-------+---------+------------------
       1 |             3 |             3 | 900         |          21600 | table |       4 | 1 mon
 
-By default, the trend store is partitioned into tables with a partition size
-of 6 hours (21600 seconds) and a data retention period of 1 month.
+By default, a trend store with a granularity of 900 seconds is partitioned
+into tables with a partition size of 6 hours (21600 seconds) and has a data
+retention period of 1 month.
 
 
 Materialize Trend Data
@@ -193,4 +218,19 @@ Materialize Trend Data
 
 Define Triggers
 ---------------
+
+Triggers are defined in a number of steps:
+
+1. Create a function that returns records with all KPI's, measurement values, etc that are needed to calculate the notifications for a specific timestamp.
+2. Create the new rule with it's name and thresholds.
+3. Define the actual rule in the form of a where-clause.
+4. Set the threshold values for the defined thresholds in step 1.
+5. Define the weighing function.
+6. Define the notification details text.
+
+Here, we will work out an example trigger named 'high_packet_loss_rate'.
+
+Create KPI function
+```````````````````
+
 

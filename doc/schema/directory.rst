@@ -6,6 +6,8 @@ Stores contextual information for the data. This includes the entities, entityty
 Tables
 ------
 
+.. _directory.alias:
+
 alias
 `````
 
@@ -22,6 +24,8 @@ alias
 +-----------+-------------------+---------------+
 
 
+.. _directory.aliastype:
+
 aliastype
 `````````
 
@@ -35,6 +39,8 @@ aliastype
 | name   | character varying |               |
 +--------+-------------------+---------------+
 
+
+.. _directory.datasource:
 
 datasource
 ``````````
@@ -53,6 +59,8 @@ Describes datasources. A datasource is used to indicate where data came from. Da
 | timezone    | character varying(40)  |               |
 +-------------+------------------------+---------------+
 
+
+.. _directory.entity:
 
 entity
 ``````
@@ -76,6 +84,8 @@ Describes entities. An entity is the base object for which the database can hold
 +------------------+--------------------------+---------------+
 
 
+.. _directory.entity_link_denorm:
+
 entity_link_denorm
 ``````````````````
 
@@ -92,6 +102,8 @@ entity_link_denorm
 +-----------+---------+---------------+
 
 
+.. _directory.entitytaglink:
+
 entitytaglink
 `````````````
 
@@ -105,6 +117,8 @@ entitytaglink
 | entity_id | integer |               |
 +-----------+---------+---------------+
 
+
+.. _directory.entitytype:
 
 entitytype
 ``````````
@@ -122,6 +136,8 @@ Stores the entity types that exist in the entity table. Entity types are also us
 +-------------+-----------------------+---------------+
 
 
+.. _directory.existence_staging:
+
 existence_staging
 `````````````````
 
@@ -133,6 +149,8 @@ existence_staging
 | dn     | character varying |               |
 +--------+-------------------+---------------+
 
+
+.. _directory.tag:
 
 tag
 ```
@@ -151,6 +169,8 @@ Stores all tags. A tag is a simple label that can be attached to a number of obj
 | description | character varying |               |
 +-------------+-------------------+---------------+
 
+
+.. _directory.taggroup:
 
 taggroup
 ````````
@@ -189,7 +209,7 @@ Functions
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 | create tag for new entitytypes (func)()                                                              | trigger                                                                                       |                                                                             |
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
-| create_datasource(character varying)                                                                 | directory.datasource                                                                          |                                                                             |
+| create_datasource(character varying)                                                                 | directory.datasource                                                                          | Create a new datasource with specified name and return the new record       |
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 | create_entity(character varying)                                                                     | directory.entity                                                                              |                                                                             |
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
@@ -207,9 +227,9 @@ Functions
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 | dns_to_entity_ids(character varying[])                                                               | SETOF integer                                                                                 |                                                                             |
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
-| entities_by_type(integer)                                                                            | SETOF directory.entity                                                                        |                                                                             |
-+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 | entities_by_type(character varying)                                                                  | SETOF directory.entity                                                                        |                                                                             |
++------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+| entities_by_type(integer)                                                                            | SETOF directory.entity                                                                        |                                                                             |
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 | entity_id(directory.entity)                                                                          | integer                                                                                       |                                                                             |
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
@@ -281,3 +301,329 @@ Functions
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 | wavg(query directory.query_part[], value_trend_id integer, weight_trend_id integer)                  | TABLE("timestamp" timestamp with time zone, wavg double precision)                            |                                                                             |
 +------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+
+.. _directory.addentity(timestamp with time zone, character varying, integer, character varying, integer):
+
+addentity(timestamp with time zone, character varying, integer, character varying, integer) -> integer
+``````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.array_to_dn_part(character varying[]):
+
+array_to_dn_part(character varying[]) -> directory.dn_part
+``````````````````````````````````````````````````````````
+
+
+.. _directory.cluster_entity_tag_denorm(name):
+
+cluster_entity_tag_denorm(name) -> name
+```````````````````````````````````````
+
+
+.. _directory.compile_minerva_query(query text):
+
+compile_minerva_query(query text) -> text
+`````````````````````````````````````````
+
+
+.. _directory.compile_minerva_query(query directory.query_part[]):
+
+compile_minerva_query(query directory.query_part[]) -> text
+```````````````````````````````````````````````````````````
+
+
+.. _directory.create alias for new entity (func)():
+
+create alias for new entity (func)() -> trigger
+```````````````````````````````````````````````
+
+
+.. _directory.create entitytaglink for new entity (func)():
+
+create entitytaglink for new entity (func)() -> trigger
+```````````````````````````````````````````````````````
+
+
+.. _directory.create tag for new entitytypes (func)():
+
+create tag for new entitytypes (func)() -> trigger
+``````````````````````````````````````````````````
+
+
+.. _directory.create_datasource(character varying):
+
+create_datasource(character varying) -> directory.datasource
+````````````````````````````````````````````````````````````
+Create a new datasource with specified name and return the new record
+
+.. _directory.create_entity(character varying):
+
+create_entity(character varying) -> directory.entity
+````````````````````````````````````````````````````
+
+
+.. _directory.create_entity_tag_denorm(name):
+
+create_entity_tag_denorm(name) -> name
+``````````````````````````````````````
+
+
+.. _directory.create_entity_tag_denorm_indexes(name):
+
+create_entity_tag_denorm_indexes(name) -> name
+``````````````````````````````````````````````
+
+
+.. _directory.create_entity_tag_denorm_sql(name):
+
+create_entity_tag_denorm_sql(name) -> text[]
+````````````````````````````````````````````
+
+
+.. _directory.create_entitytype(character varying):
+
+create_entitytype(character varying) -> directory.entitytype
+````````````````````````````````````````````````````````````
+
+
+.. _directory.dn_part_to_string(directory.dn_part):
+
+dn_part_to_string(directory.dn_part) -> character varying
+`````````````````````````````````````````````````````````
+
+
+.. _directory.dn_to_entity(character varying):
+
+dn_to_entity(character varying) -> directory.entity
+```````````````````````````````````````````````````
+
+
+.. _directory.dns_to_entity_ids(character varying[]):
+
+dns_to_entity_ids(character varying[]) -> SETOF integer
+```````````````````````````````````````````````````````
+
+
+.. _directory.entities_by_type(character varying):
+
+entities_by_type(character varying) -> SETOF directory.entity
+`````````````````````````````````````````````````````````````
+
+
+.. _directory.entities_by_type(integer):
+
+entities_by_type(integer) -> SETOF directory.entity
+```````````````````````````````````````````````````
+
+
+.. _directory.entity_id(directory.entity):
+
+entity_id(directory.entity) -> integer
+``````````````````````````````````````
+
+
+.. _directory.entitytype_id(directory.entitytype):
+
+entitytype_id(directory.entitytype) -> integer
+``````````````````````````````````````````````
+
+
+.. _directory.existence_staging_state(timestamp with time zone, entitytype_id integer):
+
+existence_staging_state(timestamp with time zone, entitytype_id integer) -> SETOF directory.existence
+`````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.existing_staging(timestamp with time zone, entitytype_id integer):
+
+existing_staging(timestamp with time zone, entitytype_id integer) -> SETOF directory.existence
+``````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.explode_dn(character varying):
+
+explode_dn(character varying) -> directory.dn_part[]
+````````````````````````````````````````````````````
+
+
+.. _directory.get_alias(entity_id integer, aliastype_name character varying):
+
+get_alias(entity_id integer, aliastype_name character varying) -> character varying
+```````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.get_datasource(character varying):
+
+get_datasource(character varying) -> directory.datasource
+`````````````````````````````````````````````````````````
+
+
+.. _directory.get_entity(character varying):
+
+get_entity(character varying) -> directory.entity
+`````````````````````````````````````````````````
+
+
+.. _directory.get_entitytype(character varying):
+
+get_entitytype(character varying) -> directory.entitytype
+`````````````````````````````````````````````````````````
+
+
+.. _directory.get_entitytype_id(character varying):
+
+get_entitytype_id(character varying) -> integer
+```````````````````````````````````````````````
+
+
+.. _directory.getentitybydn(character varying):
+
+getentitybydn(character varying) -> TABLE(id integer, entitytype_id integer, name character varying, parent_id integer)
+```````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.getentitybyid(integer):
+
+getentitybyid(integer) -> TABLE(dn character varying, entitytype_id integer, name character varying, parent_id integer)
+```````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.glue_dn(directory.dn_part[]):
+
+glue_dn(directory.dn_part[]) -> character varying
+`````````````````````````````````````````````````
+
+
+.. _directory.last_dn_part(directory.dn_part[]):
+
+last_dn_part(directory.dn_part[]) -> directory.dn_part
+``````````````````````````````````````````````````````
+
+
+.. _directory.make_c_join(index integer, entity_id_table text, entity_id_column text, tag_index integer, tag text):
+
+make_c_join(index integer, entity_id_table text, entity_id_column text, tag_index integer, tag text) -> text
+````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.make_s_join(index integer, entity_id_table text, entity_id_column text, alias text):
+
+make_s_join(index integer, entity_id_table text, entity_id_column text, alias text) -> text
+```````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.name_to_datasource(character varying):
+
+name_to_datasource(character varying) -> directory.datasource
+`````````````````````````````````````````````````````````````
+
+
+.. _directory.name_to_entitytype(character varying):
+
+name_to_entitytype(character varying) -> directory.entitytype
+`````````````````````````````````````````````````````````````
+
+
+.. _directory.new_existence_state(timestamp with time zone, entitytype_id integer):
+
+new_existence_state(timestamp with time zone, entitytype_id integer) -> SETOF directory.existence
+`````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.non_existing_staging(timestamp with time zone, entitytype_id integer):
+
+non_existing_staging(timestamp with time zone, entitytype_id integer) -> SETOF directory.existence
+``````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.parent_dn(character varying):
+
+parent_dn(character varying) -> character varying
+`````````````````````````````````````````````````
+
+
+.. _directory.parent_dn_parts(directory.dn_part[]):
+
+parent_dn_parts(directory.dn_part[]) -> directory.dn_part[]
+```````````````````````````````````````````````````````````
+
+
+.. _directory.populate_entity_tag_denorm(name):
+
+populate_entity_tag_denorm(name) -> name
+````````````````````````````````````````
+
+
+.. _directory.rebuild_entity_tag_denorm(name DEFAULT 'entity_tag_denorm_new'::name):
+
+rebuild_entity_tag_denorm(name DEFAULT 'entity_tag_denorm_new'::name) -> name
+`````````````````````````````````````````````````````````````````````````````
+Build a new denormalized entity tags table, populate it and replace the old
+one by using drop/rename to avoid blocking other users
+
+.. _directory.replace_entity_tag_denorm(name):
+
+replace_entity_tag_denorm(name) -> name
+```````````````````````````````````````
+
+
+.. _directory.run_minerva_query(query directory.query_part[]):
+
+run_minerva_query(query directory.query_part[]) -> TABLE(id integer, dn character varying, entitytype_id integer)
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.split_raw_part(character varying):
+
+split_raw_part(character varying) -> directory.dn_part
+``````````````````````````````````````````````````````
+
+
+.. _directory.sumproduct(query directory.query_part[], value_trend text, weight_trend text):
+
+sumproduct(query directory.query_part[], value_trend text, weight_trend text) -> TABLE("timestamp" timestamp with time zone, wavg double precision)
+```````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.tag_entity(dn character varying, tag character varying):
+
+tag_entity(dn character varying, tag character varying) -> character varying
+````````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.tag_entity(entity_id integer, tag character varying):
+
+tag_entity(entity_id integer, tag character varying) -> integer
+```````````````````````````````````````````````````````````````
+
+
+.. _directory.transfer_existence(timestamp with time zone):
+
+transfer_existence(timestamp with time zone) -> timestamp with time zone
+````````````````````````````````````````````````````````````````````````
+
+
+.. _directory.update_denormalized_entity_tags(entity_id integer):
+
+update_denormalized_entity_tags(entity_id integer) -> text[]
+````````````````````````````````````````````````````````````
+
+
+.. _directory.update_entity_link_denorm_for_delete():
+
+update_entity_link_denorm_for_delete() -> trigger
+`````````````````````````````````````````````````
+
+
+.. _directory.update_entity_link_denorm_for_insert():
+
+update_entity_link_denorm_for_insert() -> trigger
+`````````````````````````````````````````````````
+
+
+.. _directory.wavg(query directory.query_part[], value_trend_id integer, weight_trend_id integer):
+
+wavg(query directory.query_part[], value_trend_id integer, weight_trend_id integer) -> TABLE("timestamp" timestamp with time zone, wavg double precision)
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+

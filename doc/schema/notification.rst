@@ -6,6 +6,8 @@ Stores information of events that can occur at irregular intervals, but still ha
 Tables
 ------
 
+.. _notification.attribute:
+
 attribute
 `````````
 
@@ -26,6 +28,8 @@ Describes attributes of notificationstores. An attribute of a notificationstore 
 +----------------------+-------------------+---------------+
 
 
+.. _notification.notificationsetstore:
+
 notificationsetstore
 ````````````````````
 
@@ -42,6 +46,8 @@ Describes notificationsetstores. A notificationsetstore can hold information ove
 +----------------------+---------+---------------+
 
 
+.. _notification.notificationstore:
+
 notificationstore
 `````````````````
 
@@ -57,6 +63,8 @@ Describes notificationstores. Each notificationstore maps to a set of tables and
 | version       | integer |               |
 +---------------+---------+---------------+
 
+
+.. _notification.setattribute:
 
 setattribute
 ````````````
@@ -105,13 +113,13 @@ Functions
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | create_notificationsetstore(name name, notificationstore_id integer)         | notification.notificationsetstore |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
-| create_notificationstore(datasource_name text, notification.attr_def[])      | notification.notificationstore    |               |
-+------------------------------------------------------------------------------+-----------------------------------+---------------+
 | create_notificationstore(datasource_id integer)                              | notification.notificationstore    |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | create_notificationstore(datasource_name text)                               | notification.notificationstore    |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | create_notificationstore(datasource_id integer, notification.attr_def[])     | notification.notificationstore    |               |
++------------------------------------------------------------------------------+-----------------------------------+---------------+
+| create_notificationstore(datasource_name text, notification.attr_def[])      | notification.notificationstore    |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | create_staging_table(notification.notificationstore)                         | notification.notificationstore    |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
@@ -127,9 +135,9 @@ Functions
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | get_attr_defs(notification.notificationstore)                                | SETOF notification.attr_def       |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
-| get_column_type_name(namespace_name name, table_name name, column_name name) | name                              |               |
-+------------------------------------------------------------------------------+-----------------------------------+---------------+
 | get_column_type_name(notification.notificationstore, name)                   | name                              |               |
++------------------------------------------------------------------------------+-----------------------------------+---------------+
+| get_column_type_name(namespace_name name, table_name name, column_name name) | name                              |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | get_notificationstore(datasource_name name)                                  | notification.notificationstore    |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
@@ -139,11 +147,204 @@ Functions
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | staging_table_name(notification.notificationstore)                           | name                              |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
-| table_exists(schema_name name, table_name name)                              | boolean                           |               |
-+------------------------------------------------------------------------------+-----------------------------------+---------------+
 | table_exists(name)                                                           | boolean                           |               |
++------------------------------------------------------------------------------+-----------------------------------+---------------+
+| table_exists(schema_name name, table_name name)                              | boolean                           |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | table_name(notification.notificationstore)                                   | name                              |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
 | to_char(notification.notificationstore)                                      | text                              |               |
 +------------------------------------------------------------------------------+-----------------------------------+---------------+
+
+.. _notification.action(anyelement, text):
+
+action(anyelement, text) -> anyelement
+``````````````````````````````````````
+
+
+.. _notification.add_attribute_column_sql(name, notification.attribute):
+
+add_attribute_column_sql(name, notification.attribute) -> text
+``````````````````````````````````````````````````````````````
+
+
+.. _notification.add_staging_attribute_column_sql(notification.attribute):
+
+add_staging_attribute_column_sql(notification.attribute) -> text
+````````````````````````````````````````````````````````````````
+
+
+.. _notification.cleanup_on_datasource_delete():
+
+cleanup_on_datasource_delete() -> trigger
+`````````````````````````````````````````
+
+
+.. _notification.column_exists(schema_name name, table_name name, column_name name):
+
+column_exists(schema_name name, table_name name, column_name name) -> boolean
+`````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.column_exists(table_name name, column_name name):
+
+column_exists(table_name name, column_name name) -> boolean
+```````````````````````````````````````````````````````````
+
+
+.. _notification.create_attribute(notification.notificationstore, name, name):
+
+create_attribute(notification.notificationstore, name, name) -> SETOF notification.attribute
+````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_attribute_column(notification.attribute):
+
+create_attribute_column(notification.attribute) -> notification.attribute
+`````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_attribute_column_on_insert():
+
+create_attribute_column_on_insert() -> trigger
+``````````````````````````````````````````````
+
+
+.. _notification.create_notificationsetstore(name name, notification.notificationstore):
+
+create_notificationsetstore(name name, notification.notificationstore) -> notification.notificationsetstore
+```````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_notificationsetstore(name name, notificationstore_id integer):
+
+create_notificationsetstore(name name, notificationstore_id integer) -> notification.notificationsetstore
+`````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_notificationstore(datasource_id integer):
+
+create_notificationstore(datasource_id integer) -> notification.notificationstore
+`````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_notificationstore(datasource_name text):
+
+create_notificationstore(datasource_name text) -> notification.notificationstore
+````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_notificationstore(datasource_id integer, notification.attr_def[]):
+
+create_notificationstore(datasource_id integer, notification.attr_def[]) -> notification.notificationstore
+``````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_notificationstore(datasource_name text, notification.attr_def[]):
+
+create_notificationstore(datasource_name text, notification.attr_def[]) -> notification.notificationstore
+`````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_staging_table(notification.notificationstore):
+
+create_staging_table(notification.notificationstore) -> notification.notificationstore
+``````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_table(notification.notificationstore):
+
+create_table(notification.notificationstore) -> notification.notificationstore
+``````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.create_table_on_insert():
+
+create_table_on_insert() -> trigger
+```````````````````````````````````
+
+
+.. _notification.define_notificationsetstore(name name, notificationstore_id integer):
+
+define_notificationsetstore(name name, notificationstore_id integer) -> notification.notificationsetstore
+`````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.drop_notificationsetstore_table_on_delete():
+
+drop_notificationsetstore_table_on_delete() -> trigger
+``````````````````````````````````````````````````````
+
+
+.. _notification.drop_table_on_delete():
+
+drop_table_on_delete() -> trigger
+`````````````````````````````````
+
+
+.. _notification.get_attr_defs(notification.notificationstore):
+
+get_attr_defs(notification.notificationstore) -> SETOF notification.attr_def
+````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.get_column_type_name(notification.notificationstore, name):
+
+get_column_type_name(notification.notificationstore, name) -> name
+``````````````````````````````````````````````````````````````````
+
+
+.. _notification.get_column_type_name(namespace_name name, table_name name, column_name name):
+
+get_column_type_name(namespace_name name, table_name name, column_name name) -> name
+````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.get_notificationstore(datasource_name name):
+
+get_notificationstore(datasource_name name) -> notification.notificationstore
+`````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.init_notificationsetstore(notification.notificationsetstore):
+
+init_notificationsetstore(notification.notificationsetstore) -> notification.notificationsetstore
+`````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.notificationstore(notification.notificationsetstore):
+
+notificationstore(notification.notificationsetstore) -> notification.notificationstore
+``````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _notification.staging_table_name(notification.notificationstore):
+
+staging_table_name(notification.notificationstore) -> name
+``````````````````````````````````````````````````````````
+
+
+.. _notification.table_exists(name):
+
+table_exists(name) -> boolean
+`````````````````````````````
+
+
+.. _notification.table_exists(schema_name name, table_name name):
+
+table_exists(schema_name name, table_name name) -> boolean
+``````````````````````````````````````````````````````````
+
+
+.. _notification.table_name(notification.notificationstore):
+
+table_name(notification.notificationstore) -> name
+``````````````````````````````````````````````````
+
+
+.. _notification.to_char(notification.notificationstore):
+
+to_char(notification.notificationstore) -> text
+```````````````````````````````````````````````
+
+

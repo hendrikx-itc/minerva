@@ -81,6 +81,8 @@ AS $$
     RETURNING datasource;
 $$ LANGUAGE SQL VOLATILE STRICT;
 
+COMMENT ON FUNCTION directory.create_datasource(character varying) IS
+'Create a new datasource with specified name and return the new record';
 
 CREATE TYPE directory.dn_part AS (type_name character varying, name character varying);
 

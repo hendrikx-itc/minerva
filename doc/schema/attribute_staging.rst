@@ -6,6 +6,8 @@ Contains tables for staging new data to be added to attribute stores
 Tables
 ------
 
+.. _attribute_staging.existence_HandoverRelation:
+
 existence_HandoverRelation
 ``````````````````````````
 
@@ -21,22 +23,6 @@ existence_HandoverRelation
 | exists    | boolean                  |               |
 +-----------+--------------------------+---------------+
 
-
-network-conf_Port
-`````````````````
-
-
-
-+-----------+--------------------------+---------------+
-| Name      | Type                     |   Description |
-+===========+==========================+===============+
-| entity_id | integer                  |               |
-+-----------+--------------------------+---------------+
-| timestamp | timestamp with time zone |               |
-+-----------+--------------------------+---------------+
-| speed     | integer                  |               |
-+-----------+--------------------------+---------------+
-
 Functions
 ---------
 
@@ -44,3 +30,4 @@ Functions
 | Name   | Return Type   | Description   |
 +========+===============+===============+
 +--------+---------------+---------------+
+

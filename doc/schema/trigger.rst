@@ -6,6 +6,8 @@ trigger
 Tables
 ------
 
+.. _trigger.exception_base:
+
 exception_base
 ``````````````
 
@@ -25,6 +27,8 @@ exception_base
 | expires   | timestamp with time zone |               |
 +-----------+--------------------------+---------------+
 
+
+.. _trigger.rule:
 
 rule
 ````
@@ -48,6 +52,8 @@ rule
 +----------------------+----------+---------------+
 
 
+.. _trigger.rule_state:
+
 rule_state
 ``````````
 
@@ -63,6 +69,8 @@ rule_state
 | fingerprint | text                     |               |
 +-------------+--------------------------+---------------+
 
+
+.. _trigger.rule_tag_link:
 
 rule_tag_link
 `````````````
@@ -123,6 +131,8 @@ Functions
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_notifications(rule_name name)                                                                 | integer                        |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
+| create_notifications(rule_name name, interval)                                                       | integer                        |                                                                       |
++------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_notifications(rule_name name, notificationstore_name name, interval)                          | integer                        |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_notifications(rule_name name, timestamp with time zone)                                       | integer                        |                                                                       |
@@ -137,8 +147,6 @@ Functions
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_notifications(trigger.rule, timestamp with time zone)                                         | integer                        |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
-| create_notifications(rule_name name, interval)                                                       | integer                        |                                                                       |
-+------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_notifications_classic(trigger.rule, notification.notificationstore, timestamp with time zone) | integer                        |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_notifications_new(trigger.rule, notification.notificationstore, timestamp with time zone)     | integer                        |                                                                       |
@@ -151,9 +159,9 @@ Functions
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_runnable_fn(trigger.rule)                                                                     | trigger.rule                   |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
-| create_runnable_fn_sql(trigger.rule, fn_body text)                                                   | text                           |                                                                       |
-+------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_runnable_fn_sql(trigger.rule)                                                                 | text                           |                                                                       |
++------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
+| create_runnable_fn_sql(trigger.rule, fn_body text)                                                   | text                           |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | create_set_thresholds_fn(trigger.rule)                                                               | trigger.rule                   |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
@@ -265,9 +273,9 @@ Functions
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | set_condition(trigger.rule, sql text)                                                                | trigger.rule                   |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
-| set_fingerprint(name, fn_sql text)                                                                   | name                           |                                                                       |
-+------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | set_fingerprint(trigger.rule, fn_sql text)                                                           | trigger.rule                   |                                                                       |
++------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
+| set_fingerprint(name, fn_sql text)                                                                   | name                           |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | set_runnable(trigger.rule, fn_sql text)                                                              | trigger.rule                   |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
@@ -281,15 +289,15 @@ Functions
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | set_thresholds_fn_name(trigger.rule)                                                                 | name                           |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
-| set_weight(name, expression text)                                                                    | trigger.rule                   |                                                                       |
-+------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | set_weight(trigger.rule, expression text)                                                            | trigger.rule                   |                                                                       |
++------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
+| set_weight(name, expression text)                                                                    | trigger.rule                   |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | setup_rule(trigger.rule, trigger.threshold_def[])                                                    | trigger.rule                   |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
-| tag(tag_name character varying, rule_name name)                                                      | trigger.rule_tag_link          |                                                                       |
-+------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | tag(tag_name character varying, rule_id integer)                                                     | trigger.rule_tag_link          | Add tag with name tag_name to rule with id rule_id.                   |
++------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
+| tag(tag_name character varying, rule_name name)                                                      | trigger.rule_tag_link          |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | threshold_view_name(trigger.rule)                                                                    | name                           |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
@@ -313,3 +321,695 @@ Functions
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
 | with_threshold_fn_sql_normal(trigger.rule)                                                           | text                           |                                                                       |
 +------------------------------------------------------------------------------------------------------+--------------------------------+-----------------------------------------------------------------------+
+
+.. _trigger.add_rule(name):
+
+add_rule(name) -> trigger.rule
+``````````````````````````````
+
+
+.. _trigger.cleanup_on_rule_delete():
+
+cleanup_on_rule_delete() -> trigger
+```````````````````````````````````
+
+
+.. _trigger.cleanup_rule(trigger.rule):
+
+cleanup_rule(trigger.rule) -> trigger.rule
+``````````````````````````````````````````
+
+
+.. _trigger.contains_null(anyarray):
+
+contains_null(anyarray) -> boolean
+``````````````````````````````````
+
+
+.. _trigger.create_details_type(trigger.rule, trigger.threshold_def[]):
+
+create_details_type(trigger.rule, trigger.threshold_def[]) -> trigger.rule
+``````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_details_type_sql(trigger.rule, trigger.threshold_def[]):
+
+create_details_type_sql(trigger.rule, trigger.threshold_def[]) -> text
+``````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_dummy_default_weight(trigger.rule):
+
+create_dummy_default_weight(trigger.rule) -> trigger.rule
+`````````````````````````````````````````````````````````
+
+
+.. _trigger.create_dummy_notification_message_fn(trigger.rule):
+
+create_dummy_notification_message_fn(trigger.rule) -> trigger.rule
+``````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_dummy_thresholds(trigger.rule, trigger.threshold_def[]):
+
+create_dummy_thresholds(trigger.rule, trigger.threshold_def[]) -> trigger.rule
+``````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_exception_threshold_table(trigger.rule, trigger.threshold_def[]):
+
+create_exception_threshold_table(trigger.rule, trigger.threshold_def[]) -> trigger.rule
+```````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_exception_threshold_table_sql(trigger.rule, trigger.threshold_def[]):
+
+create_exception_threshold_table_sql(trigger.rule, trigger.threshold_def[]) -> text
+```````````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_exception_weight_table(trigger.rule):
+
+create_exception_weight_table(trigger.rule) -> trigger.rule
+```````````````````````````````````````````````````````````
+
+
+.. _trigger.create_fingerprint_fn(trigger.rule):
+
+create_fingerprint_fn(trigger.rule) -> trigger.rule
+```````````````````````````````````````````````````
+
+
+.. _trigger.create_fingerprint_fn_sql(trigger.rule):
+
+create_fingerprint_fn_sql(trigger.rule) -> text
+```````````````````````````````````````````````
+
+
+.. _trigger.create_fingerprint_fn_sql(trigger.rule, fn_sql text):
+
+create_fingerprint_fn_sql(trigger.rule, fn_sql text) -> text
+````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notification_fn(trigger.rule):
+
+create_notification_fn(trigger.rule) -> trigger.rule
+````````````````````````````````````````````````````
+
+
+.. _trigger.create_notification_fn_sql(trigger.rule):
+
+create_notification_fn_sql(trigger.rule) -> text[]
+``````````````````````````````````````````````````
+
+
+.. _trigger.create_notification_message_fn(trigger.rule, expression text):
+
+create_notification_message_fn(trigger.rule, expression text) -> trigger.rule
+`````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(trigger.rule, notification.notificationstore, timestamp with time zone):
+
+create_notifications(trigger.rule, notification.notificationstore, timestamp with time zone) -> integer
+```````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(rule_name name):
+
+create_notifications(rule_name name) -> integer
+```````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(rule_name name, interval):
+
+create_notifications(rule_name name, interval) -> integer
+`````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(rule_name name, notificationstore_name name, interval):
+
+create_notifications(rule_name name, notificationstore_name name, interval) -> integer
+``````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(rule_name name, timestamp with time zone):
+
+create_notifications(rule_name name, timestamp with time zone) -> integer
+`````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(rule_name name, notificationstore_name name, timestamp with time zone):
+
+create_notifications(rule_name name, notificationstore_name name, timestamp with time zone) -> integer
+``````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(trigger.rule):
+
+create_notifications(trigger.rule) -> integer
+`````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(trigger.rule, interval):
+
+create_notifications(trigger.rule, interval) -> integer
+```````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(trigger.rule, notification.notificationstore, interval):
+
+create_notifications(trigger.rule, notification.notificationstore, interval) -> integer
+```````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications(trigger.rule, timestamp with time zone):
+
+create_notifications(trigger.rule, timestamp with time zone) -> integer
+```````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications_classic(trigger.rule, notification.notificationstore, timestamp with time zone):
+
+create_notifications_classic(trigger.rule, notification.notificationstore, timestamp with time zone) -> integer
+```````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_notifications_new(trigger.rule, notification.notificationstore, timestamp with time zone):
+
+create_notifications_new(trigger.rule, notification.notificationstore, timestamp with time zone) -> integer
+```````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_rule(name, trigger.threshold_def[]):
+
+create_rule(name, trigger.threshold_def[]) -> trigger.rule
+``````````````````````````````````````````````````````````
+
+
+.. _trigger.create_rule_fn(trigger.rule, rule_view_sql text):
+
+create_rule_fn(trigger.rule, rule_view_sql text) -> trigger.rule
+````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_rule_fn_sql(trigger.rule, rule_view_sql text):
+
+create_rule_fn_sql(trigger.rule, rule_view_sql text) -> text[]
+``````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_runnable_fn(trigger.rule):
+
+create_runnable_fn(trigger.rule) -> trigger.rule
+````````````````````````````````````````````````
+
+
+.. _trigger.create_runnable_fn_sql(trigger.rule):
+
+create_runnable_fn_sql(trigger.rule) -> text
+````````````````````````````````````````````
+
+
+.. _trigger.create_runnable_fn_sql(trigger.rule, fn_body text):
+
+create_runnable_fn_sql(trigger.rule, fn_body text) -> text
+``````````````````````````````````````````````````````````
+
+
+.. _trigger.create_set_thresholds_fn(trigger.rule):
+
+create_set_thresholds_fn(trigger.rule) -> trigger.rule
+``````````````````````````````````````````````````````
+
+
+.. _trigger.create_set_thresholds_fn_sql(trigger.rule):
+
+create_set_thresholds_fn_sql(trigger.rule) -> text
+``````````````````````````````````````````````````
+
+
+.. _trigger.create_trigger_notificationstore(name):
+
+create_trigger_notificationstore(name) -> notification.notificationstore
+````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.create_with_threshold_fn(trigger.rule):
+
+create_with_threshold_fn(trigger.rule) -> trigger.rule
+``````````````````````````````````````````````````````
+
+
+.. _trigger.define(name):
+
+define(name) -> trigger.rule
+````````````````````````````
+
+
+.. _trigger.define_notification(name, expression text):
+
+define_notification(name, expression text) -> trigger.rule
+``````````````````````````````````````````````````````````
+
+
+.. _trigger.define_thresholds(trigger.rule, trigger.threshold_def[]):
+
+define_thresholds(trigger.rule, trigger.threshold_def[]) -> trigger.rule
+````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.details_type_name(trigger.rule):
+
+details_type_name(trigger.rule) -> name
+```````````````````````````````````````
+
+
+.. _trigger.drop_details_type(trigger.rule):
+
+drop_details_type(trigger.rule) -> trigger.rule
+```````````````````````````````````````````````
+
+
+.. _trigger.drop_details_type_sql(trigger.rule):
+
+drop_details_type_sql(trigger.rule) -> text
+```````````````````````````````````````````
+
+
+.. _trigger.drop_exception_threshold_table_sql(trigger.rule):
+
+drop_exception_threshold_table_sql(trigger.rule) -> text
+````````````````````````````````````````````````````````
+
+
+.. _trigger.drop_exception_weight_table_sql(trigger.rule):
+
+drop_exception_weight_table_sql(trigger.rule) -> text
+`````````````````````````````````````````````````````
+
+
+.. _trigger.drop_fingerprint_fn(trigger.rule):
+
+drop_fingerprint_fn(trigger.rule) -> trigger.rule
+`````````````````````````````````````````````````
+
+
+.. _trigger.drop_fingerprint_fn_sql(trigger.rule):
+
+drop_fingerprint_fn_sql(trigger.rule) -> text
+`````````````````````````````````````````````
+
+
+.. _trigger.drop_kpi_fn_sql(trigger.rule):
+
+drop_kpi_fn_sql(trigger.rule) -> text
+`````````````````````````````````````
+
+
+.. _trigger.drop_notification_fn_sql(trigger.rule):
+
+drop_notification_fn_sql(trigger.rule) -> text
+``````````````````````````````````````````````
+
+
+.. _trigger.drop_notification_message_fn_sql(trigger.rule):
+
+drop_notification_message_fn_sql(trigger.rule) -> text
+``````````````````````````````````````````````````````
+
+
+.. _trigger.drop_rule_fn_sql(trigger.rule):
+
+drop_rule_fn_sql(trigger.rule) -> text
+``````````````````````````````````````
+
+
+.. _trigger.drop_runnable_fn_sql(trigger.rule):
+
+drop_runnable_fn_sql(trigger.rule) -> text
+``````````````````````````````````````````
+
+
+.. _trigger.drop_set_thresholds_fn_sql(trigger.rule):
+
+drop_set_thresholds_fn_sql(trigger.rule) -> text
+````````````````````````````````````````````````
+
+
+.. _trigger.drop_thresholds_view_sql(trigger.rule):
+
+drop_thresholds_view_sql(trigger.rule) -> text
+``````````````````````````````````````````````
+
+
+.. _trigger.drop_weight_fn_sql(trigger.rule):
+
+drop_weight_fn_sql(trigger.rule) -> text
+````````````````````````````````````````
+
+
+.. _trigger.drop_with_threshold_fn_sql(trigger.rule):
+
+drop_with_threshold_fn_sql(trigger.rule) -> text
+````````````````````````````````````````````````
+
+
+.. _trigger.exception_threshold_table_name(trigger.rule):
+
+exception_threshold_table_name(trigger.rule) -> name
+````````````````````````````````````````````````````
+
+
+.. _trigger.exception_weight_table_name(trigger.rule):
+
+exception_weight_table_name(trigger.rule) -> name
+`````````````````````````````````````````````````
+
+
+.. _trigger.exception_weight_table_sql(trigger.rule):
+
+exception_weight_table_sql(trigger.rule) -> text
+````````````````````````````````````````````````
+
+
+.. _trigger.fingerprint(trigger.rule, timestamp with time zone):
+
+fingerprint(trigger.rule, timestamp with time zone) -> text
+```````````````````````````````````````````````````````````
+
+
+.. _trigger.fingerprint_fn_name(trigger.rule):
+
+fingerprint_fn_name(trigger.rule) -> name
+`````````````````````````````````````````
+
+
+.. _trigger.function_oid(obj_schema name, obj_name name, signature text[]):
+
+function_oid(obj_schema name, obj_name name, signature text[]) -> oid
+`````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.get_function_def(schema_name name, fn_name name):
+
+get_function_def(schema_name name, fn_name name) -> text
+````````````````````````````````````````````````````````
+
+
+.. _trigger.get_kpi_def(trigger.rule, name):
+
+get_kpi_def(trigger.rule, name) -> trigger.kpi_def
+``````````````````````````````````````````````````
+
+
+.. _trigger.get_kpi_defs(trigger.rule):
+
+get_kpi_defs(trigger.rule) -> SETOF trigger.kpi_def
+```````````````````````````````````````````````````
+
+
+.. _trigger.get_notification_message_fn_sql(trigger.rule):
+
+get_notification_message_fn_sql(trigger.rule) -> text
+`````````````````````````````````````````````````````
+
+
+.. _trigger.get_rule(name):
+
+get_rule(name) -> trigger.rule
+``````````````````````````````
+
+
+.. _trigger.get_threshold_defs(trigger.rule):
+
+get_threshold_defs(trigger.rule) -> SETOF trigger.threshold_def
+```````````````````````````````````````````````````````````````
+
+
+.. _trigger.get_weight_fn_sql(trigger.rule):
+
+get_weight_fn_sql(trigger.rule) -> text
+```````````````````````````````````````
+
+
+.. _trigger.has_notification_function(trigger.rule):
+
+has_notification_function(trigger.rule) -> boolean
+``````````````````````````````````````````````````
+
+
+.. _trigger.has_thresholds(trigger.rule):
+
+has_thresholds(trigger.rule) -> boolean
+```````````````````````````````````````
+Return true if there is a view with thresholds for the specified rule
+
+.. _trigger.insert_state(integer, timestamp with time zone, text):
+
+insert_state(integer, timestamp with time zone, text) -> trigger.rule_state
+```````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.kpi_def_arr_from_proc(oid):
+
+kpi_def_arr_from_proc(oid) -> trigger.kpi_def[]
+```````````````````````````````````````````````
+
+
+.. _trigger.kpi_def_arr_from_type(namespace name, type name):
+
+kpi_def_arr_from_type(namespace name, type name) -> trigger.kpi_def[]
+`````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.kpi_fn_name(trigger.rule):
+
+kpi_fn_name(trigger.rule) -> name
+`````````````````````````````````
+
+
+.. _trigger.kpi_type_name(trigger.rule):
+
+kpi_type_name(trigger.rule) -> name
+```````````````````````````````````
+
+
+.. _trigger.modified_to_fingerprint(timestamp with time zone[]):
+
+modified_to_fingerprint(timestamp with time zone[]) -> text
+```````````````````````````````````````````````````````````
+
+
+.. _trigger.notification_fn_name(trigger.rule):
+
+notification_fn_name(trigger.rule) -> name
+``````````````````````````````````````````
+
+
+.. _trigger.notification_fn_sql(trigger.rule):
+
+notification_fn_sql(trigger.rule) -> text
+`````````````````````````````````````````
+
+
+.. _trigger.notification_message_fn_name(trigger.rule):
+
+notification_message_fn_name(trigger.rule) -> name
+``````````````````````````````````````````````````
+
+
+.. _trigger.notification_message_fn_sql(trigger.rule, expression text):
+
+notification_message_fn_sql(trigger.rule, expression text) -> text
+``````````````````````````````````````````````````````````````````
+
+
+.. _trigger.notification_test_threshold_fn_sql(trigger.rule):
+
+notification_test_threshold_fn_sql(trigger.rule) -> text
+````````````````````````````````````````````````````````
+
+
+.. _trigger.notification_threshold_test_fn_name(trigger.rule):
+
+notification_threshold_test_fn_name(trigger.rule) -> name
+`````````````````````````````````````````````````````````
+
+
+.. _trigger.rule_fn_name(trigger.rule):
+
+rule_fn_name(trigger.rule) -> name
+``````````````````````````````````
+
+
+.. _trigger.rule_fn_sql(trigger.rule, where_clause text):
+
+rule_fn_sql(trigger.rule, where_clause text) -> text
+````````````````````````````````````````````````````
+
+
+.. _trigger.runnable_fn_name(trigger.rule):
+
+runnable_fn_name(trigger.rule) -> name
+``````````````````````````````````````
+
+
+.. _trigger.set_condition(name, sql text):
+
+set_condition(name, sql text) -> trigger.rule
+`````````````````````````````````````````````
+
+
+.. _trigger.set_condition(trigger.rule, sql text):
+
+set_condition(trigger.rule, sql text) -> trigger.rule
+`````````````````````````````````````````````````````
+
+
+.. _trigger.set_fingerprint(trigger.rule, fn_sql text):
+
+set_fingerprint(trigger.rule, fn_sql text) -> trigger.rule
+``````````````````````````````````````````````````````````
+
+
+.. _trigger.set_fingerprint(name, fn_sql text):
+
+set_fingerprint(name, fn_sql text) -> name
+``````````````````````````````````````````
+
+
+.. _trigger.set_runnable(trigger.rule, fn_sql text):
+
+set_runnable(trigger.rule, fn_sql text) -> trigger.rule
+```````````````````````````````````````````````````````
+
+
+.. _trigger.set_state(trigger.rule, timestamp with time zone):
+
+set_state(trigger.rule, timestamp with time zone) -> trigger.rule
+`````````````````````````````````````````````````````````````````
+
+
+.. _trigger.set_state(integer, timestamp with time zone, text):
+
+set_state(integer, timestamp with time zone, text) -> trigger.rule_state
+````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.set_thresholds(name, exprs text):
+
+set_thresholds(name, exprs text) -> trigger.rule
+````````````````````````````````````````````````
+
+
+.. _trigger.set_thresholds(trigger.rule, exprs text):
+
+set_thresholds(trigger.rule, exprs text) -> trigger.rule
+````````````````````````````````````````````````````````
+
+
+.. _trigger.set_thresholds_fn_name(trigger.rule):
+
+set_thresholds_fn_name(trigger.rule) -> name
+````````````````````````````````````````````
+
+
+.. _trigger.set_weight(trigger.rule, expression text):
+
+set_weight(trigger.rule, expression text) -> trigger.rule
+`````````````````````````````````````````````````````````
+
+
+.. _trigger.set_weight(name, expression text):
+
+set_weight(name, expression text) -> trigger.rule
+`````````````````````````````````````````````````
+
+
+.. _trigger.setup_rule(trigger.rule, trigger.threshold_def[]):
+
+setup_rule(trigger.rule, trigger.threshold_def[]) -> trigger.rule
+`````````````````````````````````````````````````````````````````
+
+
+.. _trigger.tag(tag_name character varying, rule_id integer):
+
+tag(tag_name character varying, rule_id integer) -> trigger.rule_tag_link
+`````````````````````````````````````````````````````````````````````````
+Add tag with name tag_name to rule with id rule_id.
+The tag must already exist.
+
+.. _trigger.tag(tag_name character varying, rule_name name):
+
+tag(tag_name character varying, rule_name name) -> trigger.rule_tag_link
+````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.threshold_view_name(trigger.rule):
+
+threshold_view_name(trigger.rule) -> name
+`````````````````````````````````````````
+
+
+.. _trigger.timestamps(trigger.rule):
+
+timestamps(trigger.rule) -> SETOF timestamp with time zone
+``````````````````````````````````````````````````````````
+
+
+.. _trigger.transfer_notifications_from_staging(notification.notificationstore):
+
+transfer_notifications_from_staging(notification.notificationstore) -> integer
+``````````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.truncate(timestamp with time zone, interval):
+
+truncate(timestamp with time zone, interval) -> timestamp with time zone
+````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.update_state(integer, timestamp with time zone, text):
+
+update_state(integer, timestamp with time zone, text) -> trigger.rule_state
+```````````````````````````````````````````````````````````````````````````
+
+
+.. _trigger.weight_fn_name(trigger.rule):
+
+weight_fn_name(trigger.rule) -> name
+````````````````````````````````````
+
+
+.. _trigger.weight_fn_sql(trigger.rule, expression text):
+
+weight_fn_sql(trigger.rule, expression text) -> text
+````````````````````````````````````````````````````
+
+
+.. _trigger.with_threshold_fn_name(trigger.rule):
+
+with_threshold_fn_name(trigger.rule) -> name
+````````````````````````````````````````````
+
+
+.. _trigger.with_threshold_fn_sql(trigger.rule):
+
+with_threshold_fn_sql(trigger.rule) -> text
+```````````````````````````````````````````
+
+
+.. _trigger.with_threshold_fn_sql_no_thresholds(trigger.rule):
+
+with_threshold_fn_sql_no_thresholds(trigger.rule) -> text
+`````````````````````````````````````````````````````````
+
+
+.. _trigger.with_threshold_fn_sql_normal(trigger.rule):
+
+with_threshold_fn_sql_normal(trigger.rule) -> text
+``````````````````````````````````````````````````
+
+

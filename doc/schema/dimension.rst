@@ -6,6 +6,8 @@ dimension
 Tables
 ------
 
+.. _dimension.5m:
+
 5m
 ``
 
@@ -21,6 +23,8 @@ Tables
 | end       | timestamp with time zone |               |
 +-----------+--------------------------+---------------+
 
+
+.. _dimension.day:
 
 day
 ```
@@ -38,6 +42,8 @@ day
 +-----------+--------------------------+---------------+
 
 
+.. _dimension.day_15m:
+
 day_15m
 ```````
 
@@ -51,6 +57,8 @@ day_15m
 | timestamp_15m | timestamp with time zone |               |
 +---------------+--------------------------+---------------+
 
+
+.. _dimension.four_consec_qtr:
 
 four_consec_qtr
 ```````````````
@@ -68,6 +76,8 @@ four_consec_qtr
 +-----------+--------------------------+---------------+
 
 
+.. _dimension.hour:
+
 hour
 ````
 
@@ -83,6 +93,8 @@ hour
 | end       | timestamp with time zone |               |
 +-----------+--------------------------+---------------+
 
+
+.. _dimension.month:
 
 month
 `````
@@ -100,6 +112,8 @@ month
 +-----------+--------------------------+---------------+
 
 
+.. _dimension.month_15m:
+
 month_15m
 `````````
 
@@ -113,6 +127,8 @@ month_15m
 | timestamp_15m | timestamp with time zone |               |
 +---------------+--------------------------+---------------+
 
+
+.. _dimension.quarter:
 
 quarter
 ```````
@@ -129,6 +145,8 @@ quarter
 | end       | timestamp with time zone |               |
 +-----------+--------------------------+---------------+
 
+
+.. _dimension.week:
 
 week
 ````
@@ -149,6 +167,8 @@ week
 | week_iso_8601 | smallint                 |               |
 +---------------+--------------------------+---------------+
 
+
+.. _dimension.week_15m:
 
 week_15m
 ````````
@@ -189,3 +209,64 @@ Functions
 +--------------------------+---------------+---------------+
 | update_week_15m()        | void          |               |
 +--------------------------+---------------+---------------+
+
+.. _dimension.update_5m():
+
+update_5m() -> void
+```````````````````
+
+
+.. _dimension.update_day():
+
+update_day() -> void
+````````````````````
+
+
+.. _dimension.update_day_15m():
+
+update_day_15m() -> void
+````````````````````````
+
+
+.. _dimension.update_four_consec_qtr():
+
+update_four_consec_qtr() -> void
+````````````````````````````````
+
+
+.. _dimension.update_hour():
+
+update_hour() -> void
+`````````````````````
+
+
+.. _dimension.update_month():
+
+update_month() -> void
+``````````````````````
+
+
+.. _dimension.update_month_15m():
+
+update_month_15m() -> void
+``````````````````````````
+
+
+.. _dimension.update_quarter():
+
+update_quarter() -> void
+````````````````````````
+
+
+.. _dimension.update_week():
+
+update_week() -> void
+`````````````````````
+
+
+.. _dimension.update_week_15m():
+
+update_week_15m() -> void
+`````````````````````````
+
+

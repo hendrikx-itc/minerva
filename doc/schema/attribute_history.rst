@@ -6,6 +6,8 @@ Contains tables with the actual data of attribute stores
 Tables
 ------
 
+.. _attribute_history.existence_HandoverRelation:
+
 existence_HandoverRelation
 ``````````````````````````
 
@@ -27,6 +29,8 @@ existence_HandoverRelation
 | hash             | character varying        |               |
 +------------------+--------------------------+---------------+
 
+
+.. _attribute_history.existence_HandoverRelation_compacted_tmp:
 
 existence_HandoverRelation_compacted_tmp
 ````````````````````````````````````````
@@ -50,66 +54,10 @@ existence_HandoverRelation_compacted_tmp
 +-----------+--------------------------+---------------+
 
 
+.. _attribute_history.existence_HandoverRelation_curr_ptr:
+
 existence_HandoverRelation_curr_ptr
 ```````````````````````````````````
-
-
-
-+-----------+--------------------------+---------------+
-| Name      | Type                     |   Description |
-+===========+==========================+===============+
-| entity_id | integer                  |               |
-+-----------+--------------------------+---------------+
-| timestamp | timestamp with time zone |               |
-+-----------+--------------------------+---------------+
-
-
-network-conf_Port
-`````````````````
-
-
-
-+------------------+--------------------------+---------------+
-| Name             | Type                     |   Description |
-+==================+==========================+===============+
-| entity_id        | integer                  |               |
-+------------------+--------------------------+---------------+
-| timestamp        | timestamp with time zone |               |
-+------------------+--------------------------+---------------+
-| speed            | integer                  |               |
-+------------------+--------------------------+---------------+
-| first_appearance | timestamp with time zone |               |
-+------------------+--------------------------+---------------+
-| modified         | timestamp with time zone |               |
-+------------------+--------------------------+---------------+
-| hash             | character varying        |               |
-+------------------+--------------------------+---------------+
-
-
-network-conf_Port_compacted_tmp
-```````````````````````````````
-
-
-
-+-----------+--------------------------+---------------+
-| Name      | Type                     |   Description |
-+===========+==========================+===============+
-| entity_id | integer                  |               |
-+-----------+--------------------------+---------------+
-| timestamp | timestamp with time zone |               |
-+-----------+--------------------------+---------------+
-| speed     | integer                  |               |
-+-----------+--------------------------+---------------+
-| end       | timestamp with time zone |               |
-+-----------+--------------------------+---------------+
-| modified  | timestamp with time zone |               |
-+-----------+--------------------------+---------------+
-| hash      | text                     |               |
-+-----------+--------------------------+---------------+
-
-
-network-conf_Port_curr_ptr
-``````````````````````````
 
 
 
@@ -137,17 +85,42 @@ Functions
 +--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
 | mark_modified_1()                                                              | trigger                                                        |               |
 +--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
-| mark_modified_2()                                                              | trigger                                                        |               |
-+--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
-| network-conf_Port_at(entity_id integer, timestamp with time zone)              | attribute_history."network-conf_Port"                          |               |
-+--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
-| network-conf_Port_at(timestamp with time zone)                                 | SETOF attribute_history."network-conf_Port"                    |               |
-+--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
-| network-conf_Port_at_ptr(timestamp with time zone)                             | TABLE(entity_id integer, "timestamp" timestamp with time zone) |               |
-+--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
-| network-conf_Port_at_ptr(entity_id integer, timestamp with time zone)          | timestamp with time zone                                       |               |
-+--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
 | values_hash(attribute_history."existence_HandoverRelation")                    | text                                                           |               |
 +--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
-| values_hash(attribute_history."network-conf_Port")                             | text                                                           |               |
-+--------------------------------------------------------------------------------+----------------------------------------------------------------+---------------+
+
+.. _attribute_history.existence_HandoverRelation_at(timestamp with time zone):
+
+existence_HandoverRelation_at(timestamp with time zone) -> SETOF attribute_history."existence_HandoverRelation"
+```````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _attribute_history.existence_HandoverRelation_at(entity_id integer, timestamp with time zone):
+
+existence_HandoverRelation_at(entity_id integer, timestamp with time zone) -> attribute_history."existence_HandoverRelation"
+````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _attribute_history.existence_HandoverRelation_at_ptr(timestamp with time zone):
+
+existence_HandoverRelation_at_ptr(timestamp with time zone) -> TABLE(entity_id integer, "timestamp" timestamp with time zone)
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _attribute_history.existence_HandoverRelation_at_ptr(entity_id integer, timestamp with time zone):
+
+existence_HandoverRelation_at_ptr(entity_id integer, timestamp with time zone) -> timestamp with time zone
+``````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+.. _attribute_history.mark_modified_1():
+
+mark_modified_1() -> trigger
+````````````````````````````
+
+
+.. _attribute_history.values_hash(attribute_history."existence_HandoverRelation"):
+
+values_hash(attribute_history."existence_HandoverRelation") -> text
+```````````````````````````````````````````````````````````````````
+
+
