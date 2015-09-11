@@ -4,14 +4,6 @@ postgresql:
   service:
     - running
 
-postgis:
-  pkg:
-    - installed
-
-postgresql-9.3-postgis-scripts:
-  pkg:
-    - installed
-
 postgresql-server-dev-9.3:
   pkg:
     - installed
