@@ -3,8 +3,12 @@ olap
 
 
 
+Types
+-----
 Tables
 ------
+Views
+-----
 Functions
 ---------
 

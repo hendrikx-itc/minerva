@@ -244,6 +244,9 @@ CREATE TABLE directory.entitytaglink (
     entity_id integer NOT NULL
 );
 
+COMMENT ON TABLE directory.entitytaglink IS
+'The n:n relation between :ref:`directory.entity` and :ref:`directory.tag`';
+
 ALTER TABLE directory.entitytaglink OWNER TO minerva_admin;
 
 ALTER TABLE ONLY directory.entitytaglink
@@ -271,6 +274,13 @@ CREATE TABLE directory.entity_link_denorm (
     tags text[] not null,
     name text not null
 );
+
+COMMENT ON TABLE directory.entity_link_denorm IS
+'The denormalized relation between entity and tag.
+
+Stores one record for each entity, with all tag names in lower case in the
+tags column. A gin index on tags makes it ideal to lookup entities that have
+certain tags.';
 
 ALTER TABLE directory.entity_link_denorm OWNER TO minerva_admin;
 

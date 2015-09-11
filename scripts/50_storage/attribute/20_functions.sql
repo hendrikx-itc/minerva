@@ -993,9 +993,12 @@ BEGIN
 
     FOR r IN EXECUTE format('SELECT entity_id, start, "end", first_appearance, modified FROM attribute_history.%I WHERE run_length > 1', attribute_directory.run_length_view_name($1))
     LOOP
+        -- Delete all but the oldest records with the same data
         EXECUTE format('DELETE FROM attribute_history.%I WHERE entity_id = $1 AND timestamp > $2 AND timestamp <= $3', table_name)
         USING r.entity_id, r."start", r."end";
 
+        -- Update the oldest record with the most recent 'modified' and the
+        -- oldest 'first_appearence'
         EXECUTE format('UPDATE attribute_history.%I SET modified = $1, first_appearance = $4 WHERE entity_id = $2 AND timestamp = $3', table_name)
         USING r.modified, r.entity_id, r."start", r.first_appearance;
     END LOOP;

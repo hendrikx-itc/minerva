@@ -3,8 +3,12 @@ attribute
 
 Contains views pointing to current attribute records
 
+Types
+-----
 Tables
 ------
+Views
+-----
 Functions
 ---------
 

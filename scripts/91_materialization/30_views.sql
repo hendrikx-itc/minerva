@@ -32,7 +32,7 @@ GRANT SELECT ON materialization.tagged_runnable_materializations TO minerva;
 
 -- View 'runnable_materializations'
 
-CREATE OR REPLACE view runnable_materializations AS 
+CREATE OR REPLACE view runnable_materializations AS
 SELECT type, state
 FROM state
 JOIN type ON type.id = state.type_id
@@ -83,7 +83,7 @@ CREATE OR REPLACE VIEW materializables AS
 				(trendstore_id, src_timestamp)::materialization.source_fragment,
 				modified
 			)::materialization.source_fragment_state
-			ORDER BY trendstore_id, src_timestamp 
+			ORDER BY trendstore_id, src_timestamp
 		) AS source_states
 	FROM materialization.materializable_source_state
 	GROUP BY type_id, timestamp;
@@ -188,7 +188,7 @@ GRANT SELECT ON TABLE trend_ext TO minerva;
 
 -- View 'next_up_materializations'
 
-CREATE OR REPLACE VIEW next_up_materializations AS 
+CREATE OR REPLACE VIEW next_up_materializations AS
 SELECT type_id, timestamp, (tag).name, cost, cumsum, resources AS group_resources, (job.id IS NOT NULL AND job.state IN ('queued', 'running')) AS job_active FROM
 (
     SELECT
@@ -220,3 +220,4 @@ JOIN materialization.group_priority gp ON gp.tag_id = ttl.tag_id
 GROUP BY ttl.tag_id;
 
 ALTER VIEW required_resources_by_group OWNER TO minerva_admin;
+
