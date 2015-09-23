@@ -309,11 +309,11 @@ Functions
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
 | :ref:`create_entity_tag_denorm_sql(char[])<directory.create_entity_tag_denorm_sql(char[])>`                                                                                                                                 | text[]                                                        |                                                                             |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
-| :ref:`create_entitytype(character varying)<directory.create_entitytype(character varying)>`                                                                                                                                 | directory.entitytype                                          |                                                                             |
+| :ref:`create_entitytype(character varying)<directory.create_entitytype(character varying)>`                                                                                                                                 | directory.entitytype                                          | Create new entitytype with specified name and return it.                    |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
 | :ref:`dn_part_to_string(directory.dn_part)<directory.dn_part_to_string(directory.dn_part)>`                                                                                                                                 | character varying                                             |                                                                             |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
-| :ref:`dn_to_entity(character varying)<directory.dn_to_entity(character varying)>`                                                                                                                                           | directory.entity                                              |                                                                             |
+| :ref:`dn_to_entity(character varying)<directory.dn_to_entity(character varying)>`                                                                                                                                           | directory.entity                                              | Return existing or new entity with specified DN.                            |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
 | :ref:`dns_to_entity_ids(varchar[])<directory.dns_to_entity_ids(varchar[])>`                                                                                                                                                 | integer                                                       |                                                                             |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
@@ -355,15 +355,15 @@ Functions
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
 | :ref:`name_to_datasource(character varying)<directory.name_to_datasource(character varying)>`                                                                                                                               | directory.datasource                                          |                                                                             |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
-| :ref:`name_to_entitytype(character varying)<directory.name_to_entitytype(character varying)>`                                                                                                                               | directory.entitytype                                          |                                                                             |
+| :ref:`name_to_entitytype(character varying)<directory.name_to_entitytype(character varying)>`                                                                                                                               | directory.entitytype                                          | Return new or existing entitytype with specified name.                      |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
 | :ref:`new_existence_state(timestamp with time zone, entitytype_id integer)<directory.new_existence_state(timestamp with time zone, entitytype_id integer)>`                                                                 | directory.existence                                           |                                                                             |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
 | :ref:`non_existing_staging(timestamp with time zone, entitytype_id integer)<directory.non_existing_staging(timestamp with time zone, entitytype_id integer)>`                                                               | directory.existence                                           |                                                                             |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
-| :ref:`parent_dn(character varying)<directory.parent_dn(character varying)>`                                                                                                                                                 | character varying                                             |                                                                             |
+| :ref:`parent_dn(character varying)<directory.parent_dn(character varying)>`                                                                                                                                                 | character varying                                             | Return DN string of the parent.                                             |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
-| :ref:`parent_dn_parts(dn_part[])<directory.parent_dn_parts(dn_part[])>`                                                                                                                                                     | dn_part[]                                                     |                                                                             |
+| :ref:`parent_dn_parts(dn_part[])<directory.parent_dn_parts(dn_part[])>`                                                                                                                                                     | dn_part[]                                                     | Return all but the last DN part or NULL if the array is empty.              |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
 | :ref:`populate_entity_tag_denorm(char[])<directory.populate_entity_tag_denorm(char[])>`                                                                                                                                     | char[]                                                        |                                                                             |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------+-----------------------------------------------------------------------------+
@@ -502,7 +502,7 @@ create_entitytype(character varying) -> directory.entitytype
 ````````````````````````````````````````````````````````````
 returns: :ref:`directory.entitytype<directory.entitytype>`
 
-
+Create new entitytype with specified name and return it.
 
 .. _directory.dn_part_to_string(directory.dn_part):
 
@@ -518,7 +518,10 @@ dn_to_entity(character varying) -> directory.entity
 ```````````````````````````````````````````````````
 returns: :ref:`directory.entity<directory.entity>`
 
+Return existing or new entity with specified DN.
 
+When an existing entity is found with the specified DN, then this is returned.
+Otherwise, a new entity is created, including any parents.
 
 .. _directory.dns_to_entity_ids(varchar[]):
 
@@ -686,7 +689,7 @@ name_to_entitytype(character varying) -> directory.entitytype
 `````````````````````````````````````````````````````````````
 returns: :ref:`directory.entitytype<directory.entitytype>`
 
-
+Return new or existing entitytype with specified name.
 
 .. _directory.new_existence_state(timestamp with time zone, entitytype_id integer):
 
@@ -710,7 +713,7 @@ parent_dn(character varying) -> character varying
 `````````````````````````````````````````````````
 returns: character varying
 
-
+Return DN string of the parent.
 
 .. _directory.parent_dn_parts(dn_part[]):
 
@@ -718,7 +721,7 @@ parent_dn_parts(dn_part[]) -> dn_part[]
 ```````````````````````````````````````
 returns: dn_part[]
 
-
+Return all but the last DN part or NULL if the array is empty.
 
 .. _directory.populate_entity_tag_denorm(char[]):
 

@@ -180,6 +180,9 @@ SELECT
 	JOIN directory.entitytype et ON et.id = ts.entitytype_id
 	LEFT JOIN materialization.type m ON m.src_trendstore_id = ts.id;
 
+COMMENT ON VIEW trend_ext IS
+'Convenience view for easy lookup of trends';
+
 
 ALTER VIEW trend_ext OWNER TO minerva_admin;
 

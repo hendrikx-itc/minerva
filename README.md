@@ -18,8 +18,6 @@ The **attribute** data class stores nonperiodic data — for instance, number of
 
 The **notification** data class stores occurrences of data — for instance, a failure.
 
-The **geospatial** data class stores nonperiodic data for a position — for instance, number of active connections at the interconnect at some coordinate.
-
 
 ### Partition size
 

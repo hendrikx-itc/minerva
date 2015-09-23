@@ -216,7 +216,7 @@ SELECT ARRAY[
 $$ LANGUAGE sql STABLE;
 
 COMMENT ON FUNCTION attribute_directory.dependees(attribute_directory.attributestore) IS
-'Return array with all managed dependees of attributestore base table\n'
+E'Return array with all managed dependees of attributestore base table\n'
 '\n'
 'This array is primarily used to alter the base table using dep_recurse.alter '
 'so that the alter function can skip the database objects that are already '

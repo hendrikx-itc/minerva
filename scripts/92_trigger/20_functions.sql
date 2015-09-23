@@ -92,6 +92,10 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
+COMMENT ON FUNCTION trigger.get_rule(name) IS
+'Return rule with specified name.';
+
+
 CREATE OR REPLACE FUNCTION trigger.add_rule(name)
     RETURNS trigger.rule
 AS $$
@@ -556,6 +560,10 @@ WHERE proname = trigger.weight_fn_name($1);
 $$ LANGUAGE SQL STABLE;
 
 
+COMMENT ON FUNCTION trigger.get_weight_fn_sql(trigger.rule) IS
+'Return current implementation of the weight function for specified rule.';
+
+
 CREATE OR REPLACE FUNCTION trigger.weight_fn_sql(trigger.rule, expression text)
     RETURNS text
 AS $$
@@ -572,6 +580,10 @@ $function$,
 $$ LANGUAGE SQL IMMUTABLE;
 
 
+COMMENT ON FUNCTION trigger.weight_fn_sql(trigger.rule, expression text) IS
+'Return code to create weight function based on the provided expression.';
+
+
 CREATE OR REPLACE FUNCTION trigger.drop_weight_fn_sql(trigger.rule)
     RETURNS text
 AS $$
@@ -582,6 +594,9 @@ SELECT format(
 );
 $$ LANGUAGE SQL IMMUTABLE;
 
+
+COMMENT ON FUNCTION trigger.drop_weight_fn_sql(trigger.rule) IS
+'Return code to drop weight function for specified rule.';
 
 --- Table <rule>_exception_weight
 
@@ -604,6 +619,10 @@ SELECT format(
 $function$ LANGUAGE SQL IMMUTABLE;
 
 
+COMMENT ON FUNCTION trigger.exception_weight_table_sql(trigger.rule) IS
+'Return code to create the exception weight table for specified rule.';
+
+
 CREATE OR REPLACE FUNCTION trigger.create_exception_weight_table(trigger.rule)
     RETURNS trigger.rule AS
 $$
@@ -618,11 +637,19 @@ SELECT public.action($1, format(
 $$ LANGUAGE SQL VOLATILE;
 
 
+COMMENT ON FUNCTION trigger.create_exception_weight_table(trigger.rule) IS
+'Create the exception weight table for specified rule.';
+
+
 CREATE OR REPLACE FUNCTION trigger.drop_exception_weight_table_sql(trigger.rule)
     RETURNS text AS
 $$
 SELECT format('DROP TABLE IF EXISTS trigger_rule.%I', trigger.exception_weight_table_name($1));
 $$ LANGUAGE SQL IMMUTABLE;
+
+
+COMMENT ON FUNCTION trigger.drop_exception_weight_table_sql(trigger.rule) IS
+'Return code to drop the exception weight table for specified rule.';
 
 
 --- Notification fn setting
@@ -1223,6 +1250,14 @@ CREATE OR REPLACE FUNCTION trigger.create_rule(name, trigger.threshold_def[])
 AS $$
     SELECT trigger.setup_rule(trigger.define($1), $2);
 $$ LANGUAGE SQL VOLATILE;
+
+
+COMMENT ON FUNCTION trigger.create_rule(name, trigger.threshold_def[]) IS
+'Define a new rule and create accompanyning functions and views.
+
+.. IMPORTANT::
+   A KPI function <trigger_name>_kpi(timestamp with time zone) must already
+   exist.';
 
 
 CREATE OR REPLACE FUNCTION trigger.drop_kpi_fn_sql(trigger.rule)

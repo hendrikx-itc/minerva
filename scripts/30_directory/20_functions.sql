@@ -144,6 +144,10 @@ AS $$
 $$ LANGUAGE SQL VOLATILE STRICT;
 
 
+COMMENT ON FUNCTION directory.create_entitytype(character varying) IS
+'Create new entitytype with specified name and return it.';
+
+
 CREATE OR REPLACE FUNCTION directory.parent_dn_parts(directory.dn_part[])
     RETURNS directory.dn_part[]
 AS $$
@@ -156,6 +160,9 @@ AS $$
         END;
 $$ LANGUAGE SQL IMMUTABLE STRICT;
 
+COMMENT ON FUNCTION directory.parent_dn_parts(directory.dn_part[]) IS
+'Return all but the last DN part or NULL if the array is empty.';
+
 
 CREATE OR REPLACE FUNCTION directory.parent_dn(character varying)
     RETURNS character varying
@@ -163,12 +170,18 @@ AS $$
     SELECT directory.glue_dn(directory.parent_dn_parts(directory.explode_dn($1)));
 $$ LANGUAGE SQL IMMUTABLE STRICT;
 
+COMMENT ON FUNCTION directory.parent_dn(character varying) IS
+'Return DN string of the parent.';
+
 
 CREATE OR REPLACE FUNCTION directory.name_to_entitytype(character varying)
     RETURNS directory.entitytype
 AS $$
     SELECT COALESCE(directory.get_entitytype($1), directory.create_entitytype($1));
 $$ LANGUAGE SQL VOLATILE STRICT;
+
+COMMENT ON FUNCTION directory.name_to_entitytype(character varying) IS
+'Return new or existing entitytype with specified name.';
 
 
 CREATE OR REPLACE FUNCTION directory.entitytype_id(directory.entitytype)
@@ -220,6 +233,12 @@ CREATE OR REPLACE FUNCTION directory.dn_to_entity(character varying)
 AS $$
     SELECT COALESCE(directory.get_entity($1), directory.create_entity($1));
 $$ LANGUAGE SQL VOLATILE STRICT;
+
+COMMENT ON FUNCTION directory.dn_to_entity(character varying) IS
+'Return existing or new entity with specified DN.
+
+When an existing entity is found with the specified DN, then this is returned.
+Otherwise, a new entity is created, including any parents.';
 
 
 CREATE OR REPLACE FUNCTION directory.get_alias(entity_id integer, aliastype_name character varying)
