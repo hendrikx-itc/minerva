@@ -1517,14 +1517,14 @@ $$ LANGUAGE sql;
 CREATE FUNCTION trend.populate_attribute_at_ptr(trend.attribute_to_trend, timestamp with time zone)
     RETURNS trend.attribute_to_trend
 AS $$
+    SELECT trend.mark_attribute_to_trend_as_processed($1, $2, compacted)
+    FROM attribute_directory.attributestore_compacted
+    WHERE attributestore_compacted.attributestore_id = $1.attributestore_id;
+
     SELECT public.action(
         $1,
         trend.populate_attribute_at_ptr_sql($1, $2)
     );
-
-    SELECT trend.mark_attribute_to_trend_as_processed($1, $2, modified)
-    FROM attribute_directory.attributestore_modified
-    WHERE attributestore_modified.attributestore_id = $1.attributestore_id;
 
     SELECT $1;
 $$ LANGUAGE sql;
