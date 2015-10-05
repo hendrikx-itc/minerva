@@ -204,7 +204,7 @@ BEGIN
 
     replicated_server_conn = system.get_setting('replicated_server_conn');
 
-    IF replicated_server_conn IS NULL THEN
+    IF replicated_server_conn.value IS NULL THEN
         -- Local materialization
         EXECUTE sources_query INTO tmp_source_states;
         EXECUTE format('INSERT INTO trend.%I (%s) %s', dst_partition.table_name, columns_part, data_query);
