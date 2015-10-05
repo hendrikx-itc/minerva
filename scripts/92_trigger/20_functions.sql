@@ -1373,12 +1373,8 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION trigger.fingerprint(trigger.rule, timestamp with time zone)
     RETURNS text
 AS $$
-DECLARE
-    result text;
 BEGIN
-    EXECUTE format('SELECT trigger_rule.%I($1)', trigger.fingerprint_fn_name($1)) INTO result USING $2;
-
-    RETURN result;
+    RETURN QUERY EXECUTE format('SELECT trigger_rule.%I($1)', trigger.fingerprint_fn_name($1)) USING $2;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
