@@ -152,8 +152,52 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialize(src trend.trendstore, dst trend.trendstore, "timestamp" timestamp with time zone)
-    RETURNS materialization_result
+CREATE OR REPLACE FUNCTION materialization.has_function(materialization.type)
+    RETURNS boolean
+AS $$
+    SELECT EXISTS(SELECT pg_proc.oid
+    FROM pg_proc
+    JOIN pg_namespace ON pg_namespace.oid = pg_proc.pronamespace
+    WHERE nspname = 'trend_transform' AND proname = (SELECT trendstore::text FROM trend.trendstore WHERE id = $1.dst_trendstore_id));
+$$ LANGUAGE sql STABLE;
+
+
+CREATE TYPE materialization.function_return_column AS (
+    name name,
+    data_type text
+);
+
+
+CREATE OR REPLACE FUNCTION materialization.function_return_columns(oid)
+    RETURNS SETOF materialization.function_return_column
+AS $$
+select
+    (name, type_name)::materialization.function_return_column
+from (
+    select unnest(names) AS "name", format_type(unnest(type_oids), NULL) AS "type_name"
+    from (
+            select
+            proargnames[pronargs+1:array_length(proargnames, 1)] AS names,
+            (proallargtypes::oid[])[pronargs+1:array_length(proallargtypes, 1)] AS type_oids
+            from pg_proc where oid = $1
+    ) foo
+) bar;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.function_return_columns(materialization.type)
+    RETURNS SETOF materialization.function_return_column
+AS $$
+SELECT
+    materialization.function_return_columns(pg_proc.oid)
+FROM pg_proc
+JOIN pg_namespace ON pg_namespace.oid = pg_proc.pronamespace
+WHERE nspname = 'trend_transform' AND proname = (SELECT trendstore::text FROM trend.trendstore WHERE id = $1.dst_trendstore_id)
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.materialize(src trend.trendstore, dst trend.trendstore, "timestamp" timestamp with time zone)
+    RETURNS materialization.materialization_result
 AS $$
 DECLARE
     schema_name character varying;
@@ -199,8 +243,18 @@ BEGIN
         materialization_type.id
     );
 
-    data_query = format('SELECT %s FROM %I.%I WHERE timestamp = %L',
-        columns_part, schema_name, table_name, timestamp);
+    -- Functions should perform better than views, so use it when it exists.
+    IF materialization.has_function(materialization_type) THEN
+        data_query = format(
+            'SELECT %s FROM trend_transform.%I(%L)',
+            columns_part, dst_table_name, timestamp
+        );
+    ELSE
+        data_query = format(
+            'SELECT %s FROM %I.%I WHERE timestamp = %L',
+            columns_part, schema_name, table_name, timestamp
+        );
+    END IF;
 
     replicated_server_conn = system.get_setting('replicated_server_conn');
 
