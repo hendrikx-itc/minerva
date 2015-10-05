@@ -162,17 +162,17 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE TYPE materialization.function_return_column AS (
+CREATE TYPE materialization.column AS (
     name name,
     data_type text
 );
 
 
 CREATE OR REPLACE FUNCTION materialization.function_return_columns(oid)
-    RETURNS SETOF materialization.function_return_column
+    RETURNS SETOF materialization.column
 AS $$
 select
-    (name, type_name)::materialization.function_return_column
+    (name, type_name)::materialization.column
 from (
     select unnest(names) AS "name", format_type(unnest(type_oids), NULL) AS "type_name"
     from (
@@ -186,7 +186,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE OR REPLACE FUNCTION materialization.function_return_columns(materialization.type)
-    RETURNS SETOF materialization.function_return_column
+    RETURNS SETOF materialization.column
 AS $$
 SELECT
     materialization.function_return_columns(pg_proc.oid)
