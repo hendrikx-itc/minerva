@@ -557,6 +557,8 @@ BEGIN
         RETURN;
     END IF;
 
+    RAISE NOTICE 'alter_column_types(%, %, [..])', namespace_name, table_name;
+
     SELECT
         array_to_string(array_agg(format('ALTER %I TYPE %s USING CAST (%I AS %s)', cs.name, cs.datatype, cs.name, cs.datatype)), ', ') INTO column_alterations
     FROM unnest(columns) AS cs;
