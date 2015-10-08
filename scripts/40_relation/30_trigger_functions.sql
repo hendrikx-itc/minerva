@@ -24,7 +24,7 @@ CREATE OR REPLACE FUNCTION relation.create_self_relation()
     RETURNS TRIGGER
 AS $$
 BEGIN
-    INSERT INTO relation.self (source_id, target_id, type_id) SELECT NEW.id, NEW.id, "type".id FROM relation."type" WHERE name = 'self';
+    INSERT INTO relation.self (source_id, target_id) SELECT NEW.id, NEW.id FROM relation."type" WHERE name = 'self';
 
     RETURN NEW;
 END;

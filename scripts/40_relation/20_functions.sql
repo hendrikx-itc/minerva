@@ -1,13 +1,15 @@
-CREATE OR REPLACE FUNCTION relation.create_relation_table(name text, type_id int)
+CREATE OR REPLACE FUNCTION relation.create_relation_table(name text)
     RETURNS void
 AS $$
 DECLARE
     sql text;
     full_table_name text;
 BEGIN
-    EXECUTE format('CREATE TABLE %I.%I (
-    CHECK (type_id=%L)
-    ) INHERITS (relation."all");', 'relation', name, type_id);
+    EXECUTE format(
+        'CREATE TABLE relation.%I ('
+        ') INHERITS (relation."all");',
+        name
+    );
 
     EXECUTE format('ALTER TABLE %I.%I OWNER TO minerva_admin;', 'relation', name);
 
@@ -107,7 +109,7 @@ DECLARE
     result integer;
 BEGIN
     EXECUTE format('DELETE FROM relation.%I;', $1.name);
-    EXECUTE format('INSERT INTO relation.%I SELECT *, %L FROM relation_def.%I;', $1.name, $1.id, $1.name);
+    EXECUTE format('INSERT INTO relation.%I SELECT * FROM relation_def.%I;', $1.name, $1.name);
 
     GET DIAGNOSTICS result = ROW_COUNT;
 
@@ -153,8 +155,7 @@ AS $$
             format(
                 'CREATE TABLE relation.%I ('
                 'source_id integer NOT NULL, '
-                'target_id integer NOT NULL, '
-                'type_id integer NOT NULL'
+                'target_id integer NOT NULL '
                 ');',
                 $1
             ),
@@ -175,13 +176,8 @@ AS $$
     SELECT public.action(
         $1,
         ARRAY[
-            format(
-                'ALTER TABLE relation.%I
-                ADD PRIMARY KEY (source_id, target_id, type_id);',
-                $1
-            ),
-            format('CREATE INDEX ON relation.%I USING btree (target_id);', $1),
-            format('CREATE INDEX ON relation."all_materialized" USING btree (type_id);', $1)
+            format('CREATE INDEX ON relation.%I USING btree (source_id, target_id);', $1),
+            format('CREATE INDEX ON relation.%I USING btree (target_id);', $1)
         ]
     );
 $$ LANGUAGE sql VOLATILE;
@@ -203,8 +199,8 @@ AS $$
     SELECT public.action(
         $1,
         format(
-            'INSERT INTO relation.%I(source_id, target_id, type_id) '
-            'SELECT source_id, target_id, type_id '
+            'INSERT INTO relation.%I(source_id, target_id) '
+            'SELECT source_id, target_id '
             'FROM relation.all',
             $1
         )

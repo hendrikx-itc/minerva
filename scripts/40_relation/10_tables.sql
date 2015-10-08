@@ -107,8 +107,7 @@ CREATE UNIQUE INDEX ix_type_name ON relation."type" (name);
 
 CREATE TABLE relation."all" (
     source_id integer NOT NULL,
-    target_id integer NOT NULL,
-    type_id integer NOT NULL
+    target_id integer NOT NULL
 );
 
 ALTER TABLE relation."all" OWNER TO minerva_admin;
@@ -120,31 +119,23 @@ GRANT ALL ON TABLE relation."all" TO minerva_admin;
 GRANT SELECT ON TABLE relation."all" TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE relation."all" TO minerva_writer;
 
-ALTER TABLE ONLY relation."all"
-    ADD CONSTRAINT type_id_fkey
-    FOREIGN KEY (type_id) REFERENCES relation."type"(id)
-    ON DELETE CASCADE;
-
 CREATE INDEX ON relation."all" USING btree (target_id);
-CREATE INDEX ON relation."all" USING btree (type_id);
 
 -- Table 'relation.all_materialized'
 
 CREATE TABLE relation.all_materialized (
     source_id integer NOT NULL,
     target_id integer NOT NULL,
-    type_id integer NOT NULL
 );
 
 ALTER TABLE relation."all_materialized" OWNER TO minerva_admin;
 
 ALTER TABLE relation."all_materialized"
-    ADD PRIMARY KEY (source_id, target_id, type_id);
+    ADD PRIMARY KEY (source_id, target_id);
 
 GRANT ALL ON TABLE relation."all_materialized" TO minerva_admin;
 GRANT SELECT ON TABLE relation."all_materialized" TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE relation."all_materialized" TO minerva_writer;
 
 CREATE INDEX ON relation."all_materialized" USING btree (target_id);
-CREATE INDEX ON relation."all_materialized" USING btree (type_id);
 
