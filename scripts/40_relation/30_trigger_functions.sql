@@ -19,13 +19,3 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
-CREATE OR REPLACE FUNCTION relation.create_self_relation()
-    RETURNS TRIGGER
-AS $$
-BEGIN
-    INSERT INTO relation.self (source_id, target_id) SELECT NEW.id, NEW.id FROM relation."type" WHERE name = 'self';
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;

@@ -7,7 +7,7 @@ DECLARE
 BEGIN
     EXECUTE format(
         'CREATE TABLE relation.%I ('
-        ') INHERITS (relation."all");',
+        ') INHERITS (relation.all_tables);',
         name
     );
 

@@ -103,23 +103,23 @@ GRANT UPDATE ON SEQUENCE relation.type_id_seq TO minerva_writer;
 
 CREATE UNIQUE INDEX ix_type_name ON relation."type" (name);
 
--- Table 'relation.all'
+-- Table 'relation.all_tables'
 
-CREATE TABLE relation."all" (
+CREATE TABLE relation.all_tables (
     source_id integer NOT NULL,
     target_id integer NOT NULL
 );
 
-ALTER TABLE relation."all" OWNER TO minerva_admin;
+ALTER TABLE relation.all_tables OWNER TO minerva_admin;
 
-ALTER TABLE ONLY relation."all"
+ALTER TABLE ONLY relation.all_tables
     ADD PRIMARY KEY (source_id, target_id);
 
-GRANT ALL ON TABLE relation."all" TO minerva_admin;
-GRANT SELECT ON TABLE relation."all" TO minerva;
-GRANT INSERT,DELETE,UPDATE ON TABLE relation."all" TO minerva_writer;
+GRANT ALL ON TABLE relation.all_tables TO minerva_admin;
+GRANT SELECT ON TABLE relation.all_tables TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE relation.all_tables TO minerva_writer;
 
-CREATE INDEX ON relation."all" USING btree (target_id);
+CREATE INDEX ON relation.all_tables USING btree (target_id);
 
 -- Table 'relation.all_materialized'
 
