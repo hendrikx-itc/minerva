@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION relation.create_relation_table_on_insert()
     RETURNS TRIGGER
 AS $$
 BEGIN
-    PERFORM relation.create_relation_table(NEW.name, NEW.id);
+    PERFORM relation.create_relation_table(NEW.name);
 
     RETURN NEW;
 END;
