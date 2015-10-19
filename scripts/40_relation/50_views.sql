@@ -1,5 +1,3 @@
-INSERT INTO relation.type(name) VALUES ('self');
-
 CREATE VIEW relation.self AS
 SELECT
     id AS source_id,
