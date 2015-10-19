@@ -9,8 +9,3 @@ CREATE TRIGGER delete_relation_table_on_type_delete
     FOR EACH ROW
     EXECUTE PROCEDURE relation.drop_table_on_type_delete();
 
-
-CREATE TRIGGER create_self_relation_on_entity_insert
-    AFTER INSERT ON directory.entity
-    FOR EACH ROW
-    EXECUTE PROCEDURE relation.create_self_relation();
