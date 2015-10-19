@@ -163,6 +163,8 @@ BEGIN
         NEW.partition_size = trend.get_default_partition_size(NEW.granularity);
     END IF;
 
+    NEW.retention_period = trend.default_retention_period(NEW);
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

@@ -1710,3 +1710,10 @@ AS $$
 SELECT * FROM trend.trendstore WHERE trendstore::text = $1;
 $$ LANGUAGE sql;
 
+
+CREATE FUNCTION trend.default_retention_period(trend.trendstore)
+    RETURNS interval
+AS $$
+SELECT interval '1 month';
+$$ LANGUAGE sql STABLE;
+
