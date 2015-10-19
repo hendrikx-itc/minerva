@@ -125,7 +125,7 @@ CREATE INDEX ON relation.all_tables USING btree (target_id);
 
 CREATE TABLE relation.all_materialized (
     source_id integer NOT NULL,
-    target_id integer NOT NULL,
+    target_id integer NOT NULL
 );
 
 ALTER TABLE relation."all_materialized" OWNER TO minerva_admin;
