@@ -293,7 +293,8 @@ CREATE TABLE trend.attribute_to_trend (
     id serial PRIMARY KEY,
     attributestore_id integer REFERENCES attribute_directory.attributestore(id),
     granularity varchar not null,
-    enabled boolean not null default true
+    enabled boolean not null default true,
+    retention interval not null DEFAULT interval '1 month'
 );
 
 ALTER TABLE trend.attribute_to_trend OWNER TO minerva_admin;
