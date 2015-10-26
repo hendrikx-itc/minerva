@@ -1,14 +1,4 @@
-SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
-
-SET search_path = materialization, pg_catalog;
-
-
-CREATE OR REPLACE FUNCTION to_char(materialization.type)
+CREATE OR REPLACE FUNCTION materialization.to_char(materialization.type)
     RETURNS text
 AS $$
     SELECT trend.to_base_table_name(src) || ' -> ' || trend.to_base_table_name(dst)
@@ -17,7 +7,7 @@ AS $$
 $$ LANGUAGE SQL STABLE STRICT;
 
 
-CREATE OR REPLACE FUNCTION add_new_state()
+CREATE OR REPLACE FUNCTION materialization.add_new_state()
     RETURNS integer
 AS $$
 DECLARE
@@ -34,7 +24,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION update_modified_state()
+CREATE OR REPLACE FUNCTION materialization.update_modified_state()
     RETURNS integer
 AS $$
 DECLARE
@@ -56,7 +46,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION delete_obsolete_state()
+CREATE OR REPLACE FUNCTION materialization.delete_obsolete_state()
     RETURNS integer
 AS $$
 DECLARE
@@ -75,17 +65,17 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION update_state()
+CREATE OR REPLACE FUNCTION materialization.update_state()
     RETURNS text
 AS $$
     SELECT 'added: ' || materialization.add_new_state() || ', updated: ' || materialization.update_modified_state() || ', deleted: ' || materialization.delete_obsolete_state();
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE TYPE materialization_result AS (processed_max_modified timestamp with time zone, row_count integer);
+CREATE TYPE materialization.materialization_result AS (processed_max_modified timestamp with time zone, row_count integer);
 
 
-CREATE OR REPLACE FUNCTION missing_columns(src trend.trendstore, dst trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.missing_columns(src trend.trendstore, dst trend.trendstore)
     RETURNS TABLE (name character varying, datatype character varying)
 AS $$
     SELECT name, datatype
@@ -95,11 +85,11 @@ AS $$
     );
 $$ LANGUAGE SQL STABLE;
 
-COMMENT ON FUNCTION missing_columns(src trend.trendstore, dst trend.trendstore)
+COMMENT ON FUNCTION materialization.missing_columns(src trend.trendstore, dst trend.trendstore)
 IS 'The set of table columns (name, datatype) that exist in the source trendstore but not yet in the destination.';
 
 
-CREATE OR REPLACE FUNCTION missing_columns(materialization.type)
+CREATE OR REPLACE FUNCTION materialization.missing_columns(materialization.type)
     RETURNS TABLE (name character varying, datatype character varying)
 AS $$
     SELECT materialization.missing_columns(src, dst)
@@ -108,19 +98,19 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION add_missing_trends(src trend.trendstore, dst trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.add_missing_trends(src trend.trendstore, dst trend.trendstore)
     RETURNS bigint
 AS $$
     SELECT count(trend.add_trend_to_trendstore($2, name, datatype))
     FROM materialization.missing_columns($1, $2);
 $$ LANGUAGE SQL VOLATILE;
 
-COMMENT ON FUNCTION add_missing_trends(src trend.trendstore, dst trend.trendstore)
+COMMENT ON FUNCTION materialization.add_missing_trends(src trend.trendstore, dst trend.trendstore)
 IS 'Add trends and actual table columns to destination that exist in the source
 trendstore but not yet in the destination.';
 
 
-CREATE OR REPLACE FUNCTION add_missing_trends(materialization.type)
+CREATE OR REPLACE FUNCTION materialization.add_missing_trends(materialization.type)
     RETURNS materialization.type
 AS $$
     SELECT materialization.add_missing_trends(src, dst)
@@ -131,7 +121,7 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION modify_mismatching_trends(src trend.trendstore, dst trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.modify_mismatching_trends(src trend.trendstore, dst trend.trendstore)
     RETURNS void
 AS $$
     SELECT trend.modify_trendstore_columns($2.id, array_agg(src_column))
@@ -143,7 +133,7 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION modify_mismatching_trends(materialization.type)
+CREATE OR REPLACE FUNCTION materialization.modify_mismatching_trends(materialization.type)
     RETURNS void
 AS $$
     SELECT materialization.modify_mismatching_trends(src, dst)
@@ -298,8 +288,8 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialize(src_trendstore_id integer, dst_trendstore_id integer, "timestamp" timestamp with time zone)
-    RETURNS materialization_result
+CREATE OR REPLACE FUNCTION materialization.materialize(src_trendstore_id integer, dst_trendstore_id integer, "timestamp" timestamp with time zone)
+    RETURNS materialization.materialization_result
 AS $$
     SELECT materialization.materialize(src, dst, $3)
         FROM trend.trendstore src, trend.trendstore dst
@@ -307,8 +297,8 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialization(src text, dst text, "timestamp" timestamp with time zone)
-    RETURNS materialization_result
+CREATE OR REPLACE FUNCTION materialization.materialization(src text, dst text, "timestamp" timestamp with time zone)
+    RETURNS materialization.materialization_result
 AS $$
     SELECT materialization.materialize(src, dst, $3)
     FROM
@@ -318,8 +308,8 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialize(materialization text, "timestamp" timestamp with time zone)
-    RETURNS materialization_result
+CREATE OR REPLACE FUNCTION materialization.materialize(materialization text, "timestamp" timestamp with time zone)
+    RETURNS materialization.materialization_result
 AS $$
     SELECT materialization.materialize(mt.src_trendstore_id, mt.dst_trendstore_id, $2)
     FROM materialization.type mt
@@ -327,15 +317,15 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialize(materialization.type, "timestamp" timestamp with time zone)
-    RETURNS materialization_result
+CREATE OR REPLACE FUNCTION materialization.materialize(materialization.type, "timestamp" timestamp with time zone)
+    RETURNS materialization.materialization_result
 AS $$
     SELECT materialization.materialize($1.src_trendstore_id, $1.dst_trendstore_id, $2);
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialize(id integer, "timestamp" timestamp with time zone)
-    RETURNS materialization_result
+CREATE OR REPLACE FUNCTION materialization.materialize(id integer, "timestamp" timestamp with time zone)
+    RETURNS materialization.materialization_result
 AS $$
     SELECT materialization.materialize(mt.src_trendstore_id, mt.dst_trendstore_id, $2)
     FROM materialization.type mt
@@ -343,7 +333,35 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION define(src_trendstore_id integer, dst_trendstore_id integer)
+CREATE OR REPLACE FUNCTION materialization.default_processing_delay(granularity character varying)
+    RETURNS interval
+AS $$
+    SELECT CASE
+        WHEN $1 = '1800' OR $1 = '900' OR $1 = '300' THEN
+            interval '0 seconds'
+        WHEN $1 = '3600' THEN
+            interval '15 minutes'
+        ELSE
+            interval '3 hours'
+        END;
+$$ LANGUAGE SQL STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.default_stability_delay(granularity character varying)
+    RETURNS interval
+AS $$
+    SELECT CASE
+        WHEN $1 = '1800' OR $1 = '900' OR $1 = '300' THEN
+            interval '180 seconds'
+        WHEN $1 = '3600' THEN
+            interval '5 minutes'
+        ELSE
+            interval '15 minutes'
+        END;
+$$ LANGUAGE SQL STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.define(src_trendstore_id integer, dst_trendstore_id integer)
     RETURNS materialization.type
 AS $$
     INSERT INTO materialization.type (src_trendstore_id, dst_trendstore_id, processing_delay, stability_delay, reprocessing_period)
@@ -353,14 +371,14 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION define(src trend.trendstore, dst trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.define(src trend.trendstore, dst trend.trendstore)
     RETURNS materialization.type
 AS $$
     SELECT materialization.define($1.id, $2.id);
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION define(text, text)
+CREATE OR REPLACE FUNCTION materialization.define(text, text)
     RETURNS materialization.type
 AS $$
     SELECT
@@ -372,7 +390,7 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION define(trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.define(trend.trendstore)
     RETURNS materialization.type
 AS $$
     SELECT materialization.add_missing_trends(
@@ -388,7 +406,7 @@ AS $$
     WHERE view.trendstore_id = $1.id;
 $$ LANGUAGE SQL VOLATILE;
 
-COMMENT ON FUNCTION define(trend.trendstore)
+COMMENT ON FUNCTION materialization.define(trend.trendstore)
 IS 'Defines a new materialization with the convention that the datasource of
 the source trendstore should start with a ''v'' for views and that the
 destination trendstore has the same properties except for a datasource with a
@@ -396,7 +414,7 @@ name without the leading ''v''. A new trendstore and datasource are created if
 they do not exist.';
 
 
-CREATE OR REPLACE FUNCTION define(trend.view)
+CREATE OR REPLACE FUNCTION materialization.define(trend.view)
     RETURNS materialization.type
 AS $$
     SELECT materialization.add_missing_trends(
@@ -411,7 +429,7 @@ AS $$
     WHERE ts.id = $1.trendstore_id;
 $$ LANGUAGE SQL VOLATILE;
 
-COMMENT ON FUNCTION define(trend.view)
+COMMENT ON FUNCTION materialization.define(trend.view)
 IS 'Defines a new materialization with the convention that the datasource of
 the source trendstore should start with a ''v'' for views and that the
 destination trendstore has the same properties except for a datasource with a
@@ -419,14 +437,14 @@ name without the leading ''v''. A new trendstore and datasource are created if
 they do not exist.';
 
 
-CREATE OR REPLACE FUNCTION render_job_json(type_id integer, timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.render_job_json(type_id integer, timestamp with time zone)
     RETURNS character varying
 AS $$
     SELECT format('{"type_id": %s, "timestamp": "%s"}', $1, $2);
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION create_job(type_id integer, "timestamp" timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.create_job(type_id integer, "timestamp" timestamp with time zone)
     RETURNS integer
 AS $$
 DECLARE
@@ -448,7 +466,16 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION runnable(type materialization.type, "timestamp" timestamp with time zone, max_modified timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.source_data_ready(type materialization.type, "timestamp" timestamp with time zone, max_modified timestamp with time zone)
+    RETURNS boolean
+AS $$
+    SELECT
+        $2 < now() - $1.processing_delay AND
+        $3 < now() - $1.stability_delay;
+$$ LANGUAGE SQL STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.runnable(type materialization.type, "timestamp" timestamp with time zone, max_modified timestamp with time zone)
     RETURNS boolean
 AS $$
     SELECT
@@ -458,14 +485,14 @@ AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION runnable(materialization.type, materialization.state)
+CREATE OR REPLACE FUNCTION materialization.runnable(materialization.type, materialization.state)
     RETURNS boolean
 AS $$
     SELECT materialization.runnable($1, $2.timestamp, $2.max_modified);
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION open_job_slots(slot_count integer)
+CREATE OR REPLACE FUNCTION materialization.open_job_slots(slot_count integer)
     RETURNS integer
 AS $$
     SELECT greatest($1 - COUNT(*), 0)::integer
@@ -474,7 +501,7 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION runnable_materializations(tag varchar)
+CREATE OR REPLACE FUNCTION materialization.runnable_materializations(tag varchar)
     RETURNS TABLE (type_id integer, "timestamp" timestamp with time zone)
 AS $$
 DECLARE
@@ -499,18 +526,17 @@ BEGIN
         JOIN materialization.tagged_runnable_materializations rj ON
             replicated_state.type_id = rj.type_id
                 AND
-            replicated_state.timestamp = rj.timestamp
-        WHERE materialization.no_slave_lag();
+            replicated_state.timestamp = rj.timestamp;
     END IF;
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION runnable_materializations(tag varchar)
+COMMENT ON FUNCTION materialization.runnable_materializations(tag varchar)
 IS 'Return table with all combinations (type_id, timestamp) that are ready to
 run. This includes the check between the master and slave states.';
 
 
-CREATE OR REPLACE FUNCTION create_jobs(tag varchar, job_limit integer)
+CREATE OR REPLACE FUNCTION materialization.create_jobs(tag varchar, job_limit integer)
     RETURNS integer
 AS $$
     SELECT COUNT(materialization.create_job(type_id, timestamp))::integer
@@ -522,7 +548,7 @@ AS $$
 $$ LANGUAGE SQL;
 
 
-CREATE OR REPLACE FUNCTION create_jobs(tag varchar)
+CREATE OR REPLACE FUNCTION materialization.create_jobs(tag varchar)
     RETURNS integer
 AS $$
     SELECT COUNT(materialization.create_job(type_id, timestamp))::integer
@@ -530,17 +556,17 @@ AS $$
 $$ LANGUAGE SQL;
 
 
-CREATE OR REPLACE FUNCTION create_jobs_limited(tag varchar, job_limit integer)
+CREATE OR REPLACE FUNCTION materialization.create_jobs_limited(tag varchar, job_limit integer)
     RETURNS integer
 AS $$
     SELECT materialization.create_jobs($1, $2);
 $$ LANGUAGE SQL;
 
-COMMENT ON FUNCTION create_jobs_limited(tag varchar, job_limit integer)
+COMMENT ON FUNCTION materialization.create_jobs_limited(tag varchar, job_limit integer)
 IS 'Deprecated function that just calls the overloaded create_jobs function.';
 
 
-CREATE OR REPLACE FUNCTION tag(tag_name character varying, type_id integer)
+CREATE OR REPLACE FUNCTION materialization.tag(tag_name character varying, type_id integer)
     RETURNS materialization.type_tag_link
 AS $$
     INSERT INTO materialization.type_tag_link (type_id, tag_id)
@@ -548,12 +574,12 @@ AS $$
     RETURNING *;
 $$ LANGUAGE SQL VOLATILE;
 
-COMMENT ON FUNCTION tag(character varying, type_id integer)
+COMMENT ON FUNCTION materialization.tag(character varying, type_id integer)
 IS 'Add tag with name tag_name to materialization type with id type_id.
 The tag must already exist.';
 
 
-CREATE OR REPLACE FUNCTION tag(tag_name character varying, materialization.type)
+CREATE OR REPLACE FUNCTION materialization.tag(tag_name character varying, materialization.type)
     RETURNS materialization.type
 AS $$
     INSERT INTO materialization.type_tag_link (type_id, tag_id)
@@ -561,21 +587,21 @@ AS $$
     RETURNING $2;
 $$ LANGUAGE SQL VOLATILE;
 
-COMMENT ON FUNCTION tag(character varying, materialization.type)
+COMMENT ON FUNCTION materialization.tag(character varying, materialization.type)
 IS 'Add tag with name tag_name to materialization type. The tag must already exist.';
 
 
-CREATE OR REPLACE FUNCTION untag(materialization.type)
+CREATE OR REPLACE FUNCTION materialization.untag(materialization.type)
     RETURNS materialization.type
 AS $$
     DELETE FROM materialization.type_tag_link WHERE type_id = $1.id RETURNING $1;
 $$ LANGUAGE SQL VOLATILE;
 
-COMMENT ON FUNCTION untag(materialization.type)
+COMMENT ON FUNCTION materialization.untag(materialization.type)
 IS 'Remove all tags from the materialization';
 
 
-CREATE OR REPLACE FUNCTION reset(type_id integer)
+CREATE OR REPLACE FUNCTION materialization.reset(type_id integer)
     RETURNS SETOF materialization.state
 AS $$
     UPDATE materialization.state SET processed_states = NULL
@@ -586,20 +612,20 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION reset_hard(materialization.type)
+CREATE OR REPLACE FUNCTION materialization.reset_hard(materialization.type)
     RETURNS void
 AS $$
     DELETE FROM trend.partition WHERE trendstore_id = $1.dst_trendstore_id;
     DELETE FROM materialization.state WHERE type_id = $1.id;
 $$ LANGUAGE SQL VOLATILE;
 
-COMMENT ON FUNCTION reset_hard(materialization.type)
+COMMENT ON FUNCTION materialization.reset_hard(materialization.type)
 IS 'Remove data (partitions) resulting from this materialization and the
 corresponding state records, so materialization for all timestamps can be done
 again';
 
 
-CREATE OR REPLACE FUNCTION reset(type_id integer, timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.reset(type_id integer, timestamp with time zone)
     RETURNS materialization.state
 AS $$
     UPDATE materialization.state SET processed_states = NULL
@@ -608,35 +634,35 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION reset(materialization.type, timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.reset(materialization.type, timestamp with time zone)
     RETURNS materialization.state
 AS $$
-    SELECT reset($1.id, $2);
+    SELECT materialization.reset($1.id, $2);
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION enable(materialization.type)
+CREATE OR REPLACE FUNCTION materialization.enable(materialization.type)
     RETURNS materialization.type
 AS $$
     UPDATE materialization.type SET enabled = true WHERE id = $1.id RETURNING type;
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION disable(materialization.type)
+CREATE OR REPLACE FUNCTION materialization.disable(materialization.type)
     RETURNS materialization.type
 AS $$
     UPDATE materialization.type SET enabled = false WHERE id = $1.id RETURNING type;
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION fragments(materialization.source_fragment_state[])
+CREATE OR REPLACE FUNCTION materialization.fragments(materialization.source_fragment_state[])
     RETURNS materialization.source_fragment[]
 AS $$
     SELECT array_agg(fragment) FROM unnest($1);
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION requires_update(materialization.state)
+CREATE OR REPLACE FUNCTION materialization.requires_update(materialization.state)
     RETURNS boolean
 AS $$
     SELECT (
@@ -647,44 +673,7 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION default_processing_delay(granularity character varying)
-    RETURNS interval
-AS $$
-    SELECT CASE
-        WHEN $1 = '1800' OR $1 = '900' OR $1 = '300' THEN
-            interval '0 seconds'
-        WHEN $1 = '3600' THEN
-            interval '15 minutes'
-        ELSE
-            interval '3 hours'
-        END;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION default_stability_delay(granularity character varying)
-    RETURNS interval
-AS $$
-    SELECT CASE
-        WHEN $1 = '1800' OR $1 = '900' OR $1 = '300' THEN
-            interval '180 seconds'
-        WHEN $1 = '3600' THEN
-            interval '5 minutes'
-        ELSE
-            interval '15 minutes'
-        END;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION source_data_ready(type materialization.type, "timestamp" timestamp with time zone, max_modified timestamp with time zone)
-    RETURNS boolean
-AS $$
-    SELECT
-        $2 < now() - $1.processing_delay AND
-        $3 < now() - $1.stability_delay;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION dependencies(trend.trendstore, level integer)
+CREATE OR REPLACE FUNCTION materialization.dependencies(trend.trendstore, level integer)
     RETURNS TABLE(trendstore trend.trendstore, level integer)
 AS $$
 -- Stub to allow recursive definition.
@@ -692,7 +681,7 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION direct_view_dependencies(trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.direct_view_dependencies(trend.trendstore)
     RETURNS SETOF trend.trendstore
 AS $$
     SELECT trendstore
@@ -703,7 +692,7 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION direct_table_dependencies(trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.direct_table_dependencies(trend.trendstore)
     RETURNS SETOF trend.trendstore
 AS $$
     SELECT trendstore
@@ -713,7 +702,7 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION direct_dependencies(trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.direct_dependencies(trend.trendstore)
     RETURNS SETOF trend.trendstore
 AS $$
     SELECT
@@ -725,7 +714,7 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION dependencies(trend.trendstore, level integer)
+CREATE OR REPLACE FUNCTION materialization.dependencies(trend.trendstore, level integer)
     RETURNS TABLE(trendstore trend.trendstore, level integer)
 AS $$
     SELECT (d.dependencies).* FROM (
@@ -738,26 +727,56 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION dependencies(trend.trendstore)
+CREATE OR REPLACE FUNCTION materialization.dependencies(trend.trendstore)
     RETURNS TABLE(trendstore trend.trendstore, level integer)
 AS $$
     SELECT materialization.dependencies($1, 1);
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION dependencies(name text)
+CREATE OR REPLACE FUNCTION materialization.dependencies(name text)
     RETURNS TABLE(trendstore trend.trendstore, level integer)
 AS $$
     SELECT materialization.dependencies(trendstore) FROM trend.trendstore WHERE trend.to_char(trendstore) = $1;
 $$ LANGUAGE SQL STABLE;
 
 
-CREATE OR REPLACE FUNCTION no_slave_lag()
-    RETURNS boolean
-    LANGUAGE sql
-AS $$SELECT bytes_lag < 10000000
-FROM metric.replication_lag
-WHERE client_addr = '192.168.42.19';$$;
+-- View 'runnable_materializations'
+
+CREATE OR REPLACE view materialization.runnable_materializations AS
+SELECT type, state
+FROM materialization.state
+JOIN materialization.type ON type.id = state.type_id
+WHERE
+    materialization.requires_update(state)
+    AND
+    materialization.runnable(type, state."timestamp", state.max_modified);
+
+ALTER VIEW materialization.runnable_materializations OWNER TO minerva_admin;
+
+
+-- View 'next_up_materializations'
+
+CREATE OR REPLACE VIEW materialization.next_up_materializations AS
+SELECT type_id, timestamp, (tag).name, cost, cumsum, resources AS group_resources, (job.id IS NOT NULL AND job.state IN ('queued', 'running')) AS job_active FROM
+(
+    SELECT
+        (rm.type).id AS type_id,
+        (rm.state).timestamp,
+        tag,
+        (rm.type).cost,
+        sum((rm.type).cost) over (partition by tag.name order by trend.granularity_seconds(ts.granularity) asc, (rm.state).timestamp desc, rm.type) as cumsum,
+        (rm.state).job_id
+    FROM materialization.runnable_materializations rm
+    JOIN trend.trendstore ts ON ts.id = (rm.type).dst_trendstore_id
+    JOIN materialization.type_tag_link ttl ON ttl.type_id = (rm.type).id
+    JOIN directory.tag ON tag.id = ttl.tag_id
+) summed
+JOIN materialization.group_priority ON (summed.tag).id = group_priority.tag_id
+LEFT JOIN system.job ON job.id = job_id
+WHERE cumsum <= group_priority.resources;
+
+ALTER VIEW materialization.next_up_materializations OWNER TO minerva_admin;
 
 
 CREATE OR REPLACE FUNCTION materialization.create_jobs()
@@ -766,6 +785,6 @@ CREATE OR REPLACE FUNCTION materialization.create_jobs()
 AS $function$
     SELECT COUNT(materialization.create_job(num.type_id, timestamp))::integer
     FROM materialization.next_up_materializations num
-    WHERE NOT job_active AND materialization.no_slave_lag();
+    WHERE NOT job_active;
 $function$;
 
