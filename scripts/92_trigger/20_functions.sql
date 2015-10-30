@@ -1396,3 +1396,90 @@ AS $$
     WHERE col.name NOT IN ('entity_id', 'timestamp');
 $$ LANGUAGE sql STABLE;
 
+
+CREATE OR REPLACE FUNCTION trigger.backup_essentials(trigger.rule)
+    RETURNS trigger.rule
+AS $$
+    INSERT INTO trigger.rule_backup(id, name, notificationstore_id, granularity, default_interval, enabled)
+    VALUES($1.id, $1.name, $1.notificationstore_id, $1.granularity, $1.default_interval, $1.enabled);
+
+    SELECT public.action(
+        $1,
+        format(
+            'CREATE TABLE trigger_rule.%I AS SELECT * FROM trigger_rule.%I',
+            trigger.exception_weight_table_name($1) || '_bak',
+            trigger.exception_weight_table_name($1)
+        )
+    );
+
+    SELECT public.action(
+        $1,
+        format(
+            'CREATE TABLE trigger_rule.%I AS SELECT * FROM trigger_rule.%I',
+            trigger.exception_threshold_table_name($1) || '_bak',
+            trigger.exception_threshold_table_name($1)
+        )
+    );
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.remove_backup(trigger.rule)
+    RETURNS trigger.rule
+AS $$
+    DELETE FROM trigger.rule_backup WHERE name = $1.name;
+
+    SELECT public.action(
+        $1,
+        format(
+            'DROP TABLE IF EXISTS trigger_rule.%I',
+            trigger.exception_weight_table_name($1) || '_bak'
+        )
+    );
+
+    SELECT public.action(
+        $1,
+        format(
+            'DROP TABLE IF EXISTS trigger_rule.%I',
+            trigger.exception_threshold_table_name($1) || '_bak'
+        )
+    );
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.restore_essentials(trigger.rule)
+    RETURNS trigger.rule
+AS $$
+    UPDATE trigger.rule SET
+        id = backup.id,
+        notificationstore_id = backup.notificationstore_id,
+        granularity = backup.granularity,
+        default_interval = backup.default_interval,
+        enabled = backup.enabled
+    FROM trigger.rule_backup backup
+    WHERE backup.name = $1.name AND rule.name = $1.name;
+
+    SELECT public.action(
+        $1,
+        format(
+            'INSERT INTO trigger_rule.%I SELECT * FROM trigger_rule.%I',
+            trigger.exception_weight_table_name($1),
+            trigger.exception_weight_table_name($1) || '_bak'
+        )
+    );
+
+    SELECT public.action(
+        $1,
+        format(
+            'INSERT INTO trigger_rule.%I SELECT * FROM trigger_rule.%I',
+            trigger.exception_threshold_table_name($1),
+            trigger.exception_threshold_table_name($1) || '_bak'
+        )
+    );
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
