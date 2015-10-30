@@ -396,7 +396,7 @@ AS $$
 SELECT CASE WHEN $3 = 1 THEN true ELSE hashint4($1) BETWEEN materialization.partial_index_start($2, $3) AND materialization.partial_index_start($2 + 1, $3) - 1 END;
 $$;
 
-CREATE OR REPLACE FUNCTION materialization.materialize(src trend.trendstore, dst trend.trendstore, trend_timestamp timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.materialize(src trend.trendstore, dst trend.trendstore, trend_timestamp timestamptz)
   RETURNS materialization.materialization_result
 AS $$
 DECLARE
@@ -406,6 +406,7 @@ DECLARE
   result materialization.materialization_result;
   mat_type materialization.type;
   mat_state materialization.state;
+  mat_fingerprint text;
 BEGIN
   table_name = trend.to_base_table_name(src);
 
@@ -424,11 +425,27 @@ BEGIN
     WHERE type_id = mat_type.id
       AND timestamp = trend_timestamp;
 
+  SELECT fingerprint INTO mat_fingerprint
+    FROM materialization.state_fingerprint
+    WHERE type_id = mat_type.id
+      AND timestamp = trend_timestamp;
+
   IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states OR mat_state.partials_processed = mat_type.partials
   THEN
     -- restart from first partial, because either:
     -- * source_states changed
     -- * manual rematerialization
+
+    IF mat_state.partial_states IS NOT NULL
+    THEN
+      IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states
+      THEN
+        RAISE WARNING 'restarting partial materialization for % -> % timestamp %, reason: source states changed', src::text, dst::text, trend_timestamp;
+      ELSE
+        RAISE WARNING 'restarting partial materialization for % -> % timestamp %, reason: rematerialization', src::text, dst::text, trend_timestamp;
+      END IF;
+    END IF;
+
     UPDATE materialization.state
     SET partial_states = source_states,
       partials_processed = 0
@@ -437,15 +454,6 @@ BEGIN
 
     mat_state.partial_states = mat_state.source_states;
     mat_state.partials_processed = 0;
-  END IF;
-
-  IF mat_state.partials_processed + 1 = mat_type.partials OR materialization.has_function(mat_type) THEN
-    -- this is the final (or the only) partial materialization
-
-    UPDATE materialization.state_fingerprint SET processed_fingerprint = fingerprint
-    WHERE
-      state_fingerprint.type_id = mat_type.id AND
-      state_fingerprint.timestamp = trend_timestamp;
   END IF;
 
   EXECUTE format(
@@ -488,6 +496,11 @@ BEGIN
       partials_processed = mat_type.partials
     WHERE type_id = mat_type.id
       AND state.timestamp = trend_timestamp;
+
+    UPDATE materialization.state_fingerprint SET processed_fingerprint = mat_fingerprint
+    WHERE
+      state_fingerprint.type_id = mat_type.id AND
+      state_fingerprint.timestamp = trend_timestamp;
 
     PERFORM trend.mark_modified(dst_partition.table_name, trend_timestamp);
   ELSE
@@ -727,19 +740,6 @@ AS $$
     FROM system.job
     WHERE type = 'materialize' AND (state = 'running' OR state = 'queued');
 $$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.runnable_materializations(tag varchar)
-    RETURNS TABLE (type_id integer, "timestamp" timestamp with time zone)
-AS $$
-    SELECT trm.type_id, trm.timestamp
-    FROM materialization.tagged_runnable_materializations trm
-    WHERE trm.tag = $1;
-$$ LANGUAGE sql;
-
-COMMENT ON FUNCTION materialization.runnable_materializations(tag varchar)
-IS 'Return table with all combinations (type_id, timestamp) that are ready to
-run. This includes the check between the master and slave states.';
 
 
 CREATE OR REPLACE FUNCTION materialization.create_jobs(tag varchar, job_limit integer)
