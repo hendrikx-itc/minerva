@@ -440,9 +440,9 @@ BEGIN
     THEN
       IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states
       THEN
-        RAISE WARNING 'restarting partial materialization for % -> % timestamp %, reason: source states changed', src::text, dst::text, trend_timestamp;
+        RAISE WARNING 'restarting partial materialization for % -> % (type %) timestamp %, reason: source states changed', src::text, dst::text, mat_type.id, trend_timestamp;
       ELSE
-        RAISE WARNING 'restarting partial materialization for % -> % timestamp %, reason: rematerialization', src::text, dst::text, trend_timestamp;
+        RAISE WARNING 'restarting partial materialization for % -> % (type %) timestamp %, reason: rematerialization', src::text, dst::text, mat_type.id, trend_timestamp;
       END IF;
     END IF;
 
@@ -740,36 +740,6 @@ AS $$
     FROM system.job
     WHERE type = 'materialize' AND (state = 'running' OR state = 'queued');
 $$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.create_jobs(tag varchar, job_limit integer)
-    RETURNS integer
-AS $$
-    SELECT COUNT(materialization.create_job(type_id, timestamp))::integer
-    FROM (
-        SELECT type_id, timestamp
-        FROM materialization.runnable_materializations($1)
-        LIMIT materialization.open_job_slots($2)
-    ) mzs;
-$$ LANGUAGE SQL;
-
-
-CREATE OR REPLACE FUNCTION materialization.create_jobs(tag varchar)
-    RETURNS integer
-AS $$
-    SELECT COUNT(materialization.create_job(type_id, timestamp))::integer
-    FROM materialization.runnable_materializations($1);
-$$ LANGUAGE SQL;
-
-
-CREATE OR REPLACE FUNCTION materialization.create_jobs_limited(tag varchar, job_limit integer)
-    RETURNS integer
-AS $$
-    SELECT materialization.create_jobs($1, $2);
-$$ LANGUAGE SQL;
-
-COMMENT ON FUNCTION materialization.create_jobs_limited(tag varchar, job_limit integer)
-IS 'Deprecated function that just calls the overloaded create_jobs function.';
 
 
 CREATE OR REPLACE FUNCTION materialization.tag(tag_name character varying, type_id integer)
