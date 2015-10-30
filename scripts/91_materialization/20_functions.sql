@@ -693,7 +693,7 @@ BEGIN
 
     UPDATE materialization.state_fingerprint
         SET job_id = new_job_id
-        WHERE state.type_id = $1 AND state.timestamp = $2;
+        WHERE state_fingerprint.type_id = $1 AND state_fingerprint.timestamp = $2;
 
     RETURN new_job_id;
 END;
