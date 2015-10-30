@@ -424,9 +424,12 @@ BEGIN
     WHERE type_id = mat_type.id
       AND timestamp = trend_timestamp;
 
-  IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states
+  IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states OR mat_state.partials_processed = mat_type.partials
   THEN
-    UPDATE mat_state
+    -- restart from first partial, because either:
+    -- * source_states changed
+    -- * manual rematerialization
+    UPDATE materialization.state
     SET partial_states = source_states,
       partials_processed = 0
     WHERE type_id = mat_state.type_id
@@ -441,7 +444,7 @@ BEGIN
 
     UPDATE materialization.state_fingerprint SET processed_fingerprint = fingerprint
     WHERE
-      state_fingerprint.type_id = materialization_type.id AND
+      state_fingerprint.type_id = mat_type.id AND
       state_fingerprint.timestamp = trend_timestamp;
   END IF;
 
