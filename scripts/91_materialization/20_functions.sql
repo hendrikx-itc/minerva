@@ -396,7 +396,7 @@ AS $$
 SELECT CASE WHEN $3 = 1 THEN true ELSE hashint4($1) BETWEEN materialization.partial_index_start($2, $3) AND materialization.partial_index_start($2 + 1, $3) - 1 END;
 $$;
 
-CREATE OR REPLACE FUNCTION materialization.materialize__test(src trend.trendstore, dst trend.trendstore, trend_timestamp timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.materialize(src trend.trendstore, dst trend.trendstore, trend_timestamp timestamp with time zone)
   RETURNS materialization.materialization_result
 AS $$
 DECLARE
