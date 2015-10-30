@@ -176,3 +176,47 @@ GROUP BY ttl.tag_id;
 
 ALTER VIEW materialization.required_resources_by_group OWNER TO minerva_admin;
 
+
+-- View 'new_state_fingerprint'
+
+CREATE OR REPLACE VIEW materialization.new_state_fingerprint AS
+SELECT
+    staged.type_id,
+    staged.timestamp,
+    staged.fingerprint,
+    staged.modified
+FROM materialization.state_fingerprint_staging staged
+LEFT JOIN materialization.state_fingerprint state ON
+    state.type_id = staged.type_id AND
+    state.timestamp = staged.timestamp
+WHERE state.type_id IS NULL;
+
+ALTER VIEW materialization.new_state_fingerprint OWNER TO minerva_admin;
+
+GRANT ALL ON materialization.new_state_fingerprint TO minerva_admin;
+
+GRANT ALL ON materialization.new_state_fingerprint TO minerva_admin;
+GRANT SELECT ON materialization.new_state_fingerprint TO minerva;
+
+
+-- View 'modified_state_fingerprint'
+
+CREATE OR REPLACE VIEW materialization.modified_state_fingerprint AS
+SELECT
+    staged.type_id,
+    staged.timestamp,
+    staged.fingerprint,
+    staged.modified
+FROM materialization.state_fingerprint_staging staged
+JOIN materialization.state_fingerprint state ON
+    state.type_id = staged.type_id AND
+    state.timestamp = staged.timestamp AND
+    state.fingerprint <> staged.fingerprint;
+
+ALTER VIEW materialization.modified_state_fingerprint OWNER TO minerva_admin;
+
+GRANT ALL ON materialization.modified_state_fingerprint TO minerva_admin;
+
+GRANT ALL ON materialization.modified_state_fingerprint TO minerva_admin;
+GRANT SELECT ON materialization.modified_state_fingerprint TO minerva;
+

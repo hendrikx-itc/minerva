@@ -1,3 +1,198 @@
+CREATE TYPE trend.fingerprint AS (
+    body text,
+    modified timestamp with time zone
+);
+
+
+CREATE OR REPLACE FUNCTION trend.aggregation_timestamps(src_granularity interval, dst_granularity interval, timestamp with time zone)
+    RETURNS SETOF timestamp with time zone
+AS $$
+    SELECT generate_series($3 - $2 + $1, $3, $1);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trend.aggregation_timestamps(src_granularity character varying, dst_granularity character varying, timestamp with time zone)
+    RETURNS SETOF timestamp with time zone
+AS $$
+    SELECT trend.aggregation_timestamps(trend.parse_granularity($1), trend.parse_granularity($2), $3);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trend.fingerprint(trend.trendstore, trend.trendstore, timestamp with time zone)
+    RETURNS trend.fingerprint
+AS $$
+    SELECT
+        string_agg(
+            format('%s: %s', t, modified),
+            E'\n'
+        ),
+        max(modified)
+    FROM (
+        SELECT t, trend.modified($1, t) modified
+        FROM trend.aggregation_timestamps($1.granularity, $2.granularity, $3) t
+    ) m;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.fingerprint_function_name(materialization.type)
+    RETURNS name
+AS $$
+    SELECT (trend.to_base_table_name(dst) || '_fingerprint')::name
+    FROM trend.trendstore dst
+    WHERE dst.id = $1.dst_trendstore_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.fingerprint_fn_sql(materialization.type)
+    RETURNS text
+AS $$
+    select format('CREATE FUNCTION trend.%I(timestamp with time zone) RETURNS trend.fingerprint AS $body$', materialization.fingerprint_function_name($1)) ||
+    string_agg(
+        format(
+            E'SELECT trend.fingerprint(src_trendstore, dst_trendstore, $1)\n'
+            'FROM trend.trendstore src_trendstore, trend.trendstore dst_trendstore\n'
+            'WHERE src_trendstore.id = %s AND dst_trendstore.id = %s\n',
+            src_trendstore.id,
+            view.trendstore_id
+        ),
+        E'UNION ALL\n'
+    ) || '$body$ LANGUAGE sql STABLE;'
+    FROM trend.view
+    join trend.view_trendstore_link vtl on vtl.view_id = view.id
+    join trend.trendstore src_trendstore on src_trendstore.id = vtl.trendstore_id
+    where view.trendstore_id = $1.src_trendstore_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.create_fingerprint_fn(materialization.type)
+    RETURNS materialization.type
+AS $$
+    SELECT public.action($1, materialization.fingerprint_fn_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.drop_fingerprint_fn_sql(materialization.type)
+    RETURNS text
+AS $$
+    SELECT format(
+        'DROP FUNCTION trend.%I(timestamp with time zone)',
+        materialization.fingerprint_function_name($1)
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.drop_fingerprint_fn(materialization.type)
+    RETURNS materialization.type
+AS $$
+    SELECT public.action($1, materialization.drop_fingerprint_fn_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.fingerprint(materialization.type, timestamp with time zone)
+    RETURNS trend.fingerprint
+AS $$
+DECLARE
+    result trend.fingerprint;
+BEGIN
+    EXECUTE format('SELECT * FROM trend.%I($1)', materialization.fingerprint_function_name($1)) INTO result USING $2;
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.processable_timestamps(materialization.type)
+    RETURNS SETOF timestamp with time zone
+AS $$
+    SELECT generate_series(
+        trend.get_most_recent_timestamp(dst_trendstore.granularity, now() - $1.reprocessing_period) + trend.parse_granularity(dst_trendstore.granularity),
+        trend.get_most_recent_timestamp(dst_trendstore.granularity, now() - $1.processing_delay),
+        trend.parse_granularity(dst_trendstore.granularity)
+    )
+    FROM trend.trendstore dst_trendstore
+    WHERE dst_trendstore.id = $1.dst_trendstore_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.changed_fragments(timestamp with time zone)
+    RETURNS SETOF materialization.fragment
+AS $$
+    SELECT type, timestamp FROM (
+        SELECT
+            mt AS "type",
+            trend.get_timestamp_for(dst.granularity, mdf.timestamp) AS timestamp
+        FROM trend.modified mdf
+        JOIN trend.partition p ON
+                mdf.table_name = p.table_name
+        JOIN trend.view_trendstore_link vtl ON
+                vtl.trendstore_id = p.trendstore_id
+        JOIN trend.view v ON
+        v.id = vtl.view_id
+        JOIN materialization.type mt ON
+                mt.src_trendstore_id = v.trendstore_id
+        JOIN trend.trendstore dst ON
+                dst.id = mt.dst_trendstore_id
+        WHERE mdf.end >= $1
+    ) f GROUP BY type, timestamp;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.changed_fingerprints(timestamp with time zone)
+    RETURNS TABLE (
+        "type" materialization.type,
+        "timestamp" timestamp with time zone,
+        fingerprint trend.fingerprint
+)
+AS $$
+    SELECT type, timestamp, materialization.fingerprint(type, timestamp)
+    FROM materialization.changed_fragments($1);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE TYPE materialization.update_state_result AS (
+    new integer,
+    updated integer
+);
+
+
+CREATE OR REPLACE FUNCTION materialization.update_state_fingerprint(timestamp with time zone)
+    RETURNS materialization.update_state_result
+AS $$
+DECLARE
+    result materialization.update_state_result;
+BEGIN
+    INSERT INTO materialization.state_fingerprint_staging(type_id, timestamp, fingerprint, modified)
+    (
+        SELECT (type).id, timestamp, (fingerprint).body, (fingerprint).modified
+        FROM materialization.changed_fingerprints($1)
+    );
+
+    INSERT INTO materialization.state_fingerprint(type_id, timestamp, fingerprint, modified)
+    (
+        SELECT type_id, timestamp, fingerprint, modified
+        FROM materialization.new_state_fingerprint
+    );
+
+    GET DIAGNOSTICS result.new = ROW_COUNT;
+
+    UPDATE materialization.state_fingerprint state
+    SET
+        fingerprint = modified.fingerprint,
+        modified = modified.modified
+    FROM materialization.modified_state_fingerprint modified
+    WHERE
+        state.type_id = modified.type_id AND
+        state.timestamp = modified.timestamp;
+
+    GET DIAGNOSTICS result.updated = ROW_COUNT;
+
+    DELETE FROM materialization.state_fingerprint_staging;
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION materialization.to_char(materialization.type)
     RETURNS text
 AS $$
@@ -190,23 +385,18 @@ CREATE OR REPLACE FUNCTION materialization.materialize(src trend.trendstore, dst
     RETURNS materialization.materialization_result
 AS $$
 DECLARE
-    schema_name character varying;
     table_name character varying;
     dst_table_name character varying;
     dst_partition trend.partition;
     sources_query character varying;
     data_query character varying;
-    conn_str character varying;
     columns_part character varying;
     column_defs_part character varying;
     modified timestamp with time zone;
     row_count integer;
     result materialization.materialization_result;
-    replicated_server_conn system.setting;
-    tmp_source_states materialization.source_fragment_state[];
     materialization_type materialization.type;
 BEGIN
-    schema_name = 'trend';
     table_name = trend.to_base_table_name(src);
     dst_table_name = trend.to_base_table_name(dst);
 
@@ -219,19 +409,9 @@ BEGIN
     SELECT
         array_to_string(array_agg(quote_ident(name)), ', ') INTO columns_part
     FROM
-        trend.table_columns(schema_name, table_name);
+        trend.table_columns('trend', table_name);
 
     SELECT * INTO materialization_type FROM materialization.type where src_trendstore_id = $1.id AND dst_trendstore_id = $2.id;
-
-    sources_query = format(
-        'SELECT source_states '
-        'FROM materialization.materializables '
-        'WHERE '
-            'timestamp = %L AND '
-            'type_id = %s',
-        $3,
-        materialization_type.id
-    );
 
     -- Functions should perform better than views, so use it when it exists.
     IF materialization.has_function(materialization_type) THEN
@@ -241,40 +421,27 @@ BEGIN
         );
     ELSE
         data_query = format(
-            'SELECT %s FROM %I.%I WHERE timestamp = %L',
-            columns_part, schema_name, table_name, timestamp
+            'SELECT %s FROM trend.%I WHERE timestamp = %L',
+            columns_part, table_name, timestamp
         );
     END IF;
 
-    replicated_server_conn = system.get_setting('replicated_server_conn');
+    UPDATE materialization.state SET processed_states = materializables.source_states
+    FROM materialization.materializables
+    WHERE
+        materializables.timestamp = $3 AND
+        materializables.type_id = materialization_type.id AND
+        state.type_id = materialization_type.id AND
+        state.timestamp = $3;
 
-    IF replicated_server_conn.value IS NULL THEN
-        -- Local materialization
-        EXECUTE sources_query INTO tmp_source_states;
-        EXECUTE format('INSERT INTO trend.%I (%s) %s', dst_partition.table_name, columns_part, data_query);
-    ELSE
-        -- Remote materialization
-        conn_str = replicated_server_conn.value;
+    UPDATE materialization.state_fingerprint SET processed_fingerprint = fingerprint
+    WHERE
+        state_fingerprint.type_id = materialization_type.id AND
+        state_fingerprint.timestamp = $3;
 
-        SELECT
-            array_to_string(array_agg(format('%I %s', col.name, col.datatype)), ', ') INTO column_defs_part
-        FROM
-            trend.table_columns(schema_name, table_name) col;
-
-        SELECT sources INTO tmp_source_states
-        FROM public.dblink(conn_str, sources_query) AS r (sources materialization.source_fragment_state[]);
-
-        EXECUTE format('INSERT INTO trend.%I (%s) SELECT * FROM public.dblink(%L, %L) AS rel (%s)',
-            dst_partition.table_name, columns_part, conn_str, data_query, column_defs_part);
-    END IF;
+    EXECUTE format('INSERT INTO trend.%I (%s) %s', dst_partition.table_name, columns_part, data_query);
 
     GET DIAGNOSTICS result.row_count = ROW_COUNT;
-
-    UPDATE materialization.state SET processed_states = tmp_source_states
-    FROM materialization.type
-    WHERE type.id = state.type_id AND state.timestamp = $3
-    AND type.src_trendstore_id = $1.id
-    AND type.dst_trendstore_id = $2.id;
 
     IF result.row_count = 0 THEN
         RAISE NOTICE 'NO ROWS materialized FOR materialization of % -> %, %', src::text, dst::text, timestamp;
@@ -461,6 +628,10 @@ BEGIN
         SET job_id = new_job_id
         WHERE state.type_id = $1 AND state.timestamp = $2;
 
+    UPDATE materialization.state_fingerprint
+        SET job_id = new_job_id
+        WHERE state.type_id = $1 AND state.timestamp = $2;
+
     RETURN new_job_id;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
@@ -489,6 +660,13 @@ CREATE OR REPLACE FUNCTION materialization.runnable(materialization.type, materi
     RETURNS boolean
 AS $$
     SELECT materialization.runnable($1, $2.timestamp, $2.max_modified);
+$$ LANGUAGE SQL IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.runnable(materialization.type, materialization.state_fingerprint)
+    RETURNS boolean
+AS $$
+    SELECT materialization.runnable($1, $2.timestamp, $2.modified);
 $$ LANGUAGE SQL IMMUTABLE;
 
 
@@ -755,6 +933,24 @@ WHERE
 ALTER VIEW materialization.runnable_materializations OWNER TO minerva_admin;
 
 
+-- View 'runnable_materializations_fingerprint'
+
+CREATE OR REPLACE view materialization.runnable_materializations_fingerprint AS
+SELECT type, state
+FROM materialization.state_fingerprint state
+JOIN materialization.type ON type.id = state.type_id
+WHERE
+    (
+        state.fingerprint <> state.processed_fingerprint
+        OR
+        state.processed_fingerprint IS NULL
+    )
+    AND
+    materialization.runnable(type, state);
+
+ALTER VIEW materialization.runnable_materializations_fingerprint OWNER TO minerva_admin;
+
+
 -- View 'next_up_materializations'
 
 CREATE OR REPLACE VIEW materialization.next_up_materializations AS
@@ -768,6 +964,37 @@ SELECT type_id, timestamp, (tag).name, cost, cumsum, resources AS group_resource
         sum((rm.type).cost) over (partition by tag.name order by trend.granularity_seconds(ts.granularity) asc, (rm.state).timestamp desc, rm.type) as cumsum,
         (rm.state).job_id
     FROM materialization.runnable_materializations rm
+    JOIN trend.trendstore ts ON ts.id = (rm.type).dst_trendstore_id
+    JOIN materialization.type_tag_link ttl ON ttl.type_id = (rm.type).id
+    JOIN directory.tag ON tag.id = ttl.tag_id
+) summed
+JOIN materialization.group_priority ON (summed.tag).id = group_priority.tag_id
+LEFT JOIN system.job ON job.id = job_id
+WHERE cumsum <= group_priority.resources;
+
+ALTER VIEW materialization.next_up_materializations OWNER TO minerva_admin;
+
+-- View 'next_up_materializations_fingerprint'
+
+CREATE OR REPLACE VIEW materialization.next_up_materializations_fingerprint AS
+SELECT
+    type_id,
+    timestamp,
+    (tag).name,
+    cost,
+    cumsum,
+    resources AS group_resources,
+    (job.id IS NOT NULL AND job.state IN ('queued', 'running')) AS job_active
+FROM
+(
+    SELECT
+        (rm.type).id AS type_id,
+        (rm.state).timestamp,
+        tag,
+        (rm.type).cost,
+        sum((rm.type).cost) OVER (partition BY tag.name ORDER BY trend.granularity_seconds(ts.granularity) ASC, (rm.state).timestamp DESC, rm.type) AS cumsum,
+        (rm.state).job_id
+    FROM materialization.runnable_materializations_fingerprint rm
     JOIN trend.trendstore ts ON ts.id = (rm.type).dst_trendstore_id
     JOIN materialization.type_tag_link ttl ON ttl.type_id = (rm.type).id
     JOIN directory.tag ON tag.id = ttl.tag_id

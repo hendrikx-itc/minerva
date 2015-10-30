@@ -149,3 +149,59 @@ ALTER TABLE materialization.group_priority OWNER TO minerva_admin;
 GRANT ALL ON TABLE materialization.group_priority TO minerva_admin;
 GRANT SELECT ON TABLE materialization.group_priority TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE materialization.group_priority TO minerva_writer;
+
+
+-- Type 'fragment'
+
+CREATE TYPE materialization.fragment AS (
+    type materialization.type,
+    timestamp timestamp with time zone
+);
+
+
+-- Table 'state_fingerprint'
+
+CREATE TABLE materialization.state_fingerprint (
+    type_id integer NOT NULL REFERENCES materialization.type(id) ON DELETE CASCADE,
+    timestamp timestamp with time zone NOT NULL,
+    fingerprint text,
+    modified timestamp with time zone,
+    processed_fingerprint text DEFAULT NULL,
+    job_id integer DEFAULT NULL,
+    PRIMARY KEY (type_id, timestamp)
+);
+
+COMMENT ON COLUMN materialization.state_fingerprint.type_id IS
+'The Id of the materialization type';
+COMMENT ON COLUMN materialization.state_fingerprint.timestamp IS
+'The timestamp of the materialized (materialization result) data';
+COMMENT ON COLUMN materialization.state_fingerprint.job_id IS
+'Id of the most recent job for this materialization';
+
+ALTER TABLE materialization.state_fingerprint OWNER TO minerva_admin;
+
+GRANT ALL ON TABLE materialization.state_fingerprint TO minerva_admin;
+GRANT SELECT ON TABLE materialization.state_fingerprint TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE materialization.state_fingerprint TO minerva_writer;
+
+
+-- Table 'state_fingerprint_staging'
+
+CREATE UNLOGGED TABLE materialization.state_fingerprint_staging (
+    type_id integer NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
+    fingerprint text,
+    modified timestamp with time zone
+);
+
+COMMENT ON COLUMN materialization.state_fingerprint_staging.type_id IS
+'The Id of the materialization type';
+COMMENT ON COLUMN materialization.state_fingerprint_staging.timestamp IS
+'The timestamp of the materialized (materialization result) data';
+
+ALTER TABLE materialization.state_fingerprint_staging OWNER TO minerva_admin;
+
+GRANT ALL ON TABLE materialization.state_fingerprint_staging TO minerva_admin;
+GRANT SELECT ON TABLE materialization.state_fingerprint_staging TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE materialization.state_fingerprint_staging TO minerva_writer;
+
