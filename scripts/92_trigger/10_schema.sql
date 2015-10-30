@@ -104,3 +104,20 @@ ALTER SCHEMA trigger_rule OWNER TO minerva_admin;
 GRANT ALL ON SCHEMA trigger_rule TO minerva_writer;
 GRANT USAGE ON SCHEMA trigger_rule TO minerva;
 
+-- Table 'rule_backup'
+
+CREATE TABLE trigger.rule_backup (
+    id serial PRIMARY KEY,
+    name name,
+    notificationstore_id integer references notification.notificationstore(id),
+    granularity interval,
+    default_interval interval,
+    enabled boolean NOT null DEFAULT false,
+    UNIQUE(name)
+);
+
+ALTER TABLE trigger.rule_backup OWNER TO minerva_admin;
+
+GRANT ALL ON TABLE trigger.rule_backup TO minerva_admin;
+GRANT SELECT ON TABLE trigger.rule_backup TO minerva;
+GRANT UPDATE ON TABLE trigger.rule_backup TO minerva_writer;
