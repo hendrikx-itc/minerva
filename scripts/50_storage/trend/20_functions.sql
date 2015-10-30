@@ -327,14 +327,16 @@ END;
 $$ LANGUAGE plpgsql STABLE STRICT;
 
 
-CREATE OR REPLACE FUNCTION trend.parse_granularity(character varying)
+CREATE OR REPLACE FUNCTION trend.parse_granularity(granularity_str character varying)
     RETURNS interval
 AS $$
     SELECT CASE
         WHEN $1 = 'month' THEN
             interval '1 month'
-        WHEN $1 = 'week' THEN
+        WHEN $1 = 'week' OR $1 = '604800' THEN
             interval '1 week'
+        WHEN $1 = '86400' THEN
+            interval '1 day'
         WHEN $1 ~ '^[0-9]+$' THEN
             $1::interval
         END;
