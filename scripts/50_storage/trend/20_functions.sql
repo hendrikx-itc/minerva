@@ -124,9 +124,6 @@ $$ LANGUAGE SQL VOLATILE;
 CREATE OR REPLACE FUNCTION trend.create_partition_table(name text)
     RETURNS void
 AS $$
-DECLARE
-    sql text;
-    full_table_name text;
 BEGIN
     EXECUTE format('CREATE TABLE %I.%I (
         entity_id integer NOT NULL,
@@ -142,7 +139,7 @@ BEGIN
 
     EXECUTE format('CREATE INDEX ON %I.%I USING btree (modified);', 'trend', name);
 
-    EXECUTE format('CREATE INDEX ON %I.%I USING btree (timestamp);', 'trend', name);
+    EXECUTE format('CREATE INDEX ON %I.%I USING btree (timestamp, hashint4(entity_id));', 'trend', name);
 END;
 $$ LANGUAGE plpgsql VOLATILE STRICT;
 
@@ -412,33 +409,23 @@ $$ LANGUAGE SQL STABLE;
 
 CREATE OR REPLACE FUNCTION trend.create_partition_table_v4(base_name text, name text, data_start timestamp with time zone, data_end timestamp with time zone)
     RETURNS void
-AS $$
-DECLARE
-    sql text;
-    full_table_name text;
-    index_name text;
+AS $func$
 BEGIN
-    EXECUTE format('CREATE TABLE %I.%I (
-    CHECK ("timestamp" > %L AND "timestamp" <= %L)
-    ) INHERITS (%I.%I);', 'trend', name, data_start, data_end, 'trend', base_name);
+    EXECUTE format($$
+      CREATE TABLE trend.%I (
+        LIKE trend.%I INCLUDING ALL,
+        CHECK ("timestamp" > %L AND "timestamp" <= %L)
+      ) INHERITS (trend.%I)
+    $$, name, base_name, data_start, data_end, base_name);
 
-    EXECUTE format('ALTER TABLE ONLY %I.%I
-    ADD PRIMARY KEY (entity_id, "timestamp");', 'trend', name);
+    EXECUTE format('ALTER TABLE %I.%I OWNER TO minerva_writer', 'trend', name);
 
-    EXECUTE format('CREATE INDEX ON %I.%I USING btree (modified);', 'trend', name);
-
-    EXECUTE format('CREATE INDEX ON %I.%I USING btree (timestamp);', 'trend', name);
-
-    EXECUTE format('ALTER TABLE %I.%I OWNER TO minerva_writer;', 'trend', name);
-
-    EXECUTE format('GRANT SELECT ON TABLE %I.%I TO minerva;', 'trend', name);
-    EXECUTE format('GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;', 'trend', name);
-
-    index_name = trend.get_index_on(name, 'timestamp');
+    EXECUTE format('GRANT SELECT ON TABLE %I.%I TO minerva', 'trend', name);
+    EXECUTE format('GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer', 'trend', name);
 
     PERFORM trend.cluster_table_on_timestamp(name);
 END;
-$$ LANGUAGE plpgsql VOLATILE STRICT;
+$func$ LANGUAGE plpgsql VOLATILE STRICT;
 
 
 CREATE OR REPLACE FUNCTION trend.transfer_staged(trendstore trend.trendstore)

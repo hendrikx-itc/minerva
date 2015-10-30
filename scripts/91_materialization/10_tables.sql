@@ -6,8 +6,6 @@ ALTER SCHEMA materialization OWNER TO minerva_admin;
 GRANT ALL ON SCHEMA materialization TO minerva_writer;
 GRANT USAGE ON SCHEMA materialization TO minerva;
 
-
-
 -- Table 'type'
 
 CREATE TABLE materialization.type (
@@ -18,7 +16,8 @@ CREATE TABLE materialization.type (
     stability_delay interval NOT NULL,
     reprocessing_period interval NOT NULL,
     enabled boolean NOT NULL DEFAULT FALSE,
-    cost integer NOT NULL DEFAULT 10
+    cost integer NOT NULL DEFAULT 10,
+    partials integer NOT NULL DEFAULT 1 CHECK (partials > 0)
 );
 
 COMMENT ON COLUMN materialization.type.src_trendstore_id IS
@@ -35,6 +34,8 @@ COMMENT ON COLUMN materialization.type.reprocessing_period IS
 'The maximum time after the destination timestamp that the materialization is allowed to be executed';
 COMMENT ON COLUMN materialization.type.enabled IS
 'Indicates if jobs should be created for this materialization (manual execution is always possible)';
+COMMENT ON COLUMN materialization.type.partials IS
+'Materialization is divided into this amount of partial materialization jobs';
 
 ALTER TABLE materialization.type OWNER TO minerva_admin;
 
@@ -81,7 +82,9 @@ CREATE TABLE materialization.state (
     max_modified timestamp with time zone NOT NULL,
     job_id integer,
     source_states materialization.source_fragment_state[],
-    processed_states materialization.source_fragment_state[]
+    processed_states materialization.source_fragment_state[],
+    partial_states materialization.source_fragment_state[],
+    partials_processed integer NOT NULL DEFAULT 0 CHECK (partials_processed >= 0)
 );
 
 COMMENT ON COLUMN materialization.state.type_id IS
@@ -96,6 +99,10 @@ COMMENT ON COLUMN materialization.state.processed_states IS
 'Snapshot of source_states at the time of the most recent materialization';
 COMMENT ON COLUMN materialization.state.job_id IS
 'Id of the most recent job for this materialization';
+COMMENT ON COLUMN materialization.state.partial_states IS
+'The snapshot of source_states currently being partially materialized. If it differs from source_states, partial materialization must  restart';
+COMMENT ON COLUMN materialization.state.partials_processed IS
+'Number of partial materializations that have been processed so far. If equal to type.partials, the materialization has finished.';
 
 ALTER TABLE materialization.state OWNER TO minerva_admin;
 

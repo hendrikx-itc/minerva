@@ -185,105 +185,112 @@ JOIN pg_namespace ON pg_namespace.oid = pg_proc.pronamespace
 WHERE nspname = 'trend_transform' AND proname = (SELECT trendstore::text FROM trend.trendstore WHERE id = $1.dst_trendstore_id)
 $$ LANGUAGE sql STABLE;
 
+CREATE OR REPLACE FUNCTION materialization.partial_index_start(partial_index int4, count_partials int4)
+  RETURNS int8
+  LANGUAGE sql
+  IMMUTABLE
+AS $$
+  SELECT least(((4294967295/$2)+1) * $1) - 2147483648
+$$;
 
-CREATE OR REPLACE FUNCTION materialization.materialize(src trend.trendstore, dst trend.trendstore, "timestamp" timestamp with time zone)
-    RETURNS materialization.materialization_result
+CREATE OR REPLACE FUNCTION materialization.entity_in_partial(entity_id int4, partial_index int4, count_partials int4)
+  RETURNS boolean
+  LANGUAGE sql
+  IMMUTABLE
+AS $$
+SELECT CASE WHEN $3 = 1 THEN true ELSE hashint4($1) BETWEEN materialization.partial_index_start($2, $3) AND materialization.partial_index_start($2 + 1, $3) - 1 END;
+$$;
+
+CREATE OR REPLACE FUNCTION materialization.materialize(src trend.trendstore, dst trend.trendstore, trend_timestamp timestamp with time zone)
+  RETURNS materialization.materialization_result
 AS $$
 DECLARE
-    schema_name character varying;
-    table_name character varying;
-    dst_table_name character varying;
-    dst_partition trend.partition;
-    sources_query character varying;
-    data_query character varying;
-    conn_str character varying;
-    columns_part character varying;
-    column_defs_part character varying;
-    modified timestamp with time zone;
-    row_count integer;
-    result materialization.materialization_result;
-    replicated_server_conn system.setting;
-    tmp_source_states materialization.source_fragment_state[];
-    materialization_type materialization.type;
+  table_name character varying;
+  dst_partition trend.partition;
+  columns_part text;
+  result materialization.materialization_result;
+  mat_type materialization.type;
+  mat_state materialization.state;
 BEGIN
-    schema_name = 'trend';
-    table_name = trend.to_base_table_name(src);
-    dst_table_name = trend.to_base_table_name(dst);
+  table_name = trend.to_base_table_name(src);
 
-    PERFORM materialization.add_missing_trends($1, $2);
-    PERFORM materialization.modify_mismatching_trends($1, $2);
+  PERFORM materialization.add_missing_trends($1, $2);
+  PERFORM materialization.modify_mismatching_trends($1, $2);
 
-    dst_partition = trend.attributes_to_partition(dst, trend.timestamp_to_index(dst.partition_size, $3));
-    EXECUTE format('DELETE FROM trend.%I WHERE timestamp = %L', dst_partition.table_name, timestamp);
+  dst_partition = trend.attributes_to_partition(dst, trend.timestamp_to_index(dst.partition_size, $3));
 
-    SELECT
-        array_to_string(array_agg(quote_ident(name)), ', ') INTO columns_part
-    FROM
-        trend.table_columns(schema_name, table_name);
-
-    SELECT * INTO materialization_type FROM materialization.type where src_trendstore_id = $1.id AND dst_trendstore_id = $2.id;
-
-    sources_query = format(
-        'SELECT source_states '
-        'FROM materialization.materializables '
-        'WHERE '
-            'timestamp = %L AND '
-            'type_id = %s',
-        $3,
-        materialization_type.id
-    );
-
-    -- Functions should perform better than views, so use it when it exists.
-    IF materialization.has_function(materialization_type) THEN
-        data_query = format(
-            'SELECT %s FROM trend_transform.%I(%L)',
-            columns_part, dst_table_name, timestamp
-        );
-    ELSE
-        data_query = format(
-            'SELECT %s FROM %I.%I WHERE timestamp = %L',
-            columns_part, schema_name, table_name, timestamp
-        );
-    END IF;
-
-    replicated_server_conn = system.get_setting('replicated_server_conn');
-
-    IF replicated_server_conn.value IS NULL THEN
-        -- Local materialization
-        EXECUTE sources_query INTO tmp_source_states;
-        EXECUTE format('INSERT INTO trend.%I (%s) %s', dst_partition.table_name, columns_part, data_query);
-    ELSE
-        -- Remote materialization
-        conn_str = replicated_server_conn.value;
-
-        SELECT
-            array_to_string(array_agg(format('%I %s', col.name, col.datatype)), ', ') INTO column_defs_part
-        FROM
-            trend.table_columns(schema_name, table_name) col;
-
-        SELECT sources INTO tmp_source_states
-        FROM public.dblink(conn_str, sources_query) AS r (sources materialization.source_fragment_state[]);
-
-        EXECUTE format('INSERT INTO trend.%I (%s) SELECT * FROM public.dblink(%L, %L) AS rel (%s)',
-            dst_partition.table_name, columns_part, conn_str, data_query, column_defs_part);
-    END IF;
-
-    GET DIAGNOSTICS result.row_count = ROW_COUNT;
-
-    UPDATE materialization.state SET processed_states = tmp_source_states
+  SELECT * INTO STRICT mat_type
     FROM materialization.type
-    WHERE type.id = state.type_id AND state.timestamp = $3
-    AND type.src_trendstore_id = $1.id
-    AND type.dst_trendstore_id = $2.id;
+    WHERE src_trendstore_id = src.id
+      AND dst_trendstore_id = dst.id;
 
-    IF result.row_count = 0 THEN
-        RAISE NOTICE 'NO ROWS materialized FOR materialization of % -> %, %', src::text, dst::text, timestamp;
-        RETURN result;
-    END IF;
+  SELECT * INTO STRICT mat_state
+    FROM materialization.state
+    WHERE type_id = mat_type.id
+      AND timestamp = trend_timestamp;
 
-    PERFORM trend.mark_modified(dst_partition.table_name, "timestamp");
+  IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states
+  THEN
+    UPDATE mat_state
+    SET partial_states = source_states,
+      partials_processed = 0
+    WHERE type_id = mat_state.type_id
+      AND timestamp = mat_state.timestamp;
 
-    RETURN result;
+    mat_state.partial_states = mat_state.source_states;
+    mat_state.partials_processed = 0;
+  END IF;
+
+  EXECUTE format(
+    'DELETE FROM trend.%I WHERE timestamp = $1 AND materialization.entity_in_partial(entity_id, $2, $3)',
+    dst_partition.table_name, mat_state.partials_processed, mat_type.partials
+  )
+    USING trend_timestamp, mat_state.partials_processed, mat_type.partials;
+
+  SELECT array_to_string(array_agg(quote_ident(name)), ', ') INTO STRICT columns_part
+  FROM
+    trend.table_columns('trend', table_name);
+
+  -- Functions should perform better than views, so use it when it exists.
+  IF materialization.has_function(mat_type) THEN
+    -- TODO: use partial in function
+    EXECUTE format(
+      'INSERT INTO trend.%I (%s) SELECT %s FROM trend_transform.%I($1)',
+      dst_partition.table_name, columns_part, columns_part, trend.to_base_table_name(dst)
+    )
+    USING trend_timestamp;
+
+    -- HACK: finish partial materialization because the function has no knowledge of partials
+    mat_state.partials_processed = mat_type.partials - 1;
+  ELSE
+    EXECUTE format(
+      'INSERT INTO trend.%I (%s) SELECT %s FROM trend.%I WHERE timestamp = $1 AND materialization.entity_in_partial(entity_id, $2, $3)',
+      dst_partition.table_name, columns_part, columns_part, table_name
+    )
+    USING trend_timestamp, mat_state.partials_processed, mat_type.partials;
+  END IF;
+
+  GET DIAGNOSTICS result.row_count = ROW_COUNT;
+  RAISE NOTICE 'materialized % rows for partial % for % -> % timestamp %', result.row_count, mat_state.partials_processed, src::text, dst::text, trend_timestamp;
+
+  IF mat_state.partials_processed + 1 = mat_type.partials OR materialization.has_function(mat_type) THEN
+    UPDATE materialization.state
+    SET processed_states = mat_state.source_states,
+      partials_processed = mat_state.partials_processed + 1
+    WHERE type_id = mat_type.id
+      AND state.timestamp = trend_timestamp;
+
+    PERFORM trend.mark_modified(dst_partition.table_name, trend_timestamp);
+  ELSE
+    UPDATE materialization.state
+    SET partials_processed = mat_state.partials_processed + 1
+    WHERE type_id = mat_type.id
+      AND state.timestamp = trend_timestamp;
+
+    PERFORM materialization.create_job(mat_type.id, trend_timestamp);
+  END IF;
+
+  RETURN result;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
@@ -504,32 +511,10 @@ $$ LANGUAGE SQL STABLE;
 CREATE OR REPLACE FUNCTION materialization.runnable_materializations(tag varchar)
     RETURNS TABLE (type_id integer, "timestamp" timestamp with time zone)
 AS $$
-DECLARE
-    runnable_materializations_query text;
-    conn_str text;
-    replicated_server_conn system.setting;
-BEGIN
-    replicated_server_conn = system.get_setting('replicated_server_conn');
-
-    IF replicated_server_conn IS NULL THEN
-        RETURN QUERY SELECT trm.type_id, trm.timestamp
-        FROM materialization.tagged_runnable_materializations trm
-        WHERE trm.tag = $1;
-    ELSE
-        runnable_materializations_query = format('SELECT type_id, timestamp
-            FROM materialization.tagged_runnable_materializations
-            WHERE tag = %L', tag);
-
-        RETURN QUERY SELECT replicated_state.type_id, replicated_state.timestamp
-        FROM public.dblink(replicated_server_conn.value, runnable_materializations_query)
-            AS replicated_state(type_id integer, "timestamp" timestamp with time zone)
-        JOIN materialization.tagged_runnable_materializations rj ON
-            replicated_state.type_id = rj.type_id
-                AND
-            replicated_state.timestamp = rj.timestamp;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+    SELECT trm.type_id, trm.timestamp
+    FROM materialization.tagged_runnable_materializations trm
+    WHERE trm.tag = $1;
+$$ LANGUAGE sql;
 
 COMMENT ON FUNCTION materialization.runnable_materializations(tag varchar)
 IS 'Return table with all combinations (type_id, timestamp) that are ready to
