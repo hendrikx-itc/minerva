@@ -584,9 +584,9 @@ $$ LANGUAGE sql VOLATILE;
 CREATE OR REPLACE FUNCTION materialization.materialize(src_trendstore_id integer, dst_trendstore_id integer, "timestamp" timestamp with time zone)
     RETURNS materialization.materialization_result
 AS $$
-    SELECT materialization.materialize(src, dst, $3)
-        FROM trend.trendstore src, trend.trendstore dst
-        WHERE src.id = $1 AND dst.id = $2;
+    SELECT materialization.materialize(type, $3)
+    FROM materialization.type
+    WHERE src_trendstore_id = $1 ANd dst_trendstore_id = $2;
 $$ LANGUAGE SQL VOLATILE;
 
 
