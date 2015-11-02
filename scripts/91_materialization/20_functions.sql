@@ -452,7 +452,7 @@ SELECT CASE WHEN $3 = 1 THEN true ELSE hashint4($1) BETWEEN materialization.part
 $$;
 
 
-CREATE OR REPLACE FUNCTION materialization.materialize_function(materialization.type, "timestamp" timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.materialize_function(mat_type materialization.type, trend_timestamp timestamp with time zone)
   RETURNS materialization.materialization_result
 AS $$
 DECLARE
@@ -465,39 +465,39 @@ DECLARE
   mat_state materialization.state;
   mat_fingerprint text;
 BEGIN
-  SELECT * INTO src FROM trend.trendstore WHERE id = $1.src_trendstore_id;
-  SELECT * INTO dst FROM trend.trendstore WHERE id = $1.dst_trendstore_id;
+  SELECT * INTO src FROM trend.trendstore WHERE id = mat_type.src_trendstore_id;
+  SELECT * INTO dst FROM trend.trendstore WHERE id = mat_type.dst_trendstore_id;
 
   table_name = trend.to_base_table_name(src);
 
-  PERFORM materialization.add_missing_trends($1);
-  PERFORM materialization.modify_mismatching_trends($1);
+  PERFORM materialization.add_missing_trends(mat_type);
+  PERFORM materialization.modify_mismatching_trends(mat_type);
 
-  dst_partition = trend.attributes_to_partition(dst, trend.timestamp_to_index(dst.partition_size, $2));
+  dst_partition = trend.attributes_to_partition(dst, trend.timestamp_to_index(dst.partition_size, trend_timestamp));
 
   SELECT * INTO STRICT mat_state
     FROM materialization.state
-    WHERE type_id = $1.id
-      AND state.timestamp = $2;
+    WHERE type_id = mat_type.id
+      AND state.timestamp = trend_timestamp;
 
   SELECT fingerprint INTO mat_fingerprint
     FROM materialization.state_fingerprint
-    WHERE type_id = $1.id
-      AND state_fingerprint.timestamp = $2;
+    WHERE type_id = mat_type.id
+      AND state_fingerprint.timestamp = trend_timestamp;
 
-  IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states OR mat_state.partials_processed = $1.partials
+  IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states OR mat_state.partials_processed = mat_type.partials
   THEN
     -- restart from first partial, because either:
     -- * source_states changed
     -- * manual rematerialization
 
-    IF mat_state.partial_states IS NOT NULL
+    IF mat_state.partials_processed <> 0
     THEN
       IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states
       THEN
-        RAISE WARNING 'restarting partial materialization for % -> % (type %) timestamp %, reason: source states changed', src::text, dst::text, $1.id, $2;
+        RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: source states changed', dst::text, mat_type.id, trend_timestamp;
       ELSE
-        RAISE WARNING 'restarting partial materialization for % -> % (type %) timestamp %, reason: rematerialization', src::text, dst::text, $1.id, $2;
+        RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: unknown', dst::text, mat_type.id, trend_timestamp;
       END IF;
     END IF;
 
@@ -507,65 +507,60 @@ BEGIN
     WHERE type_id = mat_state.type_id
       AND state.timestamp = mat_state.timestamp;
 
-    mat_state.partial_states = mat_state.source_states;
-    mat_state.partials_processed = 0;
+    -- release lock; continue in next job
+    PERFORM materialization.create_job(mat_type.id, trend_timestamp);
+    RETURN result;
   END IF;
 
-  EXECUTE format(
-    'DELETE FROM trend.%I WHERE timestamp = $1 AND materialization.entity_in_partial(entity_id, $2, $3)',
-    dst_partition.table_name, mat_state.partials_processed, $1.partials
-  )
-    USING $2, mat_state.partials_processed, $1.partials;
+  IF mat_state.partials_processed = 0
+  THEN
+    EXECUTE format('DELETE FROM trend.%I WHERE timestamp = $1', dst_partition.table_name)
+    USING trend_timestamp;
+  END IF;
 
   SELECT array_to_string(array_agg(quote_ident(name)), ', ') INTO STRICT columns_part
   FROM
     trend.table_columns('trend', table_name);
 
-  -- Functions should perform better than views, so use it when it exists.
-  IF materialization.has_function($1) THEN
-    -- TODO: use partial in function
+  IF materialization.has_function(mat_type) THEN
     EXECUTE format(
       'INSERT INTO trend.%I (%s) SELECT %s FROM trend_transform.%I($1)',
       dst_partition.table_name, columns_part, columns_part, trend.to_base_table_name(dst)
     )
-    USING $2;
+    USING trend_timestamp;
 
     -- HACK: finish partial materialization because the function has no knowledge of partials
     mat_state.partials_processed = $1.partials - 1;
   ELSE
-    EXECUTE format(
-      'INSERT INTO trend.%I (%s) SELECT %s FROM trend.%I WHERE timestamp = $1 AND materialization.entity_in_partial(entity_id, $2, $3)',
-      dst_partition.table_name, columns_part, columns_part, table_name
-    )
-    USING $2, mat_state.partials_processed, $1.partials;
+    RAISE EXCEPTION 'materialize_function cannot be used without a transform function';
   END IF;
 
   GET DIAGNOSTICS result.row_count = ROW_COUNT;
   RAISE NOTICE 'materialized % rows for partial % for % -> % timestamp %', result.row_count, mat_state.partials_processed, src::text, dst::text, $2;
 
-  IF mat_state.partials_processed + 1 = $1.partials OR materialization.has_function($1) THEN
+  IF mat_state.partials_processed + 1 = mat_type.partials THEN
     -- this is the final (or the only) partial materialization
 
     UPDATE materialization.state
     SET processed_states = mat_state.source_states,
-      partials_processed = $1.partials
-    WHERE type_id = $1.id
-      AND state.timestamp = $2;
+      partials_processed = mat_type.partials
+    WHERE type_id = mat_type.id
+      AND state.timestamp = trend_timestamp;
 
     UPDATE materialization.state_fingerprint SET processed_fingerprint = mat_fingerprint
     WHERE
-      state_fingerprint.type_id = $1.id AND
-      state_fingerprint.timestamp = $2;
+      state_fingerprint.type_id = mat_type.id AND
+      state_fingerprint.timestamp = trend_timestamp;
 
-    PERFORM trend.mark_modified(dst_partition.table_name, $2);
+    PERFORM trend.mark_modified(dst_partition.table_name, trend_timestamp);
   ELSE
     UPDATE materialization.state
     SET partials_processed = mat_state.partials_processed + 1
-    WHERE type_id = $1.id
-      AND state.timestamp = $2;
+    WHERE type_id = mat_type.id
+      AND state.timestamp = trend_timestamp;
 
     -- schedule the next partial materialization job
-    PERFORM materialization.create_job($1.id, $2);
+    PERFORM materialization.create_job(mat_type.id, trend_timestamp);
   END IF;
 
   RETURN result;
@@ -573,7 +568,6 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-DROP FUNCTION materialization.materialize_view(materialization.type, timestamptz);
 CREATE OR REPLACE FUNCTION materialization.materialize_view(mat_type materialization.type, trend_timestamp timestamptz)
   RETURNS materialization.materialization_result
 AS $$
