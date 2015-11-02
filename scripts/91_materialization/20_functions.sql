@@ -573,7 +573,8 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialization.materialize_view(mat_type materialization.type, trend_timestamp timestamp with time zone)
+DROP FUNCTION materialization.materialize_view(materialization.type, timestamptz);
+CREATE OR REPLACE FUNCTION materialization.materialize_view(mat_type materialization.type, trend_timestamp timestamptz)
   RETURNS materialization.materialization_result
 AS $$
 DECLARE
@@ -628,8 +629,9 @@ BEGIN
     WHERE type_id = mat_state.type_id
       AND state.timestamp = mat_state.timestamp;
 
-    mat_state.partial_states = mat_state.source_states;
-    mat_state.partials_processed = 0;
+    -- release lock; continue in next job
+    PERFORM materialization.create_job(mat_type.id, trend_timestamp);
+    RETURN result;
   END IF;
 
   IF mat_state.partials_processed = 0
@@ -642,17 +644,8 @@ BEGIN
   FROM
     trend.table_columns('trend', table_name);
 
-  -- Functions should perform better than views, so use it when it exists.
   IF materialization.has_function($1) THEN
-    -- TODO: use partial in function
-    EXECUTE format(
-      'INSERT INTO trend.%I (%s) SELECT %s FROM trend_transform.%I($1)',
-      dst_partition.table_name, columns_part, columns_part, trend.to_base_table_name(dst)
-    )
-    USING trend_timestamp;
-
-    -- HACK: finish partial materialization because the function has no knowledge of partials
-    mat_state.partials_processed = mat_type.partials - 1;
+    RAISE EXCEPTION 'materialize_view cannot be used when transform function exists';
   ELSE
     EXECUTE format(
       'INSERT INTO trend.%I (%s) SELECT %s FROM trend.%I WHERE timestamp = $1 AND materialization.entity_in_partial(entity_id, $2, $3)',
@@ -664,7 +657,7 @@ BEGIN
   GET DIAGNOSTICS result.row_count = ROW_COUNT;
   RAISE NOTICE 'materialized % rows for partial % for % -> % timestamp %', result.row_count, mat_state.partials_processed, src::text, dst::text, $2;
 
-  IF mat_state.partials_processed + 1 = mat_type.partials OR materialization.has_function(mat_type)
+  IF mat_state.partials_processed + 1 = mat_type.partials
   THEN
     -- this is the final (or the only) partial materialization
 
