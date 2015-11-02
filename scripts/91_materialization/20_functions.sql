@@ -436,13 +436,13 @@ BEGIN
     -- * source_states changed
     -- * manual rematerialization
 
-    IF mat_state.partial_states IS NOT NULL
+    IF mat_state.partials_processed <> 0
     THEN
       IF mat_state.source_states IS DISTINCT FROM mat_state.partial_states
       THEN
-        RAISE WARNING 'restarting partial materialization for % -> % (type %) timestamp %, reason: source states changed', src::text, dst::text, mat_type.id, trend_timestamp;
+        RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: source states changed', dst::text, mat_type.id, trend_timestamp;
       ELSE
-        RAISE WARNING 'restarting partial materialization for % -> % (type %) timestamp %, reason: rematerialization', src::text, dst::text, mat_type.id, trend_timestamp;
+        RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: unknown', dst::text, mat_type.id, trend_timestamp;
       END IF;
     END IF;
 
@@ -456,11 +456,11 @@ BEGIN
     mat_state.partials_processed = 0;
   END IF;
 
-  EXECUTE format(
-    'DELETE FROM trend.%I WHERE timestamp = $1 AND materialization.entity_in_partial(entity_id, $2, $3)',
-    dst_partition.table_name, mat_state.partials_processed, mat_type.partials
-  )
-    USING trend_timestamp, mat_state.partials_processed, mat_type.partials;
+  IF mat_state.partials_processed = 0
+  THEN
+    EXECUTE format('DELETE FROM trend.%I WHERE timestamp = $1', dst_partition.table_name)
+    USING trend_timestamp;
+  END IF;
 
   SELECT array_to_string(array_agg(quote_ident(name)), ', ') INTO STRICT columns_part
   FROM
@@ -488,7 +488,8 @@ BEGIN
   GET DIAGNOSTICS result.row_count = ROW_COUNT;
   RAISE NOTICE 'materialized % rows for partial % for % -> % timestamp %', result.row_count, mat_state.partials_processed, src::text, dst::text, trend_timestamp;
 
-  IF mat_state.partials_processed + 1 = mat_type.partials OR materialization.has_function(mat_type) THEN
+  IF mat_state.partials_processed + 1 = mat_type.partials OR materialization.has_function(mat_type)
+  THEN
     -- this is the final (or the only) partial materialization
 
     UPDATE materialization.state
