@@ -572,32 +572,12 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialization.materialize(src trend.trendstore, dst trend.trendstore, trend_timestamp timestamptz)
-    RETURNS materialization.materialization_result
-AS $$
-    SELECT materialization.materialize(type, $3)
-    FROM materialization.type
-    WHERE src_trendstore_id = $1.id AND dst_trendstore_id = $2.id;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE OR REPLACE FUNCTION materialization.materialize(src_trendstore_id integer, dst_trendstore_id integer, "timestamp" timestamp with time zone)
     RETURNS materialization.materialization_result
 AS $$
     SELECT materialization.materialize(type, $3)
     FROM materialization.type
     WHERE src_trendstore_id = $1 ANd dst_trendstore_id = $2;
-$$ LANGUAGE SQL VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION materialization.materialization(src text, dst text, "timestamp" timestamp with time zone)
-    RETURNS materialization.materialization_result
-AS $$
-    SELECT materialization.materialize(src, dst, $3)
-    FROM
-        trend.trendstore src,
-        trend.trendstore dst
-    WHERE src::text = $1 and dst::text = $2;
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -613,9 +593,9 @@ $$ LANGUAGE SQL VOLATILE;
 CREATE OR REPLACE FUNCTION materialization.materialize(id integer, "timestamp" timestamp with time zone)
     RETURNS materialization.materialization_result
 AS $$
-    SELECT materialization.materialize(mt.src_trendstore_id, mt.dst_trendstore_id, $2)
-    FROM materialization.type mt
-    WHERE mt.id = $1;
+    SELECT materialization.materialize(type, $2)
+    FROM materialization.type
+    WHERE id = $1;
 $$ LANGUAGE SQL VOLATILE;
 
 
