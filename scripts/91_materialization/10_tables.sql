@@ -174,6 +174,8 @@ CREATE TABLE materialization.state_fingerprint (
     fingerprint text,
     modified timestamp with time zone,
     processed_fingerprint text DEFAULT NULL,
+    partial_fingerprint text DEFAULT NULL,
+    partials_processed integer NOT NULL DEFAULT 0 CHECK (partials_processed >= 0),
     job_id integer DEFAULT NULL,
     PRIMARY KEY (type_id, timestamp)
 );
