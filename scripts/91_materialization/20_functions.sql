@@ -490,7 +490,12 @@ BEGIN
     THEN
       IF mat_state_fingerprint.fingerprint IS DISTINCT FROM mat_state_fingerprint.partial_fingerprint
       THEN
-        RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: source states changed', dst::text, mat_type.id, trend_timestamp;
+        RAISE NOTICE 'restarting materialization for % (type %) timestamp %, reason: source states changed', dst::text, mat_type.id, trend_timestamp;
+
+        IF trend_timestamp > now() - interval '30 minutes'
+        THEN
+          RAISE WARNING 'materialization for type % timestamp % was restarted % after the trend timestamp', mat_type.id, trend_timestamp, now() - trend_timestamp;
+        END IF;
       ELSE
         RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: unknown', dst::text, mat_type.id, trend_timestamp;
       END IF;
@@ -620,7 +625,12 @@ BEGIN
     THEN
       IF mat_state_fingerprint.fingerprint IS DISTINCT FROM mat_state_fingerprint.partial_fingerprint
       THEN
-        RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: source states changed', dst::text, mat_type.id, trend_timestamp;
+        RAISE NOTICE 'restarting materialization for % (type %) timestamp %, reason: source states changed', dst::text, mat_type.id, trend_timestamp;
+
+        IF trend_timestamp > now() - interval '30 minutes'
+        THEN
+          RAISE WARNING 'materialization for type % timestamp % was restarted % after the trend timestamp', mat_type.id, trend_timestamp, now() - trend_timestamp;
+        END IF;
       ELSE
         RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: unknown', dst::text, mat_type.id, trend_timestamp;
       END IF;
