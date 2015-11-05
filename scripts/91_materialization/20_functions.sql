@@ -492,7 +492,6 @@ DECLARE
   dst_partition trend.partition;
   columns_part text;
   result materialization.materialization_result;
-  mat_state materialization.state;
   mat_state_fingerprint materialization.state_fingerprint;
 BEGIN
   SELECT * INTO dst FROM trend.trendstore WHERE id = mat_type.dst_trendstore_id;
@@ -501,11 +500,6 @@ BEGIN
   PERFORM materialization.modify_mismatching_trends(mat_type);
 
   dst_partition = trend.attributes_to_partition(dst, trend.timestamp_to_index(dst.partition_size, trend_timestamp));
-
-  SELECT * INTO STRICT mat_state
-    FROM materialization.state
-    WHERE type_id = mat_type.id
-      AND state.timestamp = trend_timestamp;
 
   SELECT * INTO mat_state_fingerprint
     FROM materialization.state_fingerprint
@@ -532,12 +526,6 @@ BEGIN
         RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: unknown', dst::text, mat_type.id, trend_timestamp;
       END IF;
     END IF;
-
-    UPDATE materialization.state
-    SET partial_states = source_states,
-      partials_processed = 0
-    WHERE type_id = mat_type.id
-      AND state.timestamp = trend_timestamp;
 
     UPDATE materialization.state_fingerprint
     SET partial_fingerprint = fingerprint,
@@ -579,12 +567,6 @@ BEGIN
   IF mat_state_fingerprint.partials_processed + 1 = mat_type.partials THEN
     -- this is the final (or the only) partial materialization
 
-    UPDATE materialization.state
-    SET processed_states = mat_state.source_states,
-      partials_processed = mat_type.partials
-    WHERE type_id = mat_type.id
-      AND state.timestamp = trend_timestamp;
-
     UPDATE materialization.state_fingerprint
     SET processed_fingerprint = mat_state_fingerprint.fingerprint,
       partials_processed = mat_type.partials
@@ -594,11 +576,6 @@ BEGIN
 
     PERFORM trend.mark_modified(dst_partition.table_name, trend_timestamp);
   ELSE
-    UPDATE materialization.state
-    SET partials_processed = mat_state.partials_processed + 1
-    WHERE type_id = mat_type.id
-      AND state.timestamp = trend_timestamp;
-
     UPDATE materialization.state_fingerprint
     SET partials_processed = mat_state_fingerprint.partials_processed + 1
     WHERE type_id = mat_type.id
@@ -623,7 +600,6 @@ DECLARE
   dst_partition trend.partition;
   columns_part text;
   result materialization.materialization_result;
-  mat_state materialization.state;
   mat_state_fingerprint materialization.state_fingerprint;
   mat_fingerprint text;
 BEGIN
@@ -637,12 +613,7 @@ BEGIN
 
   dst_partition = trend.attributes_to_partition(dst, trend.timestamp_to_index(dst.partition_size, trend_timestamp));
 
-  SELECT * INTO STRICT mat_state
-    FROM materialization.state
-    WHERE type_id = mat_type.id
-      AND state.timestamp = trend_timestamp;
-
-  SELECT * INTO mat_state_fingerprint
+  SELECT * INTO STRICT mat_state_fingerprint
     FROM materialization.state_fingerprint
     WHERE type_id = mat_type.id
       AND state_fingerprint.timestamp = trend_timestamp;
@@ -712,12 +683,6 @@ BEGIN
   THEN
     -- this is the final (or the only) partial materialization
 
-    UPDATE materialization.state
-    SET processed_states = mat_state.source_states,
-      partials_processed = mat_type.partials
-    WHERE type_id = mat_type.id
-      AND state.timestamp = trend_timestamp;
-
     UPDATE materialization.state_fingerprint
     SET processed_fingerprint = mat_state_fingerprint.fingerprint,
       partials_processed = mat_type.partials
@@ -727,11 +692,6 @@ BEGIN
 
     PERFORM trend.mark_modified(dst_partition.table_name, trend_timestamp);
   ELSE
-    UPDATE materialization.state
-    SET partials_processed = mat_state.partials_processed + 1
-    WHERE type_id = mat_type.id
-      AND state.timestamp = trend_timestamp;
-
     UPDATE materialization.state_fingerprint
     SET partials_processed = mat_state_fingerprint.partials_processed + 1
     WHERE type_id = mat_type.id
