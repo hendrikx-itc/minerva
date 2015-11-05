@@ -155,6 +155,38 @@ CREATE TYPE materialization.update_state_result AS (
 );
 
 
+CREATE OR REPLACE FUNCTION materialization.update_state_fingerprint(
+        materialization.type, timestamp with time zone)
+    RETURNS materialization.type
+AS $$
+DECLARE
+    count integer;
+BEGIN
+    UPDATE materialization.state_fingerprint
+    SET
+        fingerprint = f.body,
+        modified = f.modified
+    FROM materialization.fingerprint($1, $2) f
+    WHERE state_fingerprint.type_id = $1.id
+    AND state_fingerprint.timestamp = $2;
+
+    GET DIAGNOSTICS count = ROW_COUNT;
+
+    IF count = 0 THEN
+        INSERT INTO materialization.state_fingerprint(type_id, timestamp, fingerprint, modified)
+        SELECT $1.id, $2, f.body, f.modified FROM materialization.fingerprint($1, $2) f;
+    END IF;
+
+    RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+COMMENT ON FUNCTION materialization.update_state_fingerprint(
+    materialization.type, timestamp with time zone) IS
+'Update the fingerprint and modified of the state record for the specified
+type and timestamp';
+
+
 CREATE OR REPLACE FUNCTION materialization.update_state_fingerprint(timestamp with time zone)
     RETURNS materialization.update_state_result
 AS $$
