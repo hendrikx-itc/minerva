@@ -114,7 +114,7 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE OR REPLACE FUNCTION materialization.changed_fragments(timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.fragments(changed_since timestamp with time zone)
     RETURNS SETOF materialization.fragment
 AS $$
     SELECT type, timestamp FROM (
@@ -124,17 +124,19 @@ AS $$
         FROM trend.modified mdf
         JOIN trend.partition p ON
                 mdf.table_name = p.table_name
-        JOIN trend.view_trendstore_link vtl ON
-                vtl.trendstore_id = p.trendstore_id
-        JOIN trend.view v ON
-        v.id = vtl.view_id
+        JOIN materialization.type_trendstore_link ttl ON
+                ttl.trendstore_id = p.trendstore_id
         JOIN materialization.type mt ON
-                mt.src_trendstore_id = v.trendstore_id
+                mt.id = ttl.type_id
         JOIN trend.trendstore dst ON
                 dst.id = mt.dst_trendstore_id
-        WHERE mdf.end >= $1
+        WHERE $1 IS NULL OR mdf.end >= $1
     ) f GROUP BY type, timestamp;
 $$ LANGUAGE sql STABLE;
+
+COMMENT ON FUNCTION materialization.fragments(changed_since timestamp with time zone) IS
+'Return changed fragments since `changed_since` or all fragments if
+`changed_since` is NULL';
 
 
 CREATE OR REPLACE FUNCTION materialization.changed_fingerprints(timestamp with time zone)
@@ -145,7 +147,7 @@ CREATE OR REPLACE FUNCTION materialization.changed_fingerprints(timestamp with t
 )
 AS $$
     SELECT type, timestamp, materialization.fingerprint(type, timestamp)
-    FROM materialization.changed_fragments($1);
+    FROM materialization.fragments($1);
 $$ LANGUAGE sql STABLE;
 
 
@@ -1207,4 +1209,45 @@ AS $function$
     FROM materialization.next_up_materializations num
     WHERE NOT job_active;
 $function$;
+CREATE OR REPLACE FUNCTION materialization.link_trendstore(materialization.type, trend.trendstore)
+    RETURNS materialization.type
+AS $$
+    INSERT INTO materialization.type_trendstore_link(type_id, trendstore_id)
+    SELECT $1.id, $2.id
+    WHERE NOT EXISTS (
+        SELECT type_id FROM materialization.type_trendstore_link
+        WHERE type_id = $1.id AND trendstore_id = $2.id
+    );
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.link_trendstore(materialization.type, text)
+    RETURNS materialization.type
+AS $$
+DECLARE
+    a_trendstore trend.trendstore;
+BEGIN
+    SELECT * INTO a_trendstore FROM trend.trendstore WHERE trendstore::text = $2;
+
+    IF a_trendstore IS NULL THEN
+        RAISE EXCEPTION 'No such trendstore: %', $2;
+    ELSE
+        PERFORM materialization.link_trendstore($1, a_trendstore);
+    END IF;
+
+    RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.link_trendstores(materialization.type, text[])
+    RETURNS materialization.type
+AS $$
+    SELECT materialization.link_trendstore($1, trendstore_name)
+    FROM unnest($2) trendstore_name;
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
 

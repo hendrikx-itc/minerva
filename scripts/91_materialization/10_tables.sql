@@ -214,3 +214,23 @@ GRANT ALL ON TABLE materialization.state_fingerprint_staging TO minerva_admin;
 GRANT SELECT ON TABLE materialization.state_fingerprint_staging TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE materialization.state_fingerprint_staging TO minerva_writer;
 
+-- Table 'type_trendstore_link'
+
+CREATE TABLE materialization.type_trendstore_link (
+    type_id integer NOT NULL REFERENCES materialization.type(id) ON DELETE CASCADE,
+    trendstore_id integer NOT NULL REFERENCES trend.trendstore(id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE materialization.type_trendstore_link IS
+'Stores relation between materialization types and their source (table)
+trendstores.';
+
+ALTER TABLE materialization.type_trendstore_link OWNER TO minerva_admin;
+
+ALTER TABLE ONLY materialization.type_trendstore_link
+    ADD CONSTRAINT type_trendstore_link_pkey PRIMARY KEY (type_id, trendstore_id);
+
+GRANT ALL ON TABLE materialization.type_trendstore_link TO minerva_admin;
+GRANT SELECT ON TABLE materialization.type_trendstore_link TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE materialization.type_trendstore_link TO minerva_writer;
+
