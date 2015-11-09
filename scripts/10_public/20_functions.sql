@@ -116,6 +116,22 @@ CREATE AGGREGATE sum_array(anyarray)
 	stype = anyarray
 );
 
+CREATE OR REPLACE FUNCTION public.add_array_null_as_zero(anyarray, anyarray) RETURNS anyarray
+AS $$
+SELECT array_agg(coalesce(arr1 + arr2, arr1, arr2)) FROM
+(
+	SELECT
+		unnest($1[1:least(array_length($1,1), array_length($2,1))]) AS arr1,
+		unnest($2[1:least(array_length($1,1), array_length($2,1))]) AS arr2
+) AS foo;
+$$ LANGUAGE SQL STABLE STRICT;
+
+CREATE AGGREGATE sum_array_null_as_zero(anyarray)
+(
+  sfunc = public.add_array_null_as_zero,
+  stype = anyarray
+);
+
 
 CREATE OR REPLACE FUNCTION public.divide_array(anyarray, anyelement)
     RETURNS anyarray
