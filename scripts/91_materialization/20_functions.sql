@@ -100,7 +100,24 @@ BEGIN
 
     RETURN result;
 END;
-$$ LANGUAGE plpgsql VOLATILE;
+$$ LANGUAGE plpgsql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.fingerprint(type_id integer, timestamp with time zone)
+    RETURNS trend.fingerprint
+AS $$
+    SELECT materialization.fingerprint(type, $2)
+    FROM materialization.type
+    WHERE id = $1;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.fingerprint_function(materialization.type)
+    RETURNS regprocedure
+AS $$
+    SELECT format('trend."%s_fingerprint"(timestamp with time zone)', trendstore::text)::regprocedure
+    FROM trend.trendstore WHERE id = $1.dst_trendstore_id;
+$$ LANGUAGE sql STABLE;
 
 
 CREATE OR REPLACE FUNCTION materialization.processable_timestamps(materialization.type)
@@ -191,11 +208,11 @@ COMMENT ON FUNCTION materialization.update_state_fingerprint(
 type and timestamp';
 
 
-CREATE OR REPLACE FUNCTION materialization.update_state_fingerprint(timestamp with time zone)
-    RETURNS materialization.update_state_result
+CREATE OR REPLACE FUNCTION materialization.populate_state_fingerprint_staging(timestamp with time zone)
+    RETURNS integer
 AS $$
 DECLARE
-    result materialization.update_state_result;
+    row_count integer;
 BEGIN
     INSERT INTO materialization.state_fingerprint_staging(type_id, timestamp, fingerprint, modified)
     (
@@ -203,14 +220,38 @@ BEGIN
         FROM materialization.changed_fingerprints($1)
     );
 
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.add_new_state_fingerprint()
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
     INSERT INTO materialization.state_fingerprint(type_id, timestamp, fingerprint, modified)
     (
         SELECT type_id, timestamp, fingerprint, modified
         FROM materialization.new_state_fingerprint
     );
 
-    GET DIAGNOSTICS result.new = ROW_COUNT;
+    GET DIAGNOSTICS row_count = ROW_COUNT;
 
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.update_modified_state_fingerprint()
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
     UPDATE materialization.state_fingerprint state
     SET
         fingerprint = modified.fingerprint,
@@ -218,9 +259,27 @@ BEGIN
     FROM materialization.modified_state_fingerprint modified
     WHERE
         state.type_id = modified.type_id AND
-        state.timestamp = modified.timestamp;
+        state.timestamp = modified.timestamp AND
+        md5(state.fingerprint) <> md5(modified.fingerprint);
 
-    GET DIAGNOSTICS result.updated = ROW_COUNT;
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.update_state_fingerprint(timestamp with time zone)
+    RETURNS materialization.update_state_result
+AS $$
+DECLARE
+    result materialization.update_state_result;
+BEGIN
+    PERFORM materialization.populate_state_fingerprint_staging($1);
+
+    result.new = materialization.add_new_state_fingerprint();
+
+    result.updated = materialization.update_modified_state_fingerprint();
 
     DELETE FROM materialization.state_fingerprint_staging;
 
