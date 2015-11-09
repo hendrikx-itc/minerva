@@ -1275,12 +1275,13 @@ ALTER VIEW materialization.next_up_materializations OWNER TO minerva_admin;
 
 CREATE OR REPLACE FUNCTION materialization.create_jobs()
     RETURNS integer
-    LANGUAGE sql
-AS $function$
-    SELECT COUNT(materialization.create_job(num.type_id, timestamp))::integer
-    FROM materialization.next_up_materializations num
+AS $$
+    SELECT COUNT(materialization.create_job(type_id, timestamp))::integer
+    FROM materialization.next_up_materializations_fingerprint
     WHERE NOT job_active;
-$function$;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION materialization.link_trendstore(materialization.type, trend.trendstore)
     RETURNS materialization.type
 AS $$
