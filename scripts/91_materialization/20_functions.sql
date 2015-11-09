@@ -559,7 +559,7 @@ $$;
 
 
 CREATE OR REPLACE FUNCTION materialization.materialize_function(mat_type materialization.type, trend_timestamp timestamp with time zone)
-  RETURNS materialization.materialization_result
+  RETURNS integer
 AS $$
 DECLARE
   dst trend.trendstore;
