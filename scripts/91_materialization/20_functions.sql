@@ -801,12 +801,13 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialization.materialize(materialization text, "timestamp" timestamp with time zone)
+CREATE OR REPLACE FUNCTION materialization.materialize(dst_trendstore text, "timestamp" timestamp with time zone)
     RETURNS materialization.materialization_result
 AS $$
-    SELECT materialization.materialize(mt.src_trendstore_id, mt.dst_trendstore_id, $2)
+    SELECT materialization.materialize(mt, $2)
     FROM materialization.type mt
-    WHERE materialization.to_char(mt) = $1;
+    JOIN trend.trendstore ON mt.dst_trendstore_id = trendstore.id
+    WHERE trendstore::text = $1;
 $$ LANGUAGE SQL VOLATILE;
 
 
