@@ -46,21 +46,23 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION materialization.fingerprint_fn_sql(materialization.type)
     RETURNS text
 AS $$
-    select format('CREATE FUNCTION trend.%I(timestamp with time zone) RETURNS trend.fingerprint AS $body$', materialization.fingerprint_function_name($1)) ||
+    select format(E'CREATE FUNCTION trend.%I(timestamp with time zone) RETURNS trend.fingerprint AS $body$\n', materialization.fingerprint_function_name($1)) ||
+    E'SELECT string_agg(format(\'%s: %s\', source, modified::text), E\'\\n\'), max(modified)\n'
+    'FROM (\n' ||
     string_agg(
         format(
-            E'SELECT trend.fingerprint(src_trendstore, dst_trendstore, $1)\n'
-            'FROM trend.trendstore src_trendstore, trend.trendstore dst_trendstore\n'
-            'WHERE src_trendstore.id = %s AND dst_trendstore.id = %s\n',
-            src_trendstore.id,
-            view.trendstore_id
+            E'    SELECT trendstore::text AS source, trend.modified(trendstore, $1) AS modified\n'
+            '    FROM trend.trendstore\n'
+            '    WHERE trendstore::text = %L\n',
+            trendstore::text
         ),
-        E'UNION ALL\n'
-    ) || '$body$ LANGUAGE sql STABLE;'
-    FROM trend.view
-    join trend.view_trendstore_link vtl on vtl.view_id = view.id
-    join trend.trendstore src_trendstore on src_trendstore.id = vtl.trendstore_id
-    where view.trendstore_id = $1.src_trendstore_id;
+        E'    UNION ALL\n'
+    ) ||
+    ') fingerprints' ||
+    '$body$ LANGUAGE sql STABLE;'
+    FROM materialization.type_trendstore_link ttl
+    join trend.trendstore trendstore on trendstore.id = ttl.trendstore_id
+    where ttl.type_id = $1.id;
 $$ LANGUAGE sql STABLE;
 
 
