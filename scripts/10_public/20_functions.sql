@@ -101,11 +101,11 @@ ALTER FUNCTION safe_division(anyelement, anyelement)
 
 CREATE OR REPLACE FUNCTION public.add_array(anyarray, anyarray) RETURNS anyarray
 AS $$
-SELECT array_agg((arr1 + arr2)) FROM
+SELECT array_agg(v1 + v2) FROM
 (
 	SELECT
-    unnest($1[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr1,
-    unnest($2[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr2
+    unnest($1) AS v1,
+    unnest($2) AS v2
 ) AS foo;
 $$ LANGUAGE SQL STABLE STRICT;
 
@@ -118,11 +118,11 @@ CREATE AGGREGATE sum_array(anyarray)
 
 CREATE OR REPLACE FUNCTION public.add_array_null_as_zero(anyarray, anyarray) RETURNS anyarray
 AS $$
-SELECT array_agg(coalesce(arr1 + arr2, arr1, arr2)) FROM
+SELECT array_agg(coalesce(v1 + v2, v1, v2)) FROM
 (
 	SELECT
-    unnest($1[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr1,
-    unnest($2[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr2
+    unnest($1) AS v1,
+    unnest($2) AS v2
 ) AS foo;
 $$ LANGUAGE SQL STABLE STRICT;
 
@@ -137,19 +137,19 @@ CREATE OR REPLACE FUNCTION public.divide_array(anyarray, anyelement)
     RETURNS anyarray
 AS $$
 SELECT
-  array_agg(public.safe_division(arr, $2))
-FROM unnest($1) AS arr;
+  array_agg(public.safe_division(v, $2))
+FROM unnest($1) AS v;
 $$ LANGUAGE SQL STABLE STRICT;
 
 
 CREATE OR REPLACE FUNCTION public.divide_array(anyarray, anyarray)
     RETURNS anyarray
 AS $$
-SELECT array_agg(public.safe_division(arr1, arr2)) FROM
+SELECT array_agg(public.safe_division(v1, v2)) FROM
 (
   SELECT
-    unnest($1[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr1,
-    unnest($2[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr2
+    unnest($1) AS v1,
+    unnest($2) AS v2
 ) AS foo;
 $$ LANGUAGE SQL STABLE STRICT;
 
@@ -166,11 +166,11 @@ $$ LANGUAGE SQL STABLE STRICT;
 CREATE OR REPLACE FUNCTION public.multiply_array(anyarray, anyarray)
     RETURNS anyarray
 AS $$
-SELECT array_agg(arr1 * arr2) FROM
+SELECT array_agg(v1 * v2) FROM
 (
   SELECT
-    unnest($1[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr1,
-    unnest($2[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr2
+    unnest($1) AS v1,
+    unnest($2) AS v2
 ) AS foo;
 $$ LANGUAGE SQL STABLE STRICT;
 
