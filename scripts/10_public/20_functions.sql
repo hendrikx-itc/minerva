@@ -104,8 +104,8 @@ AS $$
 SELECT array_agg((arr1 + arr2)) FROM
 (
 	SELECT
-		unnest($1[1:least(array_length($1,1), array_length($2,1))]) AS arr1,
-		unnest($2[1:least(array_length($1,1), array_length($2,1))]) AS arr2
+    unnest($1[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr1,
+    unnest($2[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr2
 ) AS foo;
 $$ LANGUAGE SQL STABLE STRICT;
 
@@ -121,8 +121,8 @@ AS $$
 SELECT array_agg(coalesce(arr1 + arr2, arr1, arr2)) FROM
 (
 	SELECT
-		unnest($1[1:least(array_length($1,1), array_length($2,1))]) AS arr1,
-		unnest($2[1:least(array_length($1,1), array_length($2,1))]) AS arr2
+    unnest($1[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr1,
+    unnest($2[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr2
 ) AS foo;
 $$ LANGUAGE SQL STABLE STRICT;
 
@@ -147,9 +147,9 @@ CREATE OR REPLACE FUNCTION public.divide_array(anyarray, anyarray)
 AS $$
 SELECT array_agg(public.safe_division(arr1, arr2)) FROM
 (
-    SELECT
-    unnest($1[1:least(array_length($1,1), array_length($2,1))]) AS arr1,
-    unnest($2[1:least(array_length($1,1), array_length($2,1))]) AS arr2
+  SELECT
+    unnest($1[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr1,
+    unnest($2[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr2
 ) AS foo;
 $$ LANGUAGE SQL STABLE STRICT;
 
@@ -168,9 +168,9 @@ CREATE OR REPLACE FUNCTION public.multiply_array(anyarray, anyarray)
 AS $$
 SELECT array_agg(arr1 * arr2) FROM
 (
-    SELECT
-    unnest($1[1:least(array_length($1,1), array_length($2,1))]) AS arr1,
-    unnest($2[1:least(array_length($1,1), array_length($2,1))]) AS arr2
+  SELECT
+    unnest($1[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr1,
+    unnest($2[greatest(array_lower($1, 1), array_lower($2, 1)):least(array_upper($1,1 ), array_upper($2,1))]) AS arr2
 ) AS foo;
 $$ LANGUAGE SQL STABLE STRICT;
 
