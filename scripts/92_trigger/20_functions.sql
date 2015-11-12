@@ -1083,7 +1083,7 @@ WITH notifications AS (SELECT entity_id, timestamp, weight, details FROM trigger
 INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
 (SELECT entity_id, timestamp, clock_timestamp(), $1, weight, details FROM notifications)
 $query$,
-        notification.staging_table_name($2), trigger.notification_view_name($1)
+        trigger.notification_view_name($1), notification.staging_table_name($2)
     )
     USING $1.id, $3;
 
