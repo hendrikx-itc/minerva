@@ -10,6 +10,6 @@ RUN tar -xzvf /db-deps.tar.gz -C /db-deps --strip-components=1
 COPY docker-resources/create-minerva-database /usr/bin/
 COPY docker-resources/drop-minerva-database /usr/bin/
 COPY docker-resources/recreate-minerva-database /usr/bin/
-COPY scripts /minerva
+COPY src /minerva
 
 ADD init-minerva-db.sh /docker-entrypoint-initdb.d/

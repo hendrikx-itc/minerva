@@ -7,4 +7,4 @@ psql -d minerva -c 'CREATE EXTENSION pgtap;'
 
 /vagrant/provision/salt/roots/salt/resources/install-db-deps
 
-PGDATABASE=minerva /vagrant/schema/run-scripts /vagrant/schema/scripts
+PGDATABASE=minerva /vagrant/run-scripts /vagrant/src
