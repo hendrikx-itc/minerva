@@ -77,7 +77,7 @@ CREATE OR REPLACE FUNCTION materialization.drop_fingerprint_fn_sql(materializati
     RETURNS text
 AS $$
     SELECT format(
-        'DROP FUNCTION trend.%I(timestamp with time zone)',
+        'DROP FUNCTION IF EXISTS trend.%I(timestamp with time zone)',
         materialization.fingerprint_function_name($1)
     );
 $$ LANGUAGE sql STABLE;
@@ -87,6 +87,15 @@ CREATE OR REPLACE FUNCTION materialization.drop_fingerprint_fn(materialization.t
     RETURNS materialization.type
 AS $$
     SELECT public.action($1, materialization.drop_fingerprint_fn_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.recreate_fingerprint_fn(materialization.type)
+    RETURNS materialization.type
+AS $$
+    SELECT materialization.create_fingerprint_fn(
+        materialization.drop_fingerprint_fn($1)
+    );
 $$ LANGUAGE sql VOLATILE;
 
 
