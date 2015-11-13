@@ -574,7 +574,7 @@ DECLARE
   dst trend.trendstore;
   dst_partition trend.partition;
   columns_part text;
-  result materialization.materialization_result;
+  row_count integer;
   mat_state_fingerprint materialization.state_fingerprint;
 BEGIN
   SELECT * INTO dst FROM trend.trendstore WHERE id = mat_type.dst_trendstore_id;
@@ -618,7 +618,7 @@ BEGIN
 
     -- release lock; continue in next job
     PERFORM materialization.create_job(mat_type.id, trend_timestamp);
-    RETURN result;
+    RETURN row_count;
   END IF;
 
   IF mat_state_fingerprint.partials_processed = 0
@@ -644,8 +644,8 @@ BEGIN
     RAISE EXCEPTION 'materialize_function cannot be used without a transform function';
   END IF;
 
-  GET DIAGNOSTICS result.row_count = ROW_COUNT;
-  RAISE NOTICE 'materialized % rows for partial % for function -> % timestamp %', result.row_count, mat_state_fingerprint.partials_processed, dst::text, $2;
+  GET DIAGNOSTICS row_count = ROW_COUNT;
+  RAISE NOTICE 'materialized % rows for partial % for function -> % timestamp %', row_count, mat_state_fingerprint.partials_processed, dst::text, $2;
 
   IF mat_state_fingerprint.partials_processed + 1 = mat_type.partials THEN
     -- this is the final (or the only) partial materialization
@@ -668,13 +668,13 @@ BEGIN
     PERFORM materialization.create_job(mat_type.id, trend_timestamp);
   END IF;
 
-  RETURN result;
+  RETURN row_count;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION materialization.materialize_view(mat_type materialization.type, trend_timestamp timestamptz)
-  RETURNS materialization.materialization_result
+  RETURNS integer
 AS $$
 DECLARE
   table_name character varying;
@@ -682,7 +682,7 @@ DECLARE
   dst trend.trendstore;
   dst_partition trend.partition;
   columns_part text;
-  result materialization.materialization_result;
+  row_count integer;
   mat_state_fingerprint materialization.state_fingerprint;
   mat_fingerprint text;
 BEGIN
@@ -736,7 +736,7 @@ BEGIN
 
     -- release lock; continue in next job
     PERFORM materialization.create_job(mat_type.id, trend_timestamp);
-    RETURN result;
+    RETURN row_count;
   END IF;
 
   IF mat_state_fingerprint.partials_processed = 0
@@ -759,8 +759,8 @@ BEGIN
     USING trend_timestamp, mat_state_fingerprint.partials_processed, mat_type.partials;
   END IF;
 
-  GET DIAGNOSTICS result.row_count = ROW_COUNT;
-  RAISE NOTICE 'materialized % rows for partial % for % -> % timestamp %', result.row_count, mat_state_fingerprint.partials_processed, src::text, dst::text, $2;
+  GET DIAGNOSTICS row_count = ROW_COUNT;
+  RAISE NOTICE 'materialized % rows for partial % for % -> % timestamp %', row_count, mat_state_fingerprint.partials_processed, src::text, dst::text, $2;
 
   IF mat_state_fingerprint.partials_processed + 1 = mat_type.partials
   THEN
@@ -784,13 +784,13 @@ BEGIN
     PERFORM materialization.create_job(mat_type.id, trend_timestamp);
   END IF;
 
-  RETURN result;
+  RETURN row_count;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION materialization.materialize(materialization.type, "timestamp" timestamp with time zone)
-  RETURNS materialization.materialization_result
+  RETURNS integer
 AS $$
 SELECT CASE
 WHEN materialization.has_function($1) THEN
@@ -802,7 +802,7 @@ $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION materialization.materialize(src_trendstore_id integer, dst_trendstore_id integer, "timestamp" timestamp with time zone)
-    RETURNS materialization.materialization_result
+    RETURNS integer
 AS $$
     SELECT materialization.materialize(type, $3)
     FROM materialization.type
@@ -811,7 +811,7 @@ $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION materialization.materialize(dst_trendstore text, "timestamp" timestamp with time zone)
-    RETURNS materialization.materialization_result
+    RETURNS integer
 AS $$
     SELECT materialization.materialize(mt, $2)
     FROM materialization.type mt
@@ -821,7 +821,7 @@ $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION materialization.materialize(id integer, "timestamp" timestamp with time zone)
-    RETURNS materialization.materialization_result
+    RETURNS integer
 AS $$
     SELECT materialization.materialize(type, $2)
     FROM materialization.type
