@@ -586,8 +586,6 @@ AS $$
 BEGIN
     EXECUTE format('DROP VIEW IF EXISTS trend.%I', trend.view_name(view));
 
-    PERFORM trend.unlink_view_dependencies(view);
-
     PERFORM trend.delete_view_trends(view);
 
     RETURN view;
@@ -631,39 +629,6 @@ SELECT ARRAY[
     format('GRANT SELECT ON TABLE trend.%I TO minerva;', trend.view_name($1))
 ];
 $$ LANGUAGE sql STABLE;
-
-
--- View required by function 'link_view_dependencies'
-CREATE VIEW trend.view_dependencies AS
-    SELECT dependent.relname AS src, pg_attribute.attname column_name, dependee.relname AS dst
-    FROM pg_depend
-    JOIN pg_rewrite ON pg_depend.objid = pg_rewrite.oid
-    JOIN pg_class as dependee ON pg_rewrite.ev_class = dependee.oid
-    JOIN pg_class as dependent ON pg_depend.refobjid = dependent.oid
-    JOIN pg_namespace as n ON dependent.relnamespace = n.oid
-    JOIN pg_attribute ON
-            pg_depend.refobjid = pg_attribute.attrelid
-            AND
-            pg_depend.refobjsubid = pg_attribute.attnum
-    WHERE n.nspname = 'trend' AND pg_attribute.attnum > 0;
-
-ALTER VIEW trend.view_dependencies OWNER TO minerva_admin;
-
-GRANT SELECT ON TABLE trend.view_dependencies TO minerva;
-
-
-CREATE OR REPLACE FUNCTION trend.link_view_dependencies(trend.view)
-    RETURNS trend.view
-AS $$
-    INSERT INTO trend.view_trendstore_link (view_id, trendstore_id)
-    SELECT $1.id, ts.id
-    FROM trend.view_dependencies vdeps
-    JOIN trend.trendstore ts ON trend.to_base_table_name(ts) = vdeps.src
-    LEFT JOIN trend.view_trendstore_link vtl ON vtl.view_id = $1.id AND vtl.trendstore_id = ts.id
-    WHERE vdeps.dst = trend.view_name($1) AND vtl.view_id IS NULL
-    GROUP BY ts.id
-    RETURNING $1;
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trend.get_view_column_names(view_name character varying)
@@ -711,8 +676,6 @@ CREATE OR REPLACE FUNCTION trend.create_view(trend.view)
 AS $$
     SELECT public.action($1, trend.create_view_sql($1));
 
-    SELECT trend.link_view_dependencies($1);
-
     SELECT trend.create_view_trends($1);
 
     SELECT $1;
@@ -744,13 +707,6 @@ CREATE OR REPLACE FUNCTION trend.delete_view_trends(view trend.view)
     RETURNS void
 AS $$
     DELETE FROM trend.trend USING trend.trendstore_trend_link ttl WHERE trend.id = ttl.trend_id AND ttl.trendstore_id = $1.trendstore_id;
-$$ LANGUAGE SQL VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION trend.unlink_view_dependencies(trend.view)
-    RETURNS trend.view
-AS $$
-    DELETE FROM trend.view_trendstore_link WHERE view_id = $1.id RETURNING $1;
 $$ LANGUAGE SQL VOLATILE;
 
 
