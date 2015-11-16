@@ -1072,7 +1072,7 @@ JOIN materialization.group_priority ON (summed.tag).id = group_priority.tag_id
 LEFT JOIN system.job ON job.id = job_id
 WHERE cumsum <= group_priority.resources;
 
-ALTER VIEW materialization.next_up_materializations OWNER TO minerva_admin;
+ALTER VIEW materialization.next_up_materializations_fingerprint OWNER TO minerva_admin;
 
 
 CREATE OR REPLACE FUNCTION materialization.create_jobs()
