@@ -329,6 +329,29 @@ $$ LANGUAGE sql STABLE;
 CREATE TYPE materialization.materialization_result AS (processed_max_modified timestamp with time zone, row_count integer);
 
 
+CREATE TYPE materialization.column AS (
+    name name,
+    data_type text
+);
+
+
+CREATE OR REPLACE FUNCTION materialization.function_return_columns(oid)
+    RETURNS SETOF materialization.column
+AS $$
+select
+    (name, type_name)::materialization.column
+from (
+    select unnest(names) AS "name", format_type(unnest(type_oids), NULL) AS "type_name"
+    from (
+            select
+            proargnames[pronargs+1:array_length(proargnames, 1)] AS names,
+            (proallargtypes::oid[])[pronargs+1:array_length(proallargtypes, 1)] AS type_oids
+            from pg_proc where oid = $1
+    ) foo
+) bar;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE OR REPLACE FUNCTION materialization.missing_columns(src trend.trendstore, dst trend.trendstore)
     RETURNS TABLE (name character varying, datatype character varying)
 AS $$
@@ -439,29 +462,6 @@ AS $$
     FROM trend.trendstore src, trend.trendstore dst
     WHERE src.id = $1.src_trendstore_id AND dst.id = $1.dst_trendstore_id;
 $$ LANGUAGE SQL VOLATILE;
-
-
-CREATE TYPE materialization.column AS (
-    name name,
-    data_type text
-);
-
-
-CREATE OR REPLACE FUNCTION materialization.function_return_columns(oid)
-    RETURNS SETOF materialization.column
-AS $$
-select
-    (name, type_name)::materialization.column
-from (
-    select unnest(names) AS "name", format_type(unnest(type_oids), NULL) AS "type_name"
-    from (
-            select
-            proargnames[pronargs+1:array_length(proargnames, 1)] AS names,
-            (proallargtypes::oid[])[pronargs+1:array_length(proallargtypes, 1)] AS type_oids
-            from pg_proc where oid = $1
-    ) foo
-) bar;
-$$ LANGUAGE sql STABLE;
 
 
 CREATE OR REPLACE FUNCTION materialization.function_return_columns(materialization.type)
