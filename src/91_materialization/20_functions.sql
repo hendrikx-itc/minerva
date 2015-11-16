@@ -300,20 +300,9 @@ $$ LANGUAGE plpgsql VOLATILE;
 CREATE OR REPLACE FUNCTION materialization.to_char(materialization.type)
     RETURNS text
 AS $$
-    SELECT CASE
-    WHEN $1.src_trendstore_id IS NULL THEN
-        (
-            SELECT 'function -> ' || trend.to_base_table_name(dst)
-            FROM trend.trendstore dst
-            WHERE dst.id = $1.dst_trendstore_id
-        )
-    ELSE
-        (
-            SELECT trend.to_base_table_name(src) || ' -> ' || trend.to_base_table_name(dst)
-            FROM trend.trendstore src, trend.trendstore dst
-            WHERE src.id = $1.src_trendstore_id AND dst.id = $1.dst_trendstore_id
-        )
-    END;
+    SELECT trend.to_base_table_name(trendstore)
+    FROM trend.trendstore
+    WHERE id = $1.dst_trendstore_id
 $$ LANGUAGE SQL STABLE STRICT;
 
 
