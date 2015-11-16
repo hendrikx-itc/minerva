@@ -603,21 +603,17 @@ $$ LANGUAGE sql VOLATILE;
 CREATE OR REPLACE FUNCTION trend.alter_view(trend.view, text)
     RETURNS trend.view
 AS $$
-DECLARE
-    result trend.view;
-BEGIN
-    result = trend.update_view_sql($1, $2);
+    SELECT trend.update_view_sql($1, $2);
 
-    PERFORM dep_recurse.alter(
+    SELECT dep_recurse.alter(
         dep_recurse.view_ref('trend', $1::text),
         ARRAY[
             format('SELECT trend.recreate_view(view) FROM trend.view WHERE id = %L', $1.id)
         ]
     );
 
-    RETURN result;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trend.create_view_sql(trend.view)
@@ -701,6 +697,17 @@ CREATE OR REPLACE FUNCTION trend.recreate_view(text)
 AS $$
     SELECT trend.create_view(trend.drop_view(view)) FROM trend.view WHERE view::text = $1;
 $$ LANGUAGE SQL VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trend.alter_view(trend.trendstore, text)
+    RETURNS trend.trendstore
+AS $$
+    SELECT trend.recreate_view(trend.update_view_sql(view, $2))
+    FROM trend.view
+    WHERE trendstore_id = $1.id;
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trend.delete_view_trends(view trend.view)
