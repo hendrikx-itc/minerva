@@ -63,6 +63,13 @@ AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 
+CREATE OR REPLACE FUNCTION trigger.kpi_fn_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_kpi')::name;
+$$ LANGUAGE SQL IMMUTABLE;
+
+
 CREATE OR REPLACE FUNCTION trigger.kpi_type_name(trigger.rule)
     RETURNS name
 AS $$
@@ -165,15 +172,6 @@ CREATE OR REPLACE FUNCTION trigger.create_rule_fn(trigger.rule, rule_view_sql te
 AS $$
 SELECT public.action($1, trigger.create_rule_fn_sql($1, $2));
 $$ LANGUAGE SQL VOLATILE;
-
-
---- Function <rule>_kpi
-
-CREATE OR REPLACE FUNCTION trigger.kpi_fn_name(trigger.rule)
-    RETURNS name
-AS $$
-    SELECT ($1.name || '_kpi')::name;
-$$ LANGUAGE SQL IMMUTABLE;
 
 
 --- Function <rule>_fingerprint
@@ -538,6 +536,13 @@ SELECT public.action(
     ]
 );
 $$ LANGUAGE SQL VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trigger.with_threshold_view_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_with_threshold')::name;
+$$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE OR REPLACE FUNCTION trigger.drop_with_threshold_fn_sql(trigger.rule)
@@ -1198,6 +1203,27 @@ AS $$
 $$ LANGUAGE sql IMMUTABLE;
 
 
+CREATE OR REPLACE FUNCTION trigger.drop_kpi_type_sql(trigger.rule)
+    RETURNS text
+AS $$
+    SELECT format('DROP TYPE IF EXISTS trigger_rule.%I CASCADE', trigger.kpi_type_name($1));
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.notification_type_name(trigger.rule)
+    RETURNS name
+AS $$
+    SELECT ($1.name || '_notification_details')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE OR REPLACE FUNCTION trigger.drop_notification_type_sql(trigger.rule)
+    RETURNS text
+AS $$
+SELECT format('DROP TYPE IF EXISTS trigger_rule.%I', trigger.notification_type_name($1));
+$$ LANGUAGE sql IMMUTABLE;
+
+
 CREATE OR REPLACE FUNCTION trigger.cleanup_rule(trigger.rule)
     RETURNS trigger.rule
 AS $$
@@ -1304,8 +1330,12 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION trigger.fingerprint(trigger.rule, timestamp with time zone)
     RETURNS text
 AS $$
+DECLARE
+    result text;
 BEGIN
-    RETURN QUERY EXECUTE format('SELECT trigger_rule.%I($1)', trigger.fingerprint_fn_name($1)) USING $2;
+    EXECUTE format('SELECT trigger_rule.%I($1)', trigger.fingerprint_fn_name($1)) INTO result USING $2;
+
+    RETURN result;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
