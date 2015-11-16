@@ -251,31 +251,7 @@ GRANT SELECT ON SEQUENCE trend.view_id_seq TO minerva;
 GRANT UPDATE ON SEQUENCE trend.view_id_seq TO minerva_writer;
 
 
--- Table 'trend.view_trendstore_link'
-
-CREATE TABLE trend.view_trendstore_link (
-    view_id integer not null,
-    trendstore_id integer not null
-);
-
-ALTER TABLE trend.view_trendstore_link OWNER TO minerva_admin;
-
-ALTER TABLE ONLY trend.view_trendstore_link
-    ADD CONSTRAINT trend_view_trendstore_link_pkey
-    PRIMARY KEY (view_id, trendstore_id);
-
-ALTER TABLE ONLY trend.view_trendstore_link
-    ADD CONSTRAINT view_trendstore_link_view_id_fkey
-    FOREIGN KEY (view_id) REFERENCES trend.view(id)
-    ON DELETE CASCADE;
-
-ALTER TABLE ONLY trend.view_trendstore_link
-    ADD CONSTRAINT view_trendstore_link_trendstore_id_fkey
-    FOREIGN KEY (trendstore_id) REFERENCES trend.trendstore(id)
-    ON DELETE CASCADE;
-
-GRANT SELECT ON TABLE trend.view_trendstore_link TO minerva;
-GRANT INSERT,DELETE,UPDATE ON TABLE trend.view_trendstore_link TO minerva_writer;
+-- Table 'trend.to_be_vacuumed'
 
 
 CREATE TABLE trend.to_be_vacuumed (

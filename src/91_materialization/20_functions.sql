@@ -317,71 +317,6 @@ AS $$
 $$ LANGUAGE SQL STABLE STRICT;
 
 
-CREATE OR REPLACE FUNCTION materialization.add_new_state()
-    RETURNS integer
-AS $$
-DECLARE
-    count integer;
-BEGIN
-    INSERT INTO materialization.state(type_id, timestamp, max_modified, source_states)
-    SELECT type_id, timestamp, max_modified, source_states
-    FROM materialization.new_materializables;
-
-    GET DIAGNOSTICS count = ROW_COUNT;
-
-    RETURN count;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION materialization.update_modified_state()
-    RETURNS integer
-AS $$
-DECLARE
-    count integer;
-BEGIN
-    UPDATE materialization.state
-    SET
-        max_modified = mzb.max_modified,
-        source_states = mzb.source_states
-    FROM materialization.modified_materializables mzb
-    WHERE
-        state.type_id = mzb.type_id AND
-        state.timestamp = mzb.timestamp;
-
-    GET DIAGNOSTICS count = ROW_COUNT;
-
-    RETURN count;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION materialization.delete_obsolete_state()
-    RETURNS integer
-AS $$
-DECLARE
-    count integer;
-BEGIN
-    DELETE FROM materialization.state
-    USING materialization.obsolete_state
-    WHERE
-        state.type_id = obsolete_state.type_id AND
-        state.timestamp = obsolete_state.timestamp;
-
-    GET DIAGNOSTICS count = ROW_COUNT;
-
-    RETURN count;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION materialization.update_state()
-    RETURNS text
-AS $$
-    SELECT 'added: ' || materialization.add_new_state() || ', updated: ' || materialization.update_modified_state() || ', deleted: ' || materialization.delete_obsolete_state();
-$$ LANGUAGE SQL VOLATILE;
-
-
 CREATE OR REPLACE FUNCTION materialization.has_function(materialization.type)
     RETURNS boolean
 AS $$
@@ -998,13 +933,6 @@ AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 
-CREATE OR REPLACE FUNCTION materialization.runnable(materialization.type, materialization.state)
-    RETURNS boolean
-AS $$
-    SELECT materialization.runnable($1, $2.timestamp, $2.max_modified);
-$$ LANGUAGE SQL IMMUTABLE;
-
-
 CREATE OR REPLACE FUNCTION materialization.runnable(materialization.type, materialization.state_fingerprint)
     RETURNS boolean
 AS $$
@@ -1057,12 +985,10 @@ IS 'Remove all tags from the materialization';
 
 
 CREATE OR REPLACE FUNCTION materialization.reset(type_id integer)
-    RETURNS SETOF materialization.state
+    RETURNS SETOF materialization.state_fingerprint
 AS $$
-    UPDATE materialization.state SET processed_states = NULL
-    WHERE
-        type_id = $1 AND
-        source_states = processed_states
+    UPDATE materialization.state_fingerprint SET processed_fingerprint = NULL
+    WHERE type_id = $1
     RETURNING *;
 $$ LANGUAGE SQL VOLATILE;
 
@@ -1071,7 +997,7 @@ CREATE OR REPLACE FUNCTION materialization.reset_hard(materialization.type)
     RETURNS void
 AS $$
     DELETE FROM trend.partition WHERE trendstore_id = $1.dst_trendstore_id;
-    DELETE FROM materialization.state WHERE type_id = $1.id;
+    DELETE FROM materialization.state_fingerprint WHERE type_id = $1.id;
 $$ LANGUAGE SQL VOLATILE;
 
 COMMENT ON FUNCTION materialization.reset_hard(materialization.type)
@@ -1081,16 +1007,16 @@ again';
 
 
 CREATE OR REPLACE FUNCTION materialization.reset(type_id integer, timestamp with time zone)
-    RETURNS materialization.state
+    RETURNS materialization.state_fingerprint
 AS $$
-    UPDATE materialization.state SET processed_states = NULL
+    UPDATE materialization.state_fingerprint SET processed_fingerprint = NULL
     WHERE type_id = $1 AND timestamp = $2
     RETURNING *;
 $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION materialization.reset(materialization.type, timestamp with time zone)
-    RETURNS materialization.state
+    RETURNS materialization.state_fingerprint
 AS $$
     SELECT materialization.reset($1.id, $2);
 $$ LANGUAGE SQL VOLATILE;
@@ -1110,106 +1036,6 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION materialization.fragments(materialization.source_fragment_state[])
-    RETURNS materialization.source_fragment[]
-AS $$
-    SELECT array_agg(fragment) FROM unnest($1);
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.requires_update(materialization.state)
-    RETURNS boolean
-AS $$
-    SELECT (
-        $1.source_states <> $1.processed_states AND
-        materialization.fragments($1.source_states) @> materialization.fragments($1.processed_states)
-    )
-    OR $1.processed_states IS NULL;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.dependencies(trend.trendstore, level integer)
-    RETURNS TABLE(trendstore trend.trendstore, level integer)
-AS $$
--- Stub to allow recursive definition.
-    SELECT $1, $2;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.direct_view_dependencies(trend.trendstore)
-    RETURNS SETOF trend.trendstore
-AS $$
-    SELECT trendstore
-    FROM trend.trendstore
-    JOIN trend.view_trendstore_link vtl ON vtl.trendstore_id = trendstore.id
-    JOIN trend.view ON view.id = vtl.view_id
-    WHERE view.trendstore_id = $1.id;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.direct_table_dependencies(trend.trendstore)
-    RETURNS SETOF trend.trendstore
-AS $$
-    SELECT trendstore
-    FROM trend.trendstore
-    JOIN materialization.type ON type.src_trendstore_id = trendstore.id
-    WHERE dst_trendstore_id = $1.id;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.direct_dependencies(trend.trendstore)
-    RETURNS SETOF trend.trendstore
-AS $$
-    SELECT
-    CASE WHEN $1.type = 'view' THEN
-        materialization.direct_view_dependencies($1)
-    WHEN $1.type = 'table' THEN
-        materialization.direct_table_dependencies($1)
-    END;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.dependencies(trend.trendstore, level integer)
-    RETURNS TABLE(trendstore trend.trendstore, level integer)
-AS $$
-    SELECT (d.dependencies).* FROM (
-        SELECT materialization.dependencies(dependency, $2 + 1)
-        FROM materialization.direct_dependencies($1) dependency
-    ) d
-    UNION ALL
-    SELECT dependency, $2
-    FROM materialization.direct_dependencies($1) dependency;
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.dependencies(trend.trendstore)
-    RETURNS TABLE(trendstore trend.trendstore, level integer)
-AS $$
-    SELECT materialization.dependencies($1, 1);
-$$ LANGUAGE SQL STABLE;
-
-
-CREATE OR REPLACE FUNCTION materialization.dependencies(name text)
-    RETURNS TABLE(trendstore trend.trendstore, level integer)
-AS $$
-    SELECT materialization.dependencies(trendstore) FROM trend.trendstore WHERE trend.to_char(trendstore) = $1;
-$$ LANGUAGE SQL STABLE;
-
-
--- View 'runnable_materializations'
-
-CREATE OR REPLACE view materialization.runnable_materializations AS
-SELECT type, state
-FROM materialization.state
-JOIN materialization.type ON type.id = state.type_id
-WHERE
-    materialization.requires_update(state)
-    AND
-    materialization.runnable(type, state."timestamp", state.max_modified);
-
-ALTER VIEW materialization.runnable_materializations OWNER TO minerva_admin;
-
-
 -- View 'runnable_materializations_fingerprint'
 
 CREATE OR REPLACE view materialization.runnable_materializations_fingerprint AS
@@ -1227,29 +1053,6 @@ WHERE
 
 ALTER VIEW materialization.runnable_materializations_fingerprint OWNER TO minerva_admin;
 
-
--- View 'next_up_materializations'
-
-CREATE OR REPLACE VIEW materialization.next_up_materializations AS
-SELECT type_id, timestamp, (tag).name, cost, cumsum, resources AS group_resources, (job.id IS NOT NULL AND job.state IN ('queued', 'running')) AS job_active FROM
-(
-    SELECT
-        (rm.type).id AS type_id,
-        (rm.state).timestamp,
-        tag,
-        (rm.type).cost,
-        sum((rm.type).cost) over (partition by tag.name order by trend.granularity_seconds(ts.granularity) asc, (rm.state).timestamp desc, rm.type) as cumsum,
-        (rm.state).job_id
-    FROM materialization.runnable_materializations rm
-    JOIN trend.trendstore ts ON ts.id = (rm.type).dst_trendstore_id
-    JOIN materialization.type_tag_link ttl ON ttl.type_id = (rm.type).id
-    JOIN directory.tag ON tag.id = ttl.tag_id
-) summed
-JOIN materialization.group_priority ON (summed.tag).id = group_priority.tag_id
-LEFT JOIN system.job ON job.id = job_id
-WHERE cumsum <= group_priority.resources;
-
-ALTER VIEW materialization.next_up_materializations OWNER TO minerva_admin;
 
 -- View 'next_up_materializations_fingerprint'
 
