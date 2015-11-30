@@ -934,7 +934,7 @@ CREATE OR REPLACE FUNCTION materialization.open_job_slots(slot_count integer)
 AS $$
     SELECT greatest($1 - COUNT(*), 0)::integer
     FROM system.job
-    WHERE type = 'materialize' AND (state = 'running' OR state = 'queued');
+    WHERE type = 'materialize';
 $$ LANGUAGE SQL STABLE;
 
 
@@ -1053,7 +1053,7 @@ SELECT
     cost,
     cumsum,
     resources AS group_resources,
-    (job.id IS NOT NULL AND job.state IN ('queued', 'running')) AS job_active
+    job.id IS NOT NULL AS job_active
 FROM
 (
     SELECT
