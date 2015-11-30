@@ -102,7 +102,7 @@ FROM relation_def.%I$query$, $2.name));
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION relation.materialize_relation(type relation.type)
+CREATE OR REPLACE FUNCTION relation.materialize(type relation.type)
   RETURNS integer AS
 $$
 DECLARE
