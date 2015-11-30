@@ -99,6 +99,21 @@ ALTER FUNCTION safe_division(anyelement, anyelement)
 	OWNER TO postgres;
 
 
+CREATE OR REPLACE FUNCTION public.safe_division(numerator anyelement, denominator anyelement, division_by_zero_indicator anyelement)
+	RETURNS anyelement
+AS $$
+SELECT CASE
+	WHEN $2 = 0 THEN
+		$3
+	ELSE
+		$1 / $2
+	END;
+$$ LANGUAGE SQL IMMUTABLE;
+
+ALTER FUNCTION safe_division(anyelement, anyelement)
+	OWNER TO postgres;
+
+
 CREATE OR REPLACE FUNCTION public.add_array(anyarray, anyarray) RETURNS anyarray
 AS $$
 SELECT array_agg(v1 + v2) FROM
