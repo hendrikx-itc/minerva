@@ -88,7 +88,7 @@ BEGIN
                 CONTINUE;
             END IF;
 
-            UPDATE system.job SET state = 'running', started = NOW() WHERE id = result.id;
+            UPDATE system.job SET started = NOW() WHERE id = result.id;
         END IF;
 
         RETURN result;
@@ -97,36 +97,33 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION system.finish_job(job_id int)
-    RETURNS void
+CREATE OR REPLACE FUNCTION system.finish_job(job_id integer)
+ RETURNS void
 AS $$
-DECLARE
-BEGIN
-    UPDATE system.job SET state = 'finished', finished = NOW() WHERE system.job.id = job_id;
-END;
-$$ LANGUAGE plpgsql VOLATILE STRICT;
+    INSERT INTO system.job_finished(id, type, description, size, created, started, finished, job_source_id)
+    SELECT id, type, description, size, created, started, now(), job_source_id FROM system.job WHERE id = $1;
+
+    DELETE FROM system.job WHERE id = $1;
+$$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION system.fail_job(job_id int)
-    RETURNS void
+CREATE OR REPLACE FUNCTION system.fail_job(job_id integer)
+    RETURNS integer
 AS $$
-DECLARE
-BEGIN
-    UPDATE system.job SET state = 'failed', finished = NOW() WHERE system.job.id = job_id;
-END;
-$$ LANGUAGE plpgsql VOLATILE STRICT;
+    INSERT INTO system.job_failed(id, type, description, size, created, started, finished, job_source_id)
+    SELECT id, type, description, size, created, started, now(), job_source_id FROM system.job WHERE id = $1;
+
+    DELETE FROM system.job WHERE id = $1 RETURNING id;
+$$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION system.fail_job(job_id int, message character varying)
-    RETURNS void
+CREATE OR REPLACE FUNCTION system.fail_job(job_id integer, message character varying)
+    RETURNS integer
 AS $$
-DECLARE
-BEGIN
-    UPDATE system.job SET state = 'failed', finished = NOW() WHERE system.job.id = job_id;
+    INSERT INTO system.job_error_log (job_id, message) VALUES ($1, $2);
 
-    INSERT INTO system.job_error_log (job_id, message) VALUES (job_id, message);
-END;
-$$ LANGUAGE plpgsql VOLATILE STRICT;
+    SELECT system.fail_job($1);
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION system.add_job_source(character varying, character varying, character varying)
@@ -145,44 +142,34 @@ AS $$
 $$ LANGUAGE SQL;
 
 
-CREATE OR REPLACE FUNCTION system.remove_jobs(before timestamp with time zone)
+CREATE OR REPLACE FUNCTION system.remove_failed_jobs(before timestamp with time zone)
     RETURNS integer
 AS $$
 DECLARE
-    result integer;
+    row_count integer;
 BEGIN
-    -- Acquire locks
-    PERFORM pg_advisory_xact_lock(0);
+    DELETE FROM system.job_failed WHERE created < before;
 
-    -- Drop constraints on dependent tables
-    ALTER TABLE system.job_queue DROP CONSTRAINT job_queue_job_id_fkey;
-    ALTER TABLE transform.state DROP CONSTRAINT job_id_fkey;
+    GET DIAGNOSTICS row_count = ROW_COUNT;
 
-    -- Select rows for deletion
-    CREATE TEMP TABLE to_be_deleted ON COMMIT DROP AS SELECT * FROM system.job WHERE created < before;
-
-    -- Actual deleting of jobs
-    DELETE FROM system.job USING to_be_deleted WHERE to_be_deleted.id = job.id;
-
-    GET DIAGNOSTICS result = ROW_COUNT;
-
-    -- Update dependent tables
-    DELETE FROM system.job_queue USING to_be_deleted WHERE to_be_deleted.id = job_queue.job_id;
-
-    UPDATE transform.state SET job_id = DEFAULT WHERE job_id IN (SELECT id FROM to_be_deleted);
-
-    -- Restore constraints on dependent tables
-    ALTER TABLE transform.state
-        ADD CONSTRAINT job_id_fkey FOREIGN KEY (job_id) REFERENCES system.job(id)
-        MATCH SIMPLE ON UPDATE NO ACTION ON DELETE SET DEFAULT;
-
-    ALTER TABLE system.job_queue
-        ADD CONSTRAINT job_queue_job_id_fkey FOREIGN KEY (job_id) REFERENCES system.job(id)
-        ON DELETE CASCADE;
-
-    return result;
+    RETURN row_count;
 END;
-$$ LANGUAGE plpgsql VOLATILE STRICT;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION system.remove_finished_jobs(before timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
+    DELETE FROM system.job_finished WHERE created < before;
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION system.get_setting(name text)

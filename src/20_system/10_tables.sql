@@ -3,13 +3,6 @@ ALTER SCHEMA system OWNER TO minerva_admin;
 
 GRANT ALL ON SCHEMA system TO minerva_writer;
 
-CREATE TYPE system.job_state_enum AS ENUM (
-    'queued',
-    'running',
-    'finished',
-    'failed'
-);
-
 -- Table 'system.job_source'
 
 CREATE TABLE system.job_source (
@@ -59,8 +52,7 @@ CREATE TABLE system.job (
     created timestamp with time zone NOT NULL DEFAULT now(),
     started timestamp with time zone,
     finished timestamp with time zone,
-    job_source_id integer NOT NULL,
-    state system.job_state_enum NOT NULL DEFAULT 'queued'
+    job_source_id integer NOT NULL
 );
 
 ALTER TABLE system.job OWNER TO minerva_admin;
@@ -158,3 +150,90 @@ ALTER TABLE ONLY system.setting
 
 GRANT SELECT ON TABLE system.setting TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE system.setting TO minerva_writer;
+
+-- Table 'system.job_finished'
+
+CREATE TABLE system.job_finished (
+    id integer NOT NULL,
+    type character varying NOT NULL,
+    description character varying NOT NULL,
+    size bigint NOT NULL,
+    created timestamp with time zone NOT NULL,
+    started timestamp with time zone,
+    finished timestamp with time zone,
+    job_source_id integer NOT NULL
+);
+
+ALTER TABLE system.job_finished OWNER TO minerva_admin;
+
+GRANT SELECT ON TABLE system.job_finished TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE system.job_finished TO minerva_writer;
+
+-- Table 'system.job_failed'
+
+CREATE TABLE system.job_failed (
+    id integer NOT NULL,
+    type character varying NOT NULL,
+    description character varying NOT NULL,
+    size bigint NOT NULL,
+    created timestamp with time zone NOT NULL,
+    started timestamp with time zone,
+    finished timestamp with time zone,
+    job_source_id integer NOT NULL
+);
+
+ALTER TABLE system.job_failed OWNER TO minerva_admin;
+
+GRANT SELECT ON TABLE system.job_failed TO minerva;
+GRANT INSERT,DELETE,UPDATE ON TABLE system.job_failed TO minerva_writer;
+
+
+-- View 'system.job_state'
+
+CREATE VIEW system.job_state AS
+SELECT
+    id,
+    type,
+    description,
+    size,
+    created,
+    started,
+    finished,
+    job_source_id,
+    'finished' AS state
+FROM system.job_finished
+UNION ALL
+SELECT
+    id,
+    type,
+    description,
+    size,
+    created,
+    started,
+    finished,
+    job_source_id,
+    'failed' AS state
+FROM system.job_failed
+UNION ALL
+SELECT
+    id,
+    type,
+    description,
+    size,
+    created,
+    started,
+    finished,
+    job_source_id,
+    CASE
+    WHEN job_queue.job_id IS NOT NULL THEN
+        'queued'
+    ELSE
+        'running'
+    END AS state
+FROM system.job
+LEFT JOIN system.job_queue ON job_queue.job_id = job.id;
+
+ALTER VIEW system.job_state OWNER TO minerva_admin;
+
+GRANT SELECT ON TABLE system.job_state TO minerva;
+
