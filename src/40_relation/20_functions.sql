@@ -217,3 +217,10 @@ AS $$
     SELECT relation.create_all_materialized_indexes('all_materialized');
 $$ LANGUAGE sql VOLATILE;
 
+
+CREATE OR REPLACE FUNCTION relation.update_all_materialized()
+    RETURNS name
+AS $$
+    SELECT relation.update_all_materialized('all_materialized_new');
+$$ LANGUAGE sql VOLATILE;
+
