@@ -1659,6 +1659,26 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION attribute_directory.drop_at_func_sql(attribute_directory.attributestore)
+    RETURNS text
+AS $$
+SELECT format(
+    'DROP FUNCTION attribute_history.%I(timestamp with time zone)',
+    attribute_directory.at_function_name($1)
+);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.drop_at_func(attribute_directory.attributestore)
+    RETURNS attribute_directory.attributestore
+AS $$
+    SELECT public.action(
+        $1,
+        attribute_directory.drop_at_func_sql($1)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION attribute_directory.create_entity_at_func_sql(attribute_directory.attributestore)
     RETURNS text[]
 AS $function$
@@ -1718,7 +1738,8 @@ $$ LANGUAGE SQL VOLATILE;
 CREATE OR REPLACE FUNCTION attribute_directory.drop_dependees(attribute_directory.attributestore)
     RETURNS attribute_directory.attributestore
 AS $$
-    SELECT
+SELECT attribute_directory.drop_at_func(
+    attribute_directory.drop_entity_at_func(
         attribute_directory.drop_hash_function(
             attribute_directory.drop_staging_new_view(
                 attribute_directory.drop_staging_modified_view(
@@ -1729,7 +1750,9 @@ AS $$
                     )
                 )
             )
-        );
+        )
+    )
+);
 $$ LANGUAGE SQL VOLATILE;
 
 
