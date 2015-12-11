@@ -51,7 +51,6 @@ CREATE TABLE system.job (
     size bigint NOT NULL,
     created timestamp with time zone NOT NULL DEFAULT now(),
     started timestamp with time zone,
-    finished timestamp with time zone,
     job_source_id integer NOT NULL
 );
 
@@ -222,7 +221,7 @@ SELECT
     size,
     created,
     started,
-    finished,
+    NULL AS finished,
     job_source_id,
     CASE
     WHEN job_queue.job_id IS NOT NULL THEN
