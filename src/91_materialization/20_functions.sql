@@ -141,10 +141,10 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION materialization.clear_timestamp(materialization.type, timestamp with time zone)
+CREATE FUNCTION materialization.clear(materialization.type, timestamp with time zone)
     RETURNS materialization.type
 AS $$
-    SELECT trend_directory.clear_timestamp(
+    SELECT trend_directory.clear(
         materialization.table_trend_store($1),
         $2
     );
@@ -160,7 +160,7 @@ DECLARE
     row_count integer;
     tmp_source_states materialization.source_fragment_state[];
 BEGIN
-    PERFORM materialization.clear_timestamp(type, timestamp);
+    PERFORM materialization.clear(type, timestamp);
 
     SELECT source_states INTO tmp_source_states
     FROM materialization.materializables mz

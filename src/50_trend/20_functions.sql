@@ -1629,7 +1629,7 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.clear_timestamp(trend_directory.table_trend_store, timestamp with time zone)
+CREATE FUNCTION trend_directory.clear(trend_directory.table_trend_store, timestamp with time zone)
     RETURNS integer
 AS $$
 DECLARE
