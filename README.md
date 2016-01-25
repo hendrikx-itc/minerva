@@ -11,14 +11,14 @@ To access an existing Minerva instance from code, or to set up a new Minerva ins
 
 Minerva depends on the following software:
 
-* postgresql-libs (at least 9.1)
-* python2 (at least 2.7)
-* python2-setuptools
-* python2-yaml
-* python2-pytz
-* python2-psycopg2 (at least 2.2.1)
+* postgresql-libs (at least 9.4)
+* python3 (at least 3.4)
+* python3-setuptools
+* python3-yaml
+* python3-pytz
+* python3-psycopg2 (at least 2.2.1)
 
-The PostgreSQL database server version must be at least 9.1.
+The PostgreSQL database server version must be at least 9.4.
 
 Run `python2 setup.py install` inside the `python-package` directory to install Minerva.
 
