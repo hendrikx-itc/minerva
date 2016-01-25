@@ -4,5 +4,5 @@ minervadb:
   ports:
     - "16050:5432"
   volumes:
-  - tests:/tests
-  - scripts:/minerva
+    - ./tests:/tests
+    - ./scripts:/minerva
