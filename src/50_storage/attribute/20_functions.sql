@@ -975,7 +975,7 @@ CREATE OR REPLACE FUNCTION attribute_directory.drop_hash_function(attribute_dire
     RETURNS attribute_directory.attributestore
 AS $$
 BEGIN
-    EXECUTE format('DROP FUNCTION attribute_history.values_hash(attribute_history.%I)', attribute_directory.to_table_name($1));
+    EXECUTE format('DROP FUNCTION IF EXISTS attribute_history.values_hash(attribute_history.%I)', attribute_directory.to_table_name($1));
 
     RETURN $1;
 END;
@@ -1643,7 +1643,7 @@ CREATE OR REPLACE FUNCTION attribute_directory.drop_entity_at_func_sql(attribute
     RETURNS text
 AS $$
 SELECT format(
-    'DROP FUNCTION attribute_history.%I(integer, timestamp with time zone)',
+    'DROP FUNCTION IF EXISTS attribute_history.%I(integer, timestamp with time zone)',
     attribute_directory.at_function_name($1)
 );
 $$ LANGUAGE sql STABLE;
@@ -1663,7 +1663,7 @@ CREATE OR REPLACE FUNCTION attribute_directory.drop_at_func_sql(attribute_direct
     RETURNS text
 AS $$
 SELECT format(
-    'DROP FUNCTION attribute_history.%I(timestamp with time zone)',
+    'DROP FUNCTION IF EXISTS attribute_history.%I(timestamp with time zone)',
     attribute_directory.at_function_name($1)
 );
 $$ LANGUAGE sql STABLE;
