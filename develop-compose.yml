@@ -5,4 +5,4 @@ minervadb:
     - "16050:5432"
   volumes:
     - ./tests:/tests
-    - ./scripts:/minerva
+    - ./src:/minerva
