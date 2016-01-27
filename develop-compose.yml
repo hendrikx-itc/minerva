@@ -1,4 +1,4 @@
-minervadb:
+minerva46db:
   build: ./
   dockerfile: develop.dockerfile
   ports:
