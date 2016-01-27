@@ -1,5 +1,9 @@
 # Code Style Guide
 
+## Language
+
+Use US English for everything except maybe future translation specific strings.
+
 ## Encoding
 
 Use UTF-8 as source file encoding.
