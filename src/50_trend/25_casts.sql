@@ -7,3 +7,6 @@ CREATE CAST (trend_directory.table_trend_store AS name) WITH FUNCTION trend_dire
 CREATE CAST (trend_directory.view_trend_store AS text) WITH FUNCTION trend_directory.to_char(trend_directory.view_trend_store) AS IMPLICIT;
 
 CREATE CAST (trend_directory.view_trend_store AS name) WITH FUNCTION trend_directory.view_name(trend_directory.view_trend_store) AS IMPLICIT;
+
+CREATE CAST (trend_directory.materialization AS text) WITH FUNCTION trend_directory.to_char(trend_directory.materialization);
+

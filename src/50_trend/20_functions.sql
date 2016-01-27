@@ -1647,3 +1647,470 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
+
+-- ###############
+-- Materialization
+-- ###############
+
+CREATE FUNCTION trend_directory.to_char(trend_directory.materialization)
+    RETURNS text
+AS $$
+    SELECT table_trend_store::name::text
+    FROM trend_directory.table_trend_store
+    WHERE table_trend_store.id = $1.dst_trend_store_id
+$$ LANGUAGE sql STABLE STRICT;
+
+
+CREATE FUNCTION trend_directory.add_new_state()
+    RETURNS integer
+AS $$
+DECLARE
+    count integer;
+BEGIN
+    INSERT INTO trend_directory.state(materialization_id, timestamp, max_modified, source_states)
+    SELECT materialization_id, timestamp, max_modified, source_states
+    FROM trend_directory.new_materializables;
+
+    GET DIAGNOSTICS count = ROW_COUNT;
+
+    RETURN count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.update_modified_state()
+    RETURNS integer
+AS $$
+DECLARE
+    count integer;
+BEGIN
+    UPDATE trend_directory.state
+    SET
+        max_modified = mzb.max_modified,
+        source_states = mzb.source_states
+    FROM trend_directory.modified_materializables mzb
+    WHERE
+        state.materialization_id = mzb.materialization_id AND
+        state.timestamp = mzb.timestamp;
+
+    GET DIAGNOSTICS count = ROW_COUNT;
+
+    RETURN count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.delete_obsolete_state()
+    RETURNS integer
+AS $$
+DECLARE
+    count integer;
+BEGIN
+    DELETE FROM trend_directory.state
+    USING trend_directory.obsolete_state
+    WHERE
+        state.materialization_id = obsolete_state.materialization_id AND
+        state.timestamp = obsolete_state.timestamp;
+
+    GET DIAGNOSTICS count = ROW_COUNT;
+
+    RETURN count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.update_state()
+    RETURNS text
+AS $$
+    SELECT 'added: ' || trend_directory.add_new_state() || ', updated: ' || trend_directory.update_modified_state() || ', deleted: ' || trend_directory.delete_obsolete_state();
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.dst_trend_store(trend_directory.materialization)
+    RETURNS trend_directory.table_trend_store
+AS $$
+    SELECT * FROM trend_directory.table_trend_store WHERE id = $1.dst_trend_store_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend_directory.columns_part(trend_directory.view_materialization)
+    RETURNS text
+AS $$
+    SELECT
+        array_to_string(array_agg(quote_ident(name)), ', ')
+    FROM
+        trend_directory.table_columns(
+            trend_directory.view_schema(),
+            $1.src_view::name
+        );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend_directory.transfer_sql(trend_directory.view_materialization, timestamp with time zone)
+    RETURNS text
+AS $$
+    SELECT format(
+        'INSERT INTO %I.%I (%s) %s',
+        trend_directory.partition_table_schema(),
+        trend_directory.table_name(
+            trend_directory.attributes_to_partition(
+                trend_directory.dst_trend_store($1),
+                $2
+            )
+        ),
+        trend_directory.columns_part($1),
+        format(
+            'SELECT %s FROM %I.%I WHERE timestamp = %L',
+            trend_directory.columns_part($1),
+            trend_directory.view_schema(),
+            $1.src_view::name,
+            $2
+        )
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend_directory.transfer(trend_directory.materialization, timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
+    EXECUTE trend_directory.transfer_sql($1, $2);
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.clear(trend_directory.materialization, timestamp with time zone)
+    RETURNS trend_directory.materialization
+AS $$
+    SELECT trend_directory.clear(
+        trend_directory.dst_trend_store($1),
+        $2
+    );
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.materialize(type trend_directory.materialization, "timestamp" timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+    tmp_source_states trend_directory.source_fragment_state[];
+BEGIN
+    PERFORM trend_directory.clear(type, timestamp);
+
+    SELECT source_states INTO tmp_source_states
+    FROM trend_directory.materializables mz
+    WHERE
+        mz.timestamp = $2
+        AND
+        mz.materialization_id = $1.id;
+
+    row_count = trend_directory.transfer(type, timestamp);
+
+    UPDATE trend_directory.state
+    SET processed_states = tmp_source_states
+    WHERE state.materialization_id = $1.id AND state.timestamp = $2;
+
+    IF row_count > 0 THEN
+        PERFORM trend_directory.mark_modified($1.dst_trend_store_id, "timestamp");
+    END IF;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.materialize(materialization text, "timestamp" timestamp with time zone)
+    RETURNS integer
+AS $$
+    SELECT trend_directory.materialize(materialization, $2)
+    FROM trend_directory.materialization
+    WHERE trend_directory.to_char(materialization) = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.materialize(id integer, "timestamp" timestamp with time zone)
+    RETURNS integer
+AS $$
+    SELECT trend_directory.materialize(materialization, $2)
+    FROM trend_directory.materialization
+    WHERE id = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.default_processing_delay(granularity interval)
+    RETURNS interval
+AS $$
+    SELECT CASE
+        WHEN $1 < '1 hour'::interval THEN
+            interval '0 seconds'
+        WHEN $1 = '1 hour'::interval THEN
+            interval '15 minutes'
+        ELSE
+            interval '3 hours'
+        END;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend_directory.default_stability_delay(granularity interval)
+    RETURNS interval
+AS $$
+    SELECT CASE
+        WHEN $1 < '1 hour'::interval THEN
+            interval '180 seconds'
+        WHEN $1 = '1 hour'::interval THEN
+            interval '5 minutes'
+        ELSE
+            interval '15 minutes'
+        END;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend_directory.define(view regclass, dst_trend_store_id integer)
+    RETURNS trend_directory.view_materialization
+AS $$
+    INSERT INTO trend_directory.view_materialization (
+        src_view,
+        dst_trend_store_id,
+        processing_delay,
+        stability_delay,
+        reprocessing_period
+    )
+    SELECT
+        $1,
+        $2,
+        trend_directory.default_processing_delay(granularity),
+        trend_directory.default_stability_delay(granularity),
+        interval '3 days'
+    FROM trend_directory.table_trend_store
+    WHERE id = $2
+    RETURNING view_materialization.*;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.define(src regclass, dst trend_directory.table_trend_store)
+    RETURNS trend_directory.view_materialization
+AS $$
+    SELECT trend_directory.define($1, $2.id);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.materialized_data_source_name(name character varying)
+  RETURNS character varying
+AS $$
+BEGIN
+  IF NOT name ~ '^v.*' THEN
+    RAISE EXCEPTION '% does not start with a ''v''', name;
+  ELSE
+    RETURN substring(name, '^v(.*)');
+  END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
+CREATE FUNCTION trend_directory.render_job_json(materialization_id integer, timestamp with time zone)
+    RETURNS json
+AS $$
+    SELECT format('{"materialization_id": %s, "timestamp": "%s"}', $1, $2)::json;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION trend_directory.source_data_ready(
+        trend_directory.materialization, "timestamp" timestamp with time zone,
+        max_modified timestamp with time zone)
+    RETURNS boolean
+AS $$
+    SELECT
+        $2 < now() - $1.processing_delay AND
+        $3 < now() - $1.stability_delay;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend_directory.runnable(
+        trend_directory.materialization, "timestamp" timestamp with time zone,
+        max_modified timestamp with time zone)
+    RETURNS boolean
+AS $$
+    SELECT
+        $1.enabled AND
+        trend_directory.source_data_ready($1, $2, $3) AND
+        ($1.reprocessing_period IS NULL OR now() - $2 < $1.reprocessing_period);
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION trend_directory.runnable(trend_directory.materialization, trend_directory.state)
+    RETURNS boolean
+AS $$
+    SELECT trend_directory.runnable($1, $2.timestamp, $2.max_modified);
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION trend_directory.open_job_slots(slot_count integer)
+    RETURNS integer
+AS $$
+    SELECT greatest($1 - COUNT(*), 0)::integer
+    FROM system.job
+    WHERE type = 'materialize' AND (state = 'running' OR state = 'queued');
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend_directory.tag(tag_name character varying, materialization_id integer)
+    RETURNS trend_directory.materialization_tag_link
+AS $$
+    INSERT INTO trend_directory.materialization_tag_link (materialization_id, tag_id)
+    SELECT $2, tag.id FROM directory.tag WHERE name = $1
+    RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION trend_directory.tag(character varying, materialization_id integer)
+IS 'Add tag with name tag_name to materialization with id materialization_id.
+The tag must already exist.';
+
+
+CREATE FUNCTION trend_directory.tag(tag_name character varying, trend_directory.materialization)
+    RETURNS trend_directory.materialization
+AS $$
+    INSERT INTO trend_directory.materialization_tag_link (materialization_id, tag_id)
+    SELECT $2.id, tag.id FROM directory.tag WHERE name = $1
+    RETURNING $2;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION trend_directory.tag(character varying, trend_directory.materialization)
+IS 'Add tag with name tag_name to materialization. The tag must already exist.';
+
+
+CREATE FUNCTION trend_directory.untag(trend_directory.materialization)
+    RETURNS trend_directory.materialization
+AS $$
+    DELETE FROM trend_directory.materialization_tag_link WHERE materialization_id = $1.id RETURNING $1;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION trend_directory.untag(trend_directory.materialization)
+IS 'Remove all tags from the materialization';
+
+
+CREATE FUNCTION trend_directory.reset(materialization_id integer)
+    RETURNS SETOF trend_directory.state
+AS $$
+    UPDATE trend_directory.state SET processed_states = NULL
+    WHERE
+        materialization_id = $1 AND
+        source_states = processed_states
+    RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.reset_hard(trend_directory.materialization)
+    RETURNS void
+AS $$
+    DELETE FROM trend_directory.partition WHERE table_trend_store_id = $1.dst_trend_store_id;
+    DELETE FROM trend_directory.state WHERE materialization_id = $1.id;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION trend_directory.reset_hard(trend_directory.materialization)
+IS 'Remove data (partitions) resulting from this materialization and the
+corresponding state records, so materialization for all timestamps can be done
+again';
+
+
+CREATE FUNCTION trend_directory.reset(materialization_id integer, timestamp with time zone)
+    RETURNS trend_directory.state
+AS $$
+    UPDATE trend_directory.state SET processed_states = NULL
+    WHERE materialization_id = $1 AND timestamp = $2
+    RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.reset(trend_directory.materialization, timestamp with time zone)
+    RETURNS trend_directory.state
+AS $$
+    SELECT trend_directory.reset($1.id, $2);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.enable(trend_directory.materialization)
+    RETURNS trend_directory.materialization
+AS $$
+    UPDATE trend_directory.materialization SET enabled = true
+    WHERE id = $1.id
+    RETURNING materialization;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.disable(trend_directory.materialization)
+    RETURNS trend_directory.materialization
+AS $$
+    UPDATE trend_directory.materialization SET enabled = false
+    WHERE id = $1.id
+    RETURNING materialization;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION trend_directory.fragments(trend_directory.source_fragment_state[])
+    RETURNS trend_directory.source_fragment[]
+AS $$
+    SELECT array_agg(fragment) FROM unnest($1);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend_directory.requires_update(trend_directory.state)
+    RETURNS boolean
+AS $$
+    SELECT (
+        $1.source_states <> $1.processed_states AND
+        trend_directory.fragments($1.source_states) @> trend_directory.fragments($1.processed_states)
+    )
+    OR $1.processed_states IS NULL;
+$$ LANGUAGE sql STABLE;
+
+
+-- View 'runnable_materializations'
+
+CREATE VIEW trend_directory.runnable_materializations AS
+SELECT materialization, state
+FROM trend_directory.state
+JOIN trend_directory.materialization ON materialization.id = state.materialization_id
+WHERE
+    trend_directory.requires_update(state)
+    AND
+    trend_directory.runnable(materialization, trend_directory.state."timestamp", trend_directory.state.max_modified);
+
+
+-- View 'next_up_materializations'
+
+CREATE VIEW trend_directory.next_up_materializations AS
+SELECT
+    materialization_id,
+    timestamp,
+    (tag).name,
+    cost,
+    cumsum,
+    resources AS group_resources,
+    (job.id IS NOT NULL AND job.state IN ('queued', 'running')) AS job_active
+FROM
+(
+    SELECT
+        (rm.materialization).id AS materialization_id,
+        (rm.state).timestamp,
+        tag,
+        (rm.materialization).cost,
+        sum((rm.materialization).cost) over (partition by tag.name order by ts.granularity asc, (rm.state).timestamp desc, rm.materialization) as cumsum,
+        (rm.state).job_id
+    FROM trend_directory.runnable_materializations rm
+    JOIN trend_directory.table_trend_store ts ON ts.id = (rm.materialization).dst_trend_store_id
+    JOIN trend_directory.materialization_tag_link ttl ON ttl.materialization_id = (rm.materialization).id
+    JOIN directory.tag ON tag.id = ttl.tag_id
+) summed
+JOIN trend_directory.group_priority ON (summed.tag).id = group_priority.tag_id
+LEFT JOIN system.job ON job.id = job_id
+WHERE cumsum <= group_priority.resources;
+
