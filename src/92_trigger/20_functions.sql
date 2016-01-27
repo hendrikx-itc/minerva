@@ -758,11 +758,11 @@ CREATE OR REPLACE FUNCTION trigger.create_trigger_notification_store(name)
 AS
 $$
 SELECT notification_directory.create_notification_store($1, ARRAY[
-    ('created', 'timestamp with time zone'),
-    ('rule_id', 'integer'),
-    ('weight', 'integer'),
-    ('details', 'text')
-]::notification.attr_def[]);
+    ('created', 'timestamp with time zone', 'time of notification creation'),
+    ('rule_id', 'integer', 'source rule for this notification'),
+    ('weight', 'integer', 'weight/importance of the notification'),
+    ('details', 'text', 'extra information')
+]::notification_directory.attr_def[]);
 $$ LANGUAGE SQL VOLATILE;
 
 
