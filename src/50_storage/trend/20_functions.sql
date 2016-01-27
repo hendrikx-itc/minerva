@@ -600,22 +600,6 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trend.alter_view(trend.view, text)
-    RETURNS trend.view
-AS $$
-    SELECT trend.update_view_sql($1, $2);
-
-    SELECT dep_recurse.alter(
-        dep_recurse.view_ref('trend', $1::text),
-        ARRAY[
-            format('SELECT trend.recreate_view(view) FROM trend.view WHERE id = %L', $1.id)
-        ]
-    );
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE OR REPLACE FUNCTION trend.create_view_sql(trend.view)
     RETURNS text[]
 AS $$
@@ -636,6 +620,13 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
+CREATE OR REPLACE FUNCTION trend.get_trendstore(view trend.view)
+    RETURNS trend.trendstore
+AS $$
+    SELECT trendstore FROM trend.trendstore WHERE id = $1.trendstore_id;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE OR REPLACE FUNCTION trend.create_trend_for_trendstore(trendstore trend.trendstore, trend_name character varying)
     RETURNS trend.trend
 AS $$
@@ -649,13 +640,6 @@ BEGIN
     RETURN new_trend;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION trend.get_trendstore(view trend.view)
-    RETURNS trend.trendstore
-AS $$
-    SELECT trendstore FROM trend.trendstore WHERE id = $1.trendstore_id;
-$$ LANGUAGE sql STABLE;
 
 
 CREATE OR REPLACE FUNCTION trend.create_view_trends(view trend.view)
@@ -678,13 +662,6 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE OR REPLACE FUNCTION trend.create_view(text)
-    RETURNS trend.view
-AS $$
-    SELECT trend.create_view(view) FROM trend.view WHERE view::text = $1;
-$$ LANGUAGE SQL VOLATILE;
-
-
 CREATE OR REPLACE FUNCTION trend.recreate_view(view trend.view)
     RETURNS trend.view
 AS $$
@@ -696,6 +673,20 @@ CREATE OR REPLACE FUNCTION trend.recreate_view(text)
     RETURNS trend.view
 AS $$
     SELECT trend.create_view(trend.drop_view(view)) FROM trend.view WHERE view::text = $1;
+$$ LANGUAGE SQL VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trend.alter_view(trend.view, text)
+    RETURNS trend.view
+AS $$
+    SELECT trend.recreate_view(trend.update_view_sql($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trend.create_view(text)
+    RETURNS trend.view
+AS $$
+    SELECT trend.create_view(view) FROM trend.view WHERE view::text = $1;
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -1023,6 +1014,13 @@ AS $$
 $$ LANGUAGE SQL STABLE;
 
 
+CREATE OR REPLACE FUNCTION trend.get_partition(trend.trendstore, timestamp with time zone)
+    RETURNS trend.partition
+AS $$
+    SELECT trend.get_partition($1, trend.timestamp_to_index($1.partition_size, $2));
+$$ LANGUAGE SQL STABLE;
+
+
 CREATE OR REPLACE FUNCTION trend.create_partition(trendstore trend.trendstore, index integer)
     RETURNS trend.partition
 AS $$
@@ -1036,6 +1034,13 @@ CREATE OR REPLACE FUNCTION trend.attributes_to_partition(trendstore trend.trends
     RETURNS trend.partition
 AS $$
     SELECT COALESCE(trend.get_partition($1, $2), trend.create_partition($1, $2));
+$$ LANGUAGE SQL VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION trend.attributes_to_partition(trend.trendstore, timestamp with time zone)
+    RETURNS trend.partition
+AS $$
+    SELECT trend.attributes_to_partition($1, trend.timestamp_to_index($1.partition_size, $2));
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -1092,14 +1097,18 @@ $$ LANGUAGE plpgsql STABLE;
 CREATE OR REPLACE FUNCTION trend.update_modified(table_name name, "timestamp" timestamp with time zone, modified timestamp with time zone)
     RETURNS trend.modified
 AS $$
-    UPDATE trend.modified SET "end" = greatest("end", $3) WHERE "timestamp" = $2 AND table_name = $1::character varying RETURNING modified;
+    UPDATE trend.modified SET "end" = greatest("end", $3)
+    WHERE "timestamp" = $2 AND table_name = $1::character varying
+    RETURNING modified;
 $$ LANGUAGE SQL VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION trend.store_modified(table_name name, "timestamp" timestamp with time zone, modified timestamp with time zone)
     RETURNS trend.modified
 AS $$
-    INSERT INTO trend.modified (table_name, "timestamp", start, "end") VALUES ($1::character varying, $2, $3, $3) RETURNING modified;
+    INSERT INTO trend.modified (table_name, "timestamp", start, "end")
+    VALUES ($1::character varying, $2, $3, $3)
+    RETURNING modified;
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -1252,6 +1261,21 @@ CREATE OR REPLACE FUNCTION trend.show_trends(trendstore_id integer)
 AS $$
     SELECT trend.show_trends(trendstore) FROM trend.trendstore WHERE id = $1;
 $$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trend.clear(trend.trendstore, timestamp with time zone)
+    RETURNS trend.trendstore
+AS $$
+BEGIN
+    EXECUTE format(
+        'DELETE FROM trend.%I WHERE timestamp = $1',
+        (trend.get_partition($1, $2)).table_name
+    ) USING $2;
+
+    RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
 
 -- attribute-at logic
 
@@ -1594,5 +1618,74 @@ CREATE FUNCTION trend.default_retention_period(trend.trendstore)
     RETURNS interval
 AS $$
 SELECT interval '1 month';
+$$ LANGUAGE sql STABLE;
+
+
+CREATE TYPE trend.fingerprint AS (
+    body text,
+    modified timestamp with time zone
+);
+
+
+CREATE OR REPLACE FUNCTION trend.fingerprint_add(trend.fingerprint, trend.fingerprint)
+    RETURNS trend.fingerprint
+AS $$
+    SELECT $1.body || E'\n' || $2.body, greatest($1.modified, $2.modified);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE AGGREGATE combine(trend.fingerprint)
+(
+    sfunc = trend.fingerprint_add,
+    stype = trend.fingerprint
+);
+
+
+CREATE OR REPLACE FUNCTION trend.aggregation_timestamps(src_granularity interval, dst_granularity interval, timestamp with time zone)
+    RETURNS SETOF timestamp with time zone
+AS $$
+    SELECT generate_series($3 - $2 + $1, $3, $1);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trend.aggregation_timestamps(src_granularity character varying, dst_granularity character varying, timestamp with time zone)
+    RETURNS SETOF timestamp with time zone
+AS $$
+    SELECT trend.aggregation_timestamps(trend.parse_granularity($1), trend.parse_granularity($2), $3);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trend.fingerprint(trend.trendstore, trend.trendstore, timestamp with time zone)
+    RETURNS trend.fingerprint
+AS $$
+    SELECT
+        string_agg(
+            format('%s: %s', t, modified),
+            E'\n'
+        ),
+        max(modified)
+    FROM (
+        SELECT t, trend.modified($1, t) modified
+        FROM trend.aggregation_timestamps($1.granularity, $2.granularity, $3) t
+    ) m;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION trend.fingerprint(trend.trendstore, timestamp with time zone)
+    RETURNS trend.fingerprint
+AS $$
+SELECT format('%s: %s', $1::text, modified), modified
+FROM trend.modified($1, $2) AS modified
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION trend.fingerprint(trend.trendstore, timestamp with time zone[])
+    RETURNS trend.fingerprint
+AS $$
+    SELECT string_agg(format('%s: %s', t, modified), E'\n'), max(modified)
+    FROM (
+        SELECT t, trend.modified($1, t) modified
+        FROM trend.trendstore, unnest($2) t
+    ) m;
 $$ LANGUAGE sql STABLE;
 

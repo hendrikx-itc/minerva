@@ -1119,7 +1119,7 @@ $$ LANGUAGE sql IMMUTABLE;
 CREATE OR REPLACE FUNCTION trigger.drop_details_type_sql(trigger.rule)
     RETURNS text
 AS $$
-    SELECT format('DROP TYPE IF EXISTS trigger_rule.%I;', trigger.details_type_name($1));
+    SELECT format('DROP TYPE IF EXISTS trigger_rule.%I CASCADE;', trigger.details_type_name($1));
 $$ LANGUAGE sql IMMUTABLE;
 
 

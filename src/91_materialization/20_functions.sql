@@ -1,39 +1,3 @@
-CREATE TYPE trend.fingerprint AS (
-    body text,
-    modified timestamp with time zone
-);
-
-
-CREATE OR REPLACE FUNCTION trend.aggregation_timestamps(src_granularity interval, dst_granularity interval, timestamp with time zone)
-    RETURNS SETOF timestamp with time zone
-AS $$
-    SELECT generate_series($3 - $2 + $1, $3, $1);
-$$ LANGUAGE sql STABLE;
-
-
-CREATE OR REPLACE FUNCTION trend.aggregation_timestamps(src_granularity character varying, dst_granularity character varying, timestamp with time zone)
-    RETURNS SETOF timestamp with time zone
-AS $$
-    SELECT trend.aggregation_timestamps(trend.parse_granularity($1), trend.parse_granularity($2), $3);
-$$ LANGUAGE sql STABLE;
-
-
-CREATE OR REPLACE FUNCTION trend.fingerprint(trend.trendstore, trend.trendstore, timestamp with time zone)
-    RETURNS trend.fingerprint
-AS $$
-    SELECT
-        string_agg(
-            format('%s: %s', t, modified),
-            E'\n'
-        ),
-        max(modified)
-    FROM (
-        SELECT t, trend.modified($1, t) modified
-        FROM trend.aggregation_timestamps($1.granularity, $2.granularity, $3) t
-    ) m;
-$$ LANGUAGE sql STABLE;
-
-
 CREATE OR REPLACE FUNCTION materialization.fingerprint_function_name(materialization.type)
     RETURNS name
 AS $$
@@ -167,6 +131,27 @@ COMMENT ON FUNCTION materialization.fragments(changed_since timestamp with time 
 `changed_since` is NULL';
 
 
+CREATE OR REPLACE FUNCTION materialization.fragments(changed_since timestamp with time zone, changed_to timestamp with time zone)
+    RETURNS SETOF materialization.fragment
+AS $$
+    SELECT type, timestamp FROM (
+        SELECT
+            mt AS "type",
+            trend.get_timestamp_for(dst.granularity, mdf.timestamp) AS timestamp
+        FROM trend.modified mdf
+        JOIN trend.partition p ON
+                mdf.table_name = p.table_name
+        JOIN materialization.type_trendstore_link ttl ON
+                ttl.trendstore_id = p.trendstore_id
+        JOIN materialization.type mt ON
+                mt.id = ttl.type_id
+        JOIN trend.trendstore dst ON
+                dst.id = mt.dst_trendstore_id
+        WHERE mdf.end >= $1 AND mdf.end <= $2
+    ) f GROUP BY type, timestamp;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE OR REPLACE FUNCTION materialization.changed_fingerprints(timestamp with time zone)
     RETURNS TABLE (
         "type" materialization.type,
@@ -176,6 +161,18 @@ CREATE OR REPLACE FUNCTION materialization.changed_fingerprints(timestamp with t
 AS $$
     SELECT type, timestamp, materialization.fingerprint(type, timestamp)
     FROM materialization.fragments($1);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.changed_fingerprints(timestamp with time zone, timestamp with time zone)
+    RETURNS TABLE (
+        "type" materialization.type,
+        "timestamp" timestamp with time zone,
+        fingerprint trend.fingerprint
+)
+AS $$
+    SELECT type, timestamp, materialization.fingerprint(type, timestamp)
+    FROM materialization.fragments($1, $2);
 $$ LANGUAGE sql STABLE;
 
 
@@ -217,6 +214,16 @@ COMMENT ON FUNCTION materialization.update_state_fingerprint(
 type and timestamp';
 
 
+CREATE OR REPLACE FUNCTION materialization.update_state_fingerprint(
+        integer, timestamp with time zone)
+    RETURNS materialization.type
+AS $$
+SELECT materialization.update_state_fingerprint(type, $2)
+FROM materialization.type
+WHERE id = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION materialization.populate_state_fingerprint_staging(timestamp with time zone)
     RETURNS integer
 AS $$
@@ -227,6 +234,25 @@ BEGIN
     (
         SELECT (type).id, timestamp, (fingerprint).body, (fingerprint).modified
         FROM materialization.changed_fingerprints($1)
+    );
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization.populate_state_fingerprint_staging(timestamp with time zone, timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
+    INSERT INTO materialization.state_fingerprint_staging(type_id, timestamp, fingerprint, modified)
+    (
+        SELECT (type).id, timestamp, (fingerprint).body, (fingerprint).modified
+        FROM materialization.changed_fingerprints($1, $2)
     );
 
     GET DIAGNOSTICS row_count = ROW_COUNT;
@@ -297,6 +323,25 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION materialization.update_state_fingerprint(timestamp with time zone, timestamp with time zone)
+    RETURNS materialization.update_state_result
+AS $$
+DECLARE
+    result materialization.update_state_result;
+BEGIN
+    PERFORM materialization.populate_state_fingerprint_staging($1, $2);
+
+    result.new = materialization.add_new_state_fingerprint();
+
+    result.updated = materialization.update_modified_state_fingerprint();
+
+    DELETE FROM materialization.state_fingerprint_staging;
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION materialization.to_char(materialization.type)
     RETURNS text
 AS $$
@@ -306,13 +351,21 @@ AS $$
 $$ LANGUAGE SQL STABLE STRICT;
 
 
-CREATE OR REPLACE FUNCTION materialization.has_function(materialization.type)
-    RETURNS boolean
+CREATE OR REPLACE FUNCTION materialization.function_name(materialization.type)
+    RETURNS name
 AS $$
-    SELECT EXISTS(SELECT pg_proc.oid
-    FROM pg_proc
-    JOIN pg_namespace ON pg_namespace.oid = pg_proc.pronamespace
-    WHERE nspname = 'trend_transform' AND proname = (SELECT trendstore::text FROM trend.trendstore WHERE id = $1.dst_trendstore_id));
+    SELECT trendstore::text::name
+    FROM trend.trendstore
+    WHERE id = $1.dst_trendstore_id
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.view_name(materialization.type)
+    RETURNS name
+AS $$
+    SELECT trendstore::text::name
+    FROM trend.trendstore
+    WHERE id = $1.src_trendstore_id
 $$ LANGUAGE sql STABLE;
 
 
@@ -322,7 +375,14 @@ AS $$
     SELECT pg_proc.oid
     FROM pg_proc
     JOIN pg_namespace ON pg_namespace.oid = pg_proc.pronamespace
-    WHERE nspname = 'trend_transform' AND proname = (SELECT trendstore::text FROM trend.trendstore WHERE id = $1.dst_trendstore_id);
+    WHERE nspname = 'trend_transform' AND proname = materialization.function_name($1);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE OR REPLACE FUNCTION materialization.has_function(materialization.type)
+    RETURNS boolean
+AS $$
+    SELECT materialization.function($1) IS NOT NULL;
 $$ LANGUAGE sql STABLE;
 
 
@@ -491,6 +551,127 @@ SELECT CASE WHEN $3 = 1 THEN true ELSE hashint4($1) BETWEEN materialization.part
 $$;
 
 
+CREATE FUNCTION materialization._dest_partition(materialization.type, timestamp with time zone)
+    RETURNS trend.partition
+AS $$
+    SELECT trend.get_partition(trendstore, $2)
+    FROM trend.trendstore
+    WHERE id = $1.dst_trendstore_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION materialization._clear(materialization.type, timestamp with time zone)
+    RETURNS materialization.type
+AS $$
+    SELECT trend.clear(trendstore, $2)
+    FROM trend.trendstore
+    WHERE id = $1.dst_trendstore_id;
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION materialization._mark_modified(materialization.type, timestamp with time zone)
+    RETURNS materialization.type
+AS $$
+    SELECT trend.mark_modified((materialization._dest_partition($1, $2)).table_name, $2);
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization._transfer_from_function(mat_type materialization.type, trend_timestamp timestamp with time zone)
+  RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+    columns_part text;
+BEGIN
+    SELECT array_to_string(array_agg(quote_ident(name)), ', ') INTO STRICT columns_part
+    FROM materialization.function_return_columns(materialization.function(mat_type));
+
+    EXECUTE format(
+        'INSERT INTO trend.%I (%s) SELECT %s FROM trend_transform.%I($1)',
+        (materialization._dest_partition(mat_type, trend_timestamp)).table_name,
+        columns_part,
+        columns_part,
+        materialization.function_name(mat_type)
+    )
+    USING trend_timestamp;
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    PERFORM materialization._mark_modified($1, $2);
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION materialization._materialize_function(materialization.type, timestamp with time zone)
+  RETURNS integer
+AS $$
+    SELECT materialization._clear($1, $2);
+    SELECT materialization._transfer_from_function($1, $2);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization._transfer_from_view(mat_type materialization.type, trend_timestamp timestamp with time zone)
+  RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+    columns_part text;
+BEGIN
+    SELECT string_agg(quote_ident(name), ', ') INTO STRICT columns_part
+    FROM trend.table_columns('trend', materialization.view_name(mat_type));
+
+    EXECUTE format(
+        'INSERT INTO trend.%I (%s) SELECT %s FROM trend.%I WHERE timestamp = $1',
+        (materialization._dest_partition(mat_type, trend_timestamp)).table_name,
+        columns_part,
+        columns_part,
+        materialization.view_name(mat_type)
+    ) USING trend_timestamp;
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    PERFORM materialization._mark_modified($1, $2);
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization._materialize_view(materialization.type, timestamp with time zone)
+    RETURNS integer
+AS $$
+    SELECT materialization._clear($1, $2);
+    SELECT materialization._transfer_from_view($1, $2);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization._materialize(materialization.type, "timestamp" timestamp with time zone)
+  RETURNS integer
+AS $$
+SELECT CASE
+WHEN materialization.has_function($1) THEN
+    materialization._materialize_function($1, $2)
+ELSE
+    materialization._materialize_view($1, $2)
+END;
+$$ LANGUAGE SQL VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION materialization._materialize(text, timestamp with time zone)
+    RETURNS integer
+AS $$
+    SELECT materialization._materialize(type, $2)
+    FROM materialization.type
+    WHERE type::text = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION materialization.materialize_function(mat_type materialization.type, trend_timestamp timestamp with time zone)
   RETURNS integer
 AS $$
@@ -506,7 +687,7 @@ BEGIN
   PERFORM materialization.add_missing_trends(mat_type);
   PERFORM materialization.modify_mismatching_trends(mat_type);
 
-  dst_partition = trend.attributes_to_partition(dst, trend.timestamp_to_index(dst.partition_size, trend_timestamp));
+  dst_partition = trend.attributes_to_partition(dst, trend_timestamp);
 
   SELECT * INTO mat_state_fingerprint
     FROM materialization.state_fingerprint
@@ -618,7 +799,7 @@ BEGIN
   PERFORM materialization.add_missing_trends(mat_type);
   PERFORM materialization.modify_mismatching_trends(mat_type);
 
-  dst_partition = trend.attributes_to_partition(dst, trend.timestamp_to_index(dst.partition_size, trend_timestamp));
+  dst_partition = trend.attributes_to_partition(dst, trend_timestamp);
 
   SELECT * INTO STRICT mat_state_fingerprint
     FROM materialization.state_fingerprint
@@ -645,12 +826,6 @@ BEGIN
         RAISE WARNING 'restarting materialization for % (type %) timestamp %, reason: unknown', dst::text, mat_type.id, trend_timestamp;
       END IF;
     END IF;
-
-    UPDATE materialization.state
-    SET partial_states = source_states,
-      partials_processed = 0
-    WHERE type_id = mat_type.id
-      AND state.timestamp = trend_timestamp;
 
     UPDATE materialization.state_fingerprint
     SET partial_fingerprint = fingerprint,
@@ -889,10 +1064,6 @@ BEGIN
     SELECT system.create_job('materialize', description, 1, job_source.id) INTO new_job_id
         FROM system.job_source
         WHERE name = 'compile-materialize-jobs';
-
-    UPDATE materialization.state
-        SET job_id = new_job_id
-        WHERE state.type_id = $1 AND state.timestamp = $2;
 
     UPDATE materialization.state_fingerprint
         SET job_id = new_job_id

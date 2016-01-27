@@ -61,7 +61,7 @@ FROM materialization.state_fingerprint_staging staged
 JOIN materialization.state_fingerprint state ON
     state.type_id = staged.type_id AND
     state.timestamp = staged.timestamp AND
-    state.fingerprint <> staged.fingerprint;
+    (state.fingerprint <> staged.fingerprint OR state.fingerprint IS NULL);
 
 ALTER VIEW materialization.modified_state_fingerprint OWNER TO minerva_admin;
 
