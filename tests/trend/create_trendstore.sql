@@ -6,6 +6,7 @@ SELECT trend_directory.create_table_trend_store(
     'test1',
     'some_entity_type_name',
     '900',
+    86400,
     ARRAY[
         ('x', 'integer', 'some column with integer values')
     ]::trend_directory.trend_descr[]
@@ -32,6 +33,7 @@ SELECT trend_directory.create_table_trend_store(
     'test2',
     'some_entity_type_name',
     '900',
+    86400,
     ARRAY[]::trend_directory.trend_descr[]
 );
 

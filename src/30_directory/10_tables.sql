@@ -85,8 +85,7 @@ CREATE TABLE directory.entity (
     created timestamp with time zone NOT NULL,
     name character varying NOT NULL,
     entity_type_id integer NOT NULL,
-    dn character varying NOT NULL,
-    parent_id integer
+    dn character varying NOT NULL
 );
 
 COMMENT ON TABLE directory.entity IS
@@ -121,18 +120,12 @@ ALTER TABLE ONLY directory.entity
     FOREIGN KEY (entity_type_id) REFERENCES directory.entity_type(id)
     ON DELETE CASCADE;
 
-ALTER TABLE ONLY directory.entity
-    ADD CONSTRAINT entity_parent_id_fkey
-    FOREIGN KEY (parent_id) REFERENCES directory.entity(id)
-    ON DELETE CASCADE;
-
 CREATE UNIQUE INDEX ix_directory_entity_dn
     ON directory.entity USING btree (dn);
 
 CREATE INDEX ix_directory_entity_name
     ON directory.entity USING btree (name);
 
-CREATE INDEX parent_id ON directory.entity USING btree (parent_id);
 CREATE INDEX ix_directory_entity_entity_type_id ON directory.entity USING btree (entity_type_id);
 
 -- Table 'directory.tag_group'

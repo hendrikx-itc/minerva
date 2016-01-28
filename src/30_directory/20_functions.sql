@@ -154,13 +154,12 @@ $$ LANGUAGE sql IMMUTABLE STRICT;
 CREATE FUNCTION directory.create_entity(character varying)
     RETURNS directory.entity
 AS $$
-    INSERT INTO directory.entity(created, name, entity_type_id, dn, parent_id)
+    INSERT INTO directory.entity(created, name, entity_type_id, dn)
         VALUES (
             now(),
             (directory.last_dn_part(directory.explode_dn($1))).name,
             directory.entity_type_id(directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)),
-            $1,
-            directory.entity_id(directory.dn_to_entity(directory.glue_dn(directory.parent_dn_parts(directory.explode_dn($1)))))
+            $1
         )
         RETURNING entity;
 $$ LANGUAGE sql VOLATILE STRICT;

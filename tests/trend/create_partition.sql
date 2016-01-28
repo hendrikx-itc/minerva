@@ -6,10 +6,10 @@ SELECT trend_directory.create_table_trend_store(
     'test',
     'Node',
     '900',
+    '3600',
     ARRAY[
         ('x', 'integer', 'some column with integer values')
-    ]::trend_directory.trend_descr[],
-    '3600'
+    ]::trend_directory.trend_descr[]
 );
 
 
