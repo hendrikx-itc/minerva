@@ -295,7 +295,7 @@ BEGIN
     WHERE
         state.type_id = modified.type_id AND
         state.timestamp = modified.timestamp AND
-        md5(state.fingerprint) <> md5(modified.fingerprint);
+        md5(state.fingerprint) IS DISTINCT FROM md5(modified.fingerprint);
 
     GET DIAGNOSTICS row_count = ROW_COUNT;
 
