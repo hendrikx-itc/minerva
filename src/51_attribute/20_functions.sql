@@ -1090,19 +1090,29 @@ BEGIN
 
     default_columns = ARRAY[
         'entity_id',
-        '"timestamp"'];
+        '"timestamp"'
+    ];
 
     SELECT array_to_string(default_columns || array_agg(format('%I', name)), ', ') INTO columns_part
     FROM attribute_directory.attribute
     WHERE attribute_store_id = $1.id;
 
-    EXECUTE format('INSERT INTO attribute_history.%I(%s) SELECT %s FROM attribute_staging.%I', table_name, columns_part, columns_part, table_name || '_new');
+    EXECUTE format(
+        'INSERT INTO attribute_history.%I(%s) SELECT %s FROM attribute_staging.%I',
+        table_name, columns_part, columns_part, table_name || '_new'
+    );
 
     SELECT array_to_string(array_agg(format('%I = m.%I', name, name)), ', ') INTO set_columns_part
     FROM attribute_directory.attribute
     WHERE attribute_store_id = $1.id;
 
-    EXECUTE format('UPDATE attribute_history.%I a SET modified = now(), %s FROM attribute_staging.%I m WHERE m.entity_id = a.entity_id AND m.timestamp = a.timestamp', table_name, set_columns_part, table_name || '_modified');
+    EXECUTE format(
+        'UPDATE attribute_history.%I a '
+        'SET modified = now(), %s '
+        'FROM attribute_staging.%I m '
+        'WHERE m.entity_id = a.entity_id AND m.timestamp = a.timestamp',
+        table_name, set_columns_part, table_name || '_modified'
+    );
 
     EXECUTE format('TRUNCATE attribute_staging.%I', table_name);
 
