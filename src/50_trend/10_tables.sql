@@ -109,7 +109,7 @@ GRANT INSERT,DELETE,UPDATE ON TABLE trend_directory.view_trend_store TO minerva_
 -- Table 'trend_directory.trend'
 
 CREATE TABLE trend_directory.trend (
-    id integer NOT NULL,
+    id integer PRIMARY KEY,
     trend_store_id integer NOT NULL,
     name name NOT NULL,
     data_type text NOT NULL,
