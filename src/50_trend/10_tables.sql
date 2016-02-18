@@ -129,9 +129,6 @@ ALTER TABLE trend_directory.trend
 
 ALTER SEQUENCE trend_directory.trend_id_seq OWNED BY trend_directory.trend.id;
 
-ALTER TABLE ONLY trend_directory.trend
-    ADD CONSTRAINT trend_pkey PRIMARY KEY (id);
-
 GRANT SELECT ON TABLE trend_directory.trend TO minerva;
 
 GRANT SELECT ON SEQUENCE trend_directory.trend_id_seq TO minerva;
