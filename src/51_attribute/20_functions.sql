@@ -304,7 +304,7 @@ $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION attribute_directory.create_run_length_view(attribute_directory.attribute_store) IS
 'Create a view on an attribute_store''s history table that lists the runs of
-duplicate attribute data records by their entity Id and start-end. This can
+duplicate attribute data records by their entity ID and start-end. This can
 be used as a source for compacting actions.';
 
 

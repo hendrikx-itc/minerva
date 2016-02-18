@@ -8,7 +8,7 @@ changes in state in the case of a workflow ticket.
 The original idea for notification sets would use an existing column of the
 notifications and use that directly as the primary key of the notification set.
 So if there are alarm notifications coming in from an external system that
-maintains its own set of alarm Ids, then these alarm Ids would become the
+maintains its own set of alarm IDs, then these alarm IDs would become the
 primary key for an alarm notification set.
 
 ::
