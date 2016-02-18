@@ -63,8 +63,12 @@ SELECT isnt(
     trigger.create_notifications('3G/quarterly/badCssrSpeech'::name, '2014-03-06 14:00+01'::timestamptz)
 );
 
-SELECT is(count(*), 0)
-FROM notification."trigger_notification";
+SELECT is(
+    count(*),
+    1::bigint,
+    'One row should have been inserted of the two'
+)
+FROM notification."test";
 
 SELECT * FROM finish();
 ROLLBACK;

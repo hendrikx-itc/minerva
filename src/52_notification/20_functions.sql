@@ -100,11 +100,14 @@ CREATE FUNCTION notification_directory.create_staging_table_sql(notification_dir
 AS $$
     SELECT ARRAY[
         format(
-            'CREATE UNLOGGED TABLE %I.%I (LIKE %I.%I);',
+            'CREATE TABLE %I.%I ('
+            '  entity_id integer NOT NULL,'
+            '  "timestamp" timestamp with time zone NOT NULL'
+            '%s'
+            ');',
             notification_directory.notification_store_schema(),
             notification_directory.staging_table_name($1),
-            notification_directory.notification_store_schema(),
-            notification_directory.table_name($1)
+            (SELECT array_to_string(array_agg(format(',%I %s', name, data_type)), ' ') FROM notification_directory.attribute WHERE notification_store_id = $1.id)
         ),
         format(
             'ALTER TABLE %I.%I OWNER TO minerva_writer;',

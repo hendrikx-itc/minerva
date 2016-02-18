@@ -3,6 +3,7 @@ BEGIN;
 SELECT plan(1);
 
 SELECT trend_directory.create_table_trend_store(
+    'test-trend-store',
     'test',
     'Node',
     '900',
@@ -16,7 +17,7 @@ SELECT trend_directory.create_table_trend_store(
 SELECT
     trend_directory.create_partition(table_trend_store, 379958)
 FROM trend_directory.table_trend_store
-WHERE table_trend_store::text = 'test_Node_qtr';
+WHERE table_trend_store::text = 'test-trend-store';
 
 SELECT has_table(
     'trend_partition',
@@ -24,7 +25,7 @@ SELECT has_table(
     'trend partition table should exist'
 )
 FROM trend_directory.table_trend_store
-WHERE table_trend_store::text = 'test_Node_qtr';
+WHERE table_trend_store::text = 'test-trend-store';
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -50,24 +50,10 @@ AS $$
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION trend_directory.trend_store_name(trend_directory.trend_store)
-    RETURNS name
-AS $$
-SELECT format(
-    '%s_%s_%s',
-    data_source.name,
-    entity_type.name,
-    trend_directory.granularity_to_text($1.granularity)
-)::name
-FROM directory.data_source, directory.entity_type
-WHERE data_source.id = $1.data_source_id AND entity_type.id = $1.entity_type_id;
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
 CREATE FUNCTION trend_directory.base_object_name(trend_directory.trend_store)
     RETURNS name
 AS $$
-    SELECT $1.id::name;
+    SELECT $1.name;
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
@@ -88,26 +74,26 @@ $$ LANGUAGE sql;
 CREATE FUNCTION trend_directory.to_char(trend_directory.trend_store)
     RETURNS text
 AS $$
-    SELECT trend_directory.trend_store_name($1)::text;
+    SELECT $1.name::text;
 $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE FUNCTION trend_directory.to_char(trend_directory.table_trend_store)
     RETURNS text
 AS $$
-    SELECT trend_directory.trend_store_name($1)::text;
+    SELECT $1.name::text;
 $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE FUNCTION trend_directory.to_char(trend_directory.view_trend_store)
     RETURNS text
 AS $$
-    SELECT trend_directory.trend_store_name($1)::text;
+    SELECT $1.name::text;
 $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE FUNCTION trend_directory.get_table_trend_store(
-        data_source_name character varying, entity_type_name character varying,
+        data_source_name text, entity_type_name text,
         granularity interval)
     RETURNS trend_directory.table_trend_store
 AS $$
@@ -123,7 +109,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION trend_directory.get_view_trend_store(
-        data_source_name character varying, entity_type_name character varying,
+        data_source_name text, entity_type_name text,
         granularity interval)
     RETURNS trend_directory.view_trend_store
 AS $$
@@ -305,21 +291,23 @@ $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
 CREATE FUNCTION trend_directory.define_table_trend_store(
-        data_source_name character varying, entity_type_name character varying,
+        name name, data_source_name text, entity_type_name text,
         granularity interval, partition_size integer)
     RETURNS trend_directory.table_trend_store
 AS $$
     INSERT INTO trend_directory.table_trend_store (
+        name,
         data_source_id,
         entity_type_id,
         granularity,
         partition_size
     )
     VALUES (
-        (directory.name_to_data_source($1)).id,
-        (directory.name_to_entity_type($2)).id,
-        $3,
-        $4
+        $1,
+        (directory.name_to_data_source($2)).id,
+        (directory.name_to_entity_type($3)).id,
+        $4,
+        $5
     ) RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
@@ -345,20 +333,22 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.define_view_trend_store(
-        data_source_name character varying, entity_type_name character varying,
+        name name, data_source_name text, entity_type_name text,
         granularity interval
     )
     RETURNS trend_directory.view_trend_store
 AS $$
     INSERT INTO trend_directory.view_trend_store (
+        name,
         data_source_id,
         entity_type_id,
         granularity
     )
     VALUES (
-        (directory.name_to_data_source($1)).id,
-        (directory.name_to_entity_type($2)).id,
-        $3
+        $1,
+        (directory.name_to_data_source($2)).id,
+        (directory.name_to_entity_type($3)).id,
+        $4
     ) RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
@@ -388,7 +378,7 @@ CREATE FUNCTION trend_directory.show_trends(trend_directory.trend_store)
 AS $$
     SELECT
         trend.name::name,
-        format_type(a.atttypid, a.atttypmod)::character varying,
+        format_type(a.atttypid, a.atttypmod)::text,
         trend.description
     FROM trend_directory.trend
     JOIN pg_catalog.pg_class c ON c.relname = $1::text
@@ -428,12 +418,12 @@ $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION trend_directory.create_view_trend_store(
-        data_source_name character varying, entity_type_name character varying,
+        name name, data_source_name text, entity_type_name text,
         granularity interval, query text)
     RETURNS trend_directory.view_trend_store
 AS $$
     SELECT trend_directory.initialize_view_trend_store(
-        trend_directory.define_view_trend_store($1, $2, $3), $4
+        trend_directory.define_view_trend_store($1, $2, $3, $4), $5
     );
 $$ LANGUAGE sql VOLATILE;
 
@@ -452,40 +442,40 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.define_table_trend_store(
-        data_source_name character varying, entity_type_name character varying,
+        name name, data_source_name text, entity_type_name text,
         granularity interval, partition_size integer,
         trends trend_directory.trend_descr[])
     RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.define_table_trends(
-        trend_directory.define_table_trend_store($1, $2, $3, $4),
-        $5
+        trend_directory.define_table_trend_store($1, $2, $3, $4, $5),
+        $6
     );
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.create_table_trend_store(
-        data_source_name character varying, entity_type_name character varying,
+        name name, data_source_name text, entity_type_name text,
         granularity interval, partition_size integer,
         trends trend_directory.trend_descr[])
     RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.initialize_table_trend_store(
-        trend_directory.define_table_trend_store($1, $2, $3, $4, $5)
+        trend_directory.define_table_trend_store($1, $2, $3, $4, $5, $6)
     );
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.create_table_trend_store(
-        data_source_name character varying, entity_type_name character varying,
+        name name, data_source_name text, entity_type_name text,
         granularity interval, partition_size integer,
         trend_directory.view_trend_store)
     RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.create_table_trend_store(
-        $1, $2, $3, $4, array_agg(trends)
+        $1, $2, $3, $4, $5, array_agg(trends)
     )
-    FROM trend_directory.show_trends($5) trends;
+    FROM trend_directory.show_trends($6) trends;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -537,7 +527,7 @@ AS $$
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION trend_directory.get_index_on(character varying, character varying)
+CREATE FUNCTION trend_directory.get_index_on(name, name)
     RETURNS name
 AS $$
     SELECT
@@ -1161,7 +1151,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION trend_directory.trend_store_has_trend_with_name(
-        trend_store trend_directory.trend_store, trend_name character varying)
+        trend_store trend_directory.trend_store, trend_name name)
     RETURNS boolean
 AS $$
     SELECT exists(
@@ -1183,7 +1173,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.remove_trend_from_trend_store(
-        trend_store trend_directory.table_trend_store, trend_name character varying)
+        trend_store trend_directory.table_trend_store, trend_name name)
     RETURNS trend_directory.table_trend_store
 AS $$
     DELETE FROM trend_directory.table_trend
@@ -1202,7 +1192,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.remove_trend_from_trend_store(
-        trend_store text, trend_name character varying)
+        trend_store text, trend_name name)
     RETURNS trend_directory.table_trend_store
 AS $$
     SELECT trend_directory.remove_trend_from_trend_store(trend_store, $2)
@@ -1801,8 +1791,8 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.materialized_data_source_name(name character varying)
-  RETURNS character varying
+CREATE FUNCTION trend_directory.materialized_data_source_name(name text)
+  RETURNS text
 AS $$
 BEGIN
   IF NOT name ~ '^v.*' THEN
@@ -1860,7 +1850,7 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.tag(tag_name character varying, materialization_id integer)
+CREATE FUNCTION trend_directory.tag(tag_name text, materialization_id integer)
     RETURNS trend_directory.materialization_tag_link
 AS $$
     INSERT INTO trend_directory.materialization_tag_link (materialization_id, tag_id)
@@ -1868,12 +1858,12 @@ AS $$
     RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
-COMMENT ON FUNCTION trend_directory.tag(character varying, materialization_id integer)
+COMMENT ON FUNCTION trend_directory.tag(text, materialization_id integer)
 IS 'Add tag with name tag_name to materialization with id materialization_id.
 The tag must already exist.';
 
 
-CREATE FUNCTION trend_directory.tag(tag_name character varying, trend_directory.materialization)
+CREATE FUNCTION trend_directory.tag(tag_name text, trend_directory.materialization)
     RETURNS trend_directory.materialization
 AS $$
     INSERT INTO trend_directory.materialization_tag_link (materialization_id, tag_id)
@@ -1881,7 +1871,7 @@ AS $$
     RETURNING $2;
 $$ LANGUAGE sql VOLATILE;
 
-COMMENT ON FUNCTION trend_directory.tag(character varying, trend_directory.materialization)
+COMMENT ON FUNCTION trend_directory.tag(text, trend_directory.materialization)
 IS 'Add tag with name tag_name to materialization. The tag must already exist.';
 
 

@@ -3,6 +3,7 @@ BEGIN;
 SELECT plan(3);
 
 SELECT trend_directory.create_table_trend_store(
+    'test-trend-store-1',
     'test1',
     'some_entity_type_name',
     '900',
@@ -14,13 +15,13 @@ SELECT trend_directory.create_table_trend_store(
 
 SELECT has_table(
     'trend',
-    'test1_some_entity_type_name_qtr',
+    'test-trend-store-1',
     'trend_store table with one trend column should exist'
 );
 
 SELECT columns_are(
     'trend',
-    'test1_some_entity_type_name_qtr',
+    'test-trend-store-1',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -30,6 +31,7 @@ SELECT columns_are(
 );
 
 SELECT trend_directory.create_table_trend_store(
+    'test-trend-store-2',
     'test2',
     'some_entity_type_name',
     '900',
@@ -39,7 +41,7 @@ SELECT trend_directory.create_table_trend_store(
 
 SELECT has_table(
     'trend',
-    'test2_some_entity_type_name_qtr',
+    'test-trend-store-2',
     'trend_store table without trend columns should exist'
 );
 

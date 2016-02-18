@@ -4,6 +4,7 @@ SELECT plan(1);
 
 
 SELECT trend_directory.define_table_trend_store(
+    'test1-trend-store',
     'test1',
     'some_entity_type_name',
     '300 seconds',
@@ -12,7 +13,7 @@ SELECT trend_directory.define_table_trend_store(
 
 SELECT is(
     table_trend_store::text,
-    'test1_some_entity_type_name_5m',
+    'test1-trend-store',
     'table trend store with name test1_some_entity_type_name_300 should be defined'
 )
 FROM trend_directory.table_trend_store

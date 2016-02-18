@@ -38,6 +38,7 @@ CREATE TYPE trend_directory.trend_descr AS (
 
 CREATE TABLE trend_directory.trend_store (
     id integer NOT NULL,
+    name name NOT NULL,
     entity_type_id integer NOT NULL,
     data_source_id integer NOT NULL,
     granularity interval NOT NULL
