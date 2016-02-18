@@ -247,7 +247,7 @@ CREATE TABLE trend_directory.materialization (
 COMMENT ON COLUMN trend_directory.materialization.id IS
 'The unique identifier of this materialization';
 COMMENT ON COLUMN trend_directory.materialization.dst_trend_store_id IS
-'The Id of the destination table_trend_store';
+'The ID of the destination table_trend_store';
 COMMENT ON COLUMN trend_directory.materialization.processing_delay IS
 'The time after the destination timestamp before this materialization can be executed';
 COMMENT ON COLUMN trend_directory.materialization.stability_delay IS
@@ -274,10 +274,18 @@ CREATE TABLE trend_directory.view_materialization (
     src_view regclass NOT NULL
 ) INHERITS (trend_directory.materialization);
 
+COMMENT ON TABLE trend_directory.view_materialization IS
+'A view_materialization is a materialization that uses the data from the view
+registered in the src_view column to populate the target trend store.';
+
 
 CREATE TABLE trend_directory.function_materialization (
     src_function regprocedure NOT NULL
 ) INHERITS (trend_directory.materialization);
+
+COMMENT ON TABLE trend_directory.view_materialization IS
+'A table_materialization is a materialization that uses the data from the function
+registered in the src_function column to populate the target trend store.';
 
 
 -- table state
@@ -307,7 +315,7 @@ CREATE TABLE trend_directory.state (
 );
 
 COMMENT ON COLUMN trend_directory.state.materialization_id IS
-'The Id of the materialization type';
+'The ID of the materialization type';
 COMMENT ON COLUMN trend_directory.state.timestamp IS
 'The timestamp of the materialized (materialization result) data';
 COMMENT ON COLUMN trend_directory.state.max_modified IS
@@ -317,7 +325,7 @@ COMMENT ON COLUMN trend_directory.state.source_states IS
 COMMENT ON COLUMN trend_directory.state.processed_states IS
 'Array containing a snapshot of the source_states at the time of the most recent materialization';
 COMMENT ON COLUMN trend_directory.state.job_id IS
-'Id of the most recent job for this materialization';
+'ID of the most recent job for this materialization';
 
 ALTER TABLE ONLY trend_directory.state
     ADD CONSTRAINT state_pkey PRIMARY KEY (materialization_id, timestamp);
@@ -337,6 +345,10 @@ CREATE TABLE trend_directory.materialization_tag_link (
     materialization_id integer NOT NULL,
     tag_id integer NOT NULL
 );
+
+COMMENT ON TABLE trend_directory.materialization_tag_link IS
+'Links tags to materializations. Examples of tags to link to a materialization
+might be: online, offline, aggregation, kpi, etc.';
 
 ALTER TABLE ONLY trend_directory.materialization_tag_link
     ADD CONSTRAINT materialization_tag_link_pkey PRIMARY KEY (materialization_id, tag_id);
@@ -370,4 +382,11 @@ CREATE TABLE trend_directory.materialization_trend_store_link (
     materialization_id integer NOT NULL REFERENCES trend_directory.materialization(id) ON DELETE CASCADE,
     trend_store_id integer NOT NULL REFERENCES trend_directory.table_trend_store(id) ON DELETE CASCADE
 );
+
+COMMENT ON TABLE trend_directory.materialization_trend_store_link IS
+'Stores the dependencies between a materialization and its source table trend
+stores. Multiple levels of views and functions may exist between a
+materialization and its source table trend stores. These intermediate views and
+functions are not registered here, but only the table trend stores containing
+the actual source data used in the views and/or functions.';
 
