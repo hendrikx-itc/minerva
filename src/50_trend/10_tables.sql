@@ -228,31 +228,6 @@ GRANT SELECT ON TABLE trend_directory.modified TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE trend_directory.modified TO minerva_writer;
 
 
--- Table 'trend_directory.view_dependency'
-
-CREATE TABLE trend_directory.view_dependency (
-    view_trend_store_id integer not null,
-    table_trend_store_id integer not null
-);
-
-ALTER TABLE ONLY trend_directory.view_dependency
-    ADD CONSTRAINT trend_view_dependency_pkey
-    PRIMARY KEY (view_trend_store_id, table_trend_store_id);
-
-ALTER TABLE ONLY trend_directory.view_dependency
-    ADD CONSTRAINT view_dependency_view_trend_store_id_fkey
-    FOREIGN KEY (view_trend_store_id) REFERENCES trend_directory.view_trend_store(id)
-    ON DELETE CASCADE;
-
-ALTER TABLE ONLY trend_directory.view_dependency
-    ADD CONSTRAINT view_dependency_table_trend_store_id_fkey
-    FOREIGN KEY (table_trend_store_id) REFERENCES trend_directory.table_trend_store(id)
-    ON DELETE CASCADE;
-
-GRANT SELECT ON TABLE trend_directory.view_dependency TO minerva;
-GRANT INSERT,DELETE,UPDATE ON TABLE trend_directory.view_dependency TO minerva_writer;
-
-
 -- ###############
 -- Materialization
 -- ###############
