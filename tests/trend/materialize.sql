@@ -14,20 +14,34 @@ SELECT trend_directory.create_table_trend_store(
 );
 
 
-INSERT INTO trend."test-data_Node_qtr_staging"(
-    entity_id,
-    timestamp,
-    modified,
-    x
-)
-VALUES
-    (id(directory.dn_to_entity('Network=G01,Node=A001')), '2015-01-21 15:00+00', now(), 42),
-    (id(directory.dn_to_entity('Network=G01,Node=A002')), '2015-01-21 15:00+00', now(), 43);
+DO LANGUAGE plpgsql
+$QUERY$
+BEGIN
+EXECUTE format(
+    $$
+    INSERT INTO trend.%I(
+        entity_id,
+        timestamp,
+        modified,
+        x
+    )
+    VALUES
+        (id(directory.dn_to_entity('Network=G01,Node=A001')), '2015-01-21 15:00+00', now(), 42),
+        (id(directory.dn_to_entity('Network=G01,Node=A002')), '2015-01-21 15:00+00', now(), 43);
+    $$,
+    (
+        SELECT trend_directory.staging_table_name(table_trend_store)
+        FROM trend_directory.table_trend_store
+        WHERE table_trend_store::text = 'test-data_Node_qtr'
+    )
+);
+END;
+$QUERY$;
 
 
 SELECT trend_directory.transfer_staged(table_trend_store)
 FROM trend_directory.table_trend_store
-WHERE table_trend_store::name = 'test-data_Node_qtr';
+WHERE table_trend_store::text = 'test-data_Node_qtr';
 
 
 SELECT trend_directory.define_materialization(

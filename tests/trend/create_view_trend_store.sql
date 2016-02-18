@@ -7,11 +7,33 @@ SELECT trend_directory.create_view_trend_store(
     'SELECT 1::integer x, 2.0::double precision y'
 );
 
-SELECT has_view('trend', 'test-source_test-type_qtr', 'view should be created');
+SELECT has_view(
+    'trend',
+    trend_directory.view_name(view_trend_store),
+    'view should be created'
+)
+FROM trend_directory.view_trend_store
+WHERE view_trend_store::text = 'test-source_test-type_qtr';
 
-SELECT col_type_is('trend', 'test-source_test-type_qtr', 'x', 'integer', 'column x should be integer');
+SELECT col_type_is(
+    'trend',
+    trend_directory.view_name(view_trend_store),
+    'x',
+    'integer',
+    'column x should be integer'
+)
+FROM trend_directory.view_trend_store
+WHERE view_trend_store::text = 'test-source_test-type_qtr';
 
-SELECT col_type_is('trend', 'test-source_test-type_qtr', 'y', 'double precision', 'column y should be double precision');
+SELECT col_type_is(
+    'trend',
+    trend_directory.view_name(view_trend_store),
+    'y',
+    'double precision',
+    'column y should be double precision'
+)
+FROM trend_directory.view_trend_store
+WHERE view_trend_store::text = 'test-source_test-type_qtr';
 
 SELECT
     is(x, 1, 'x should equal 1')

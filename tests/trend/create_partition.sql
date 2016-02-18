@@ -20,9 +20,11 @@ WHERE table_trend_store::text = 'test_Node_qtr';
 
 SELECT has_table(
     'trend_partition',
-    'test_Node_qtr_379958',
+    format('%s_379958', trend_directory.base_table_name(table_trend_store)),
     'trend partition table should exist'
-);
+)
+FROM trend_directory.table_trend_store
+WHERE table_trend_store::text = 'test_Node_qtr';
 
 SELECT * FROM finish();
 ROLLBACK;

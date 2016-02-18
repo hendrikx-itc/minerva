@@ -753,16 +753,59 @@ $$SELECT trigger.set_weight($1, 'SELECT 1');$$
 LANGUAGE SQL VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION trigger.add_insert_trigger(notification_directory.notification_store)
+    RETURNS notification_directory.notification_store
+AS $$
+BEGIN
+    EXECUTE format(
+        $query$
+        CREATE OR REPLACE FUNCTION notification.%I()
+            RETURNS trigger AS
+        $fnbody$
+        BEGIN
+            IF new.weight IS NULL THEN
+                RAISE WARNING 'notification of rule %% entity %% timestamp %% has weight NULL', new.rule_id, new.entity_id, new.timestamp;
+                RETURN NULL;
+            ELSE
+                RETURN new;
+            END IF;
+        END;
+        $fnbody$ LANGUAGE plpgsql IMMUTABLE;
+        $query$,
+        notification_directory.staging_table_name($1) || '_insert_checks'
+    );
+
+    EXECUTE format(
+        $query$
+        CREATE TRIGGER check_notifications_trigger
+            BEFORE INSERT
+            ON notification.%I
+            FOR EACH ROW
+            EXECUTE PROCEDURE notification.%I();
+        $query$,
+        notification_directory.staging_table_name($1),
+        notification_directory.staging_table_name($1) || '_insert_checks'
+    );
+
+    RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+
 CREATE OR REPLACE FUNCTION trigger.create_trigger_notification_store(name)
     RETURNS notification_directory.notification_store
-AS
-$$
-SELECT notification_directory.create_notification_store($1, ARRAY[
-    ('created', 'timestamp with time zone', 'time of notification creation'),
-    ('rule_id', 'integer', 'source rule for this notification'),
-    ('weight', 'integer', 'weight/importance of the notification'),
-    ('details', 'text', 'extra information')
-]::notification_directory.attr_def[]);
+AS $$
+SELECT trigger.add_insert_trigger(
+    notification_directory.create_staging_table(
+        notification_directory.create_notification_store($1, ARRAY[
+            ('created', 'timestamp with time zone', 'time of notification creation'),
+            ('rule_id', 'integer', 'source rule for this notification'),
+            ('weight', 'integer', 'weight/importance of the notification'),
+            ('details', 'text', 'extra information')
+        ]::notification_directory.attr_def[])
+    )
+);
 $$ LANGUAGE SQL VOLATILE;
 
 
@@ -780,11 +823,11 @@ FROM notification.%I staging
 LEFT JOIN notification.%I target ON target.entity_id = staging.entity_id AND target.timestamp = staging.timestamp AND target.rule_id = staging.rule_id
 WHERE target.entity_id IS NULL;
 $query$,
-        notification.table_name($1), notification.staging_table_name($1), notification.table_name($1));
+        notification_directory.table_name($1), notification_directory.staging_table_name($1), notification_directory.table_name($1));
 
     GET DIAGNOSTICS num_rows = ROW_COUNT;
 
-    EXECUTE format('DELETE FROM notification.%I', notification.staging_table_name($1));
+    EXECUTE format('DELETE FROM notification.%I', notification_directory.staging_table_name($1));
 
     RETURN num_rows;
 END;
@@ -802,7 +845,7 @@ $query$
 INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
 (SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I WHERE timestamp = $2)
 $query$,
-        notification.staging_table_name($2), trigger.notification_view_name($1)
+        notification_directory.staging_table_name($2), trigger.notification_view_name($1)
     )
     USING $1.id, $3;
 
@@ -835,7 +878,7 @@ $query$
 INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
 (SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I WHERE timestamp > now() - $2)
 $query$,
-        notification.staging_table_name($2), trigger.notification_view_name($1)
+        notification_directory.staging_table_name($2), trigger.notification_view_name($1)
     )
     USING $1.id, $3;
 

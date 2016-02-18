@@ -53,28 +53,35 @@ $$ LANGUAGE sql IMMUTABLE STRICT;
 CREATE FUNCTION trend_directory.trend_store_name(trend_directory.trend_store)
     RETURNS name
 AS $$
-    SELECT format(
-        '%s_%s_%s',
-        data_source.name,
-        entity_type.name,
-        trend_directory.granularity_to_text($1.granularity)
-    )::name
-    FROM directory.data_source, directory.entity_type
-    WHERE data_source.id = $1.data_source_id AND entity_type.id = $1.entity_type_id;
-$$ LANGUAGE sql STABLE STRICT;
+SELECT format(
+    '%s_%s_%s',
+    data_source.name,
+    entity_type.name,
+    trend_directory.granularity_to_text($1.granularity)
+)::name
+FROM directory.data_source, directory.entity_type
+WHERE data_source.id = $1.data_source_id AND entity_type.id = $1.entity_type_id;
+$$ LANGUAGE sql IMMUTABLE STRICT;
+
+
+CREATE FUNCTION trend_directory.base_object_name(trend_directory.trend_store)
+    RETURNS name
+AS $$
+    SELECT $1.id::name;
+$$ LANGUAGE sql IMMUTABLE STRICT;
 
 
 CREATE FUNCTION trend_directory.base_table_name(trend_directory.table_trend_store)
     RETURNS name
 AS $$
-    SELECT trend_directory.trend_store_name($1);
-$$ LANGUAGE sql STABLE STRICT;
+    SELECT trend_directory.base_object_name($1);
+$$ LANGUAGE sql IMMUTABLE STRICT;
 
 
 CREATE FUNCTION trend_directory.view_name(trend_directory.view_trend_store)
     RETURNS name
 AS $$
-    SELECT trend_directory.trend_store_name($1);
+    SELECT trend_directory.base_object_name($1);
 $$ LANGUAGE sql;
 
 
@@ -142,7 +149,10 @@ SELECT ARRAY[
         ');',
         trend_directory.base_table_schema(),
         name,
-        (SELECT array_to_string(array_agg(format('%I %s,', t.name, t.data_type)), ' ') FROM unnest($2) t)
+        (
+            SELECT string_agg(format('%I %s,', t.name, t.data_type), ' ')
+            FROM unnest($2) t
+        )
     ),
     format(
         'GRANT SELECT ON TABLE %I.%I TO minerva;',
@@ -260,6 +270,16 @@ COMMENT ON FUNCTION trend_directory.initialize_table_trend_store(trend_directory
 and capable of storing data.';
 
 
+CREATE FUNCTION trend_directory.create_view(trend_directory.trend_store, name)
+    RETURNS trend_directory.trend_store
+AS $$
+   SELECT public.action(
+        $1,
+        format('CREATE VIEW trend.%I AS SELECT * FROM trend.%I', trend_directory.base_object_name($1))
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION trend_directory.get_default_partition_size(granularity interval)
     RETURNS integer
 AS $$
@@ -353,42 +373,6 @@ SELECT ARRAY[
 $$ LANGUAGE sql STABLE;
 
 
--- View required by function 'link_view_dependencies'
-CREATE VIEW trend_directory.view_dependencies AS
-    SELECT d.view_trend_store, table_trend_store
-    FROM (
-        SELECT
-            view_trend_store,
-            dep_recurse.dependencies(
-                dep_recurse.view_ref(
-                    trend_directory.view_schema(),
-                    trend_directory.view_name(view_trend_store)
-                )
-            ) dependency
-        FROM trend_directory.view_trend_store
-    ) d
-    JOIN pg_class ON pg_class.oid = ((d.dependency).obj).obj_id
-    JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
-    JOIN trend_directory.table_trend_store ON trend_directory.base_table_name(table_trend_store) = pg_class.relname;
-
-GRANT SELECT ON TABLE trend_directory.view_dependencies TO minerva;
-
-
-CREATE FUNCTION trend_directory.link_view_dependencies(trend_directory.view_trend_store)
-    RETURNS trend_directory.view_trend_store
-AS $$
-    INSERT INTO trend_directory.view_dependency (view_trend_store_id, table_trend_store_id)
-    SELECT $1.id, (vdeps.table_trend_store).id
-    FROM trend_directory.view_dependencies vdeps
-    LEFT JOIN trend_directory.view_dependency ON
-        view_dependency.view_trend_store_id = $1.id
-        AND
-        view_dependency.table_trend_store_id = (vdeps.table_trend_store).id
-    WHERE (vdeps.view_trend_store).id = $1.id AND view_dependency.view_trend_store_id IS NULL
-    RETURNING $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION trend_directory.get_view_trends(view_name name)
     RETURNS SETOF trend_directory.trend_descr
 AS $$
@@ -436,8 +420,6 @@ CREATE FUNCTION trend_directory.initialize_view_trend_store(trend_directory.view
     RETURNS trend_directory.view_trend_store
 AS $$
     SELECT public.action($1, trend_directory.create_view_sql($1, $2));
-
-    SELECT trend_directory.link_view_dependencies($1);
 
     SELECT trend_directory.create_view_trends($1);
 
@@ -829,15 +811,6 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.unlink_view_dependencies(trend_directory.view_trend_store)
-    RETURNS trend_directory.view_trend_store
-AS $$
-    DELETE FROM trend_directory.view_dependency
-    WHERE view_trend_store_id = $1.id
-    RETURNING $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION trend_directory.delete_view_trends(trend_directory.view_trend_store)
     RETURNS trend_directory.view_trend_store
 AS $$
@@ -852,8 +825,6 @@ CREATE FUNCTION trend_directory.drop_view(trend_directory.view_trend_store)
     RETURNS trend_directory.view_trend_store
 AS $$
     SELECT public.action($1, trend_directory.drop_view_sql($1));
-
-    SELECT trend_directory.unlink_view_dependencies($1);
 
     SELECT trend_directory.delete_view_trends($1);
 
@@ -1489,40 +1460,6 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.get_dependent_view_names(table_name name)
-    RETURNS SETOF name
-AS $$
-    SELECT trend_directory.view_name(view_trend_store)
-    FROM trend_directory.view_dependencies
-    WHERE table_trend_store::text = $1;
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION trend_directory.get_dependent_views(table_name name)
-    RETURNS SETOF trend_directory.view_trend_store
-AS $$
-    SELECT view_trend_store
-    FROM trend_directory.get_dependent_view_names($1) AS view_name
-    JOIN trend_directory.view_trend_store ON trend_directory.view_name(view_trend_store) = view_name;
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION trend_directory.get_dependent_views(trend_directory.trend_store)
-    RETURNS SETOF trend_directory.view_trend_store
-AS $$
-    SELECT trend_directory.get_dependent_views(trend_directory.trend_store_name($1));
-$$ LANGUAGE sql;
-
-
-CREATE FUNCTION trend_directory.get_dependent_views(trend_store_id integer)
-    RETURNS SETOF trend_directory.view_trend_store
-AS $$
-    SELECT trend_directory.get_dependent_views(trend_store)
-    FROM trend_directory.trend_store
-    WHERE id = $1;
-$$ LANGUAGE sql;
-
-
 CREATE TYPE trend_directory.transfer_result AS (
     row_count int,
     max_modified timestamp with time zone
@@ -1856,9 +1793,9 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION trend_directory.define_materialization(trend_directory.view_trend_store, dst trend_directory.table_trend_store)
     RETURNS trend_directory.view_materialization
 AS $$
-    SELECT raise_notice($1, $1::text);
+    SELECT raise_notice($1, trend_directory.view_name($1)::text);
     SELECT trend_directory.define_materialization(
-        ('trend.' || quote_ident($1::text))::regclass,
+        ('trend.' || quote_ident(trend_directory.view_name($1)))::regclass,
         $2.id
     );
 $$ LANGUAGE sql VOLATILE;

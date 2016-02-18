@@ -14,14 +14,16 @@ SELECT trend_directory.create_table_trend_store(
 
 SELECT columns_are(
     'trend',
-    'test1_some_entity_type_name_qtr',
+    trend_directory.base_table_name(table_trend_store),
     ARRAY[
         'entity_id',
         'timestamp',
         'modified',
         'x'
     ]
-);
+)
+FROM trend_directory.table_trend_store
+WHERE table_trend_store::text = 'test1_some_entity_type_name_qtr';
 
 SELECT trend_directory.alter_trend_name(
     table_trend_store,
@@ -37,14 +39,16 @@ WHERE table_trend_store::name = 'test1_some_entity_type_name_qtr';
 
 SELECT columns_are(
     'trend',
-    'test1_some_entity_type_name_qtr',
+    trend_directory.base_table_name(table_trend_store),
     ARRAY[
         'entity_id',
         'timestamp',
         'modified',
         'y'
     ]
-);
+)
+FROM trend_directory.table_trend_store
+WHERE table_trend_store::text = 'test1_some_entity_type_name_qtr';
 
 SELECT * FROM finish();
 ROLLBACK;
