@@ -479,10 +479,17 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION trend_directory.partition_name(base_table_name name, index integer)
+    RETURNS name
+AS $$
+    SELECT ($1 || '_' || $2)::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
 CREATE FUNCTION trend_directory.partition_name(trend_directory.table_trend_store, index integer)
     RETURNS name
 AS $$
-    SELECT (trend_directory.base_table_name($1) || '_' || $2)::name;
+    SELECT trend_directory.partition_name(trend_directory.base_table_name($1), $2);
 $$ LANGUAGE sql STABLE STRICT;
 
 
@@ -525,6 +532,39 @@ AS $$
     FROM trend_directory.table_trend_store
     WHERE id = $1.table_trend_store_id;
 $$ LANGUAGE sql STABLE STRICT;
+
+
+CREATE FUNCTION trend_directory.rename_table_trend_store(trend_directory.table_trend_store, name)
+    RETURNS trend_directory.table_trend_store
+AS $$
+    SELECT public.action(
+        $1,
+        format(
+            'ALTER TABLE %I.%I RENAME TO %I',
+            trend_directory.base_table_schema(),
+            $1.name,
+            $2
+        )
+    );
+
+    SELECT public.action(
+        $1,
+        format(
+            'ALTER TABLE %I.%I RENAME TO %I',
+            trend_directory.partition_table_schema(),
+            trend_directory.table_name(partition),
+            trend_directory.partition_name($2, partition.index)
+        )
+    )
+    FROM trend_directory.partition
+    WHERE table_trend_store_id = $1.id;
+
+    UPDATE trend_directory.table_trend_store
+    SET name = $2
+    WHERE id = $1.id;
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.get_index_on(name, name)
