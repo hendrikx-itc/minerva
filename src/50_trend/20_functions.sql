@@ -1466,6 +1466,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
+COMMENT ON FUNCTION trend_directory.populate_modified(partition trend_directory.partition) IS
+'Populate trend_directory.modified table with modified records from one
+partition. This function should only be used in recovery scenarios where the
+trend_directory.modified table has become corrupt or records are missing for
+some reason.';
+
 
 CREATE FUNCTION trend_directory.populate_modified(trend_directory.trend_store)
     RETURNS SETOF trend_directory.modified
@@ -1475,6 +1481,12 @@ AS $$
     FROM trend_directory.partition
     WHERE table_trend_store_id = $1.id;
 $$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION trend_directory.populate_modified(trend_directory.trend_store) IS
+'Populate trend_directory.modified table with modified records from a whole
+trend store. This function should only be used in recovery scenarios where the
+trend_directory.modified table has become corrupt or records are missing for
+some reason.';
 
 
 CREATE FUNCTION trend_directory.available_timestamps(partition trend_directory.partition)
