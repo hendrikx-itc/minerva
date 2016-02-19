@@ -95,6 +95,15 @@ AS $$
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
+CREATE FUNCTION directory.create_or_replace_entity_type(character varying)
+    RETURNS directory.entity_type
+AS $$
+    INSERT INTO directory.entity_type(name, description) VALUES ($1, '')
+    ON CONFLICT DO NOTHING
+    RETURNING entity_type;
+$$ LANGUAGE sql VOLATILE STRICT;
+
+
 CREATE FUNCTION directory.parent_dn_parts(directory.dn_part[])
     RETURNS directory.dn_part[]
 AS $$
@@ -118,7 +127,7 @@ $$ LANGUAGE sql IMMUTABLE STRICT;
 CREATE FUNCTION directory.name_to_entity_type(character varying)
     RETURNS directory.entity_type
 AS $$
-    SELECT COALESCE(directory.get_entity_type($1), directory.create_entity_type($1));
+    SELECT COALESCE(directory.get_entity_type($1), directory.create_or_replace_entity_type($1));
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
