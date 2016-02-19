@@ -1473,7 +1473,7 @@ trend_directory.modified table has become corrupt or records are missing for
 some reason.';
 
 
-CREATE FUNCTION trend_directory.populate_modified(trend_directory.trend_store)
+CREATE FUNCTION trend_directory.populate_modified(trend_directory.table_trend_store)
     RETURNS SETOF trend_directory.modified
 AS $$
     SELECT
@@ -1482,7 +1482,7 @@ AS $$
     WHERE table_trend_store_id = $1.id;
 $$ LANGUAGE sql VOLATILE;
 
-COMMENT ON FUNCTION trend_directory.populate_modified(trend_directory.trend_store) IS
+COMMENT ON FUNCTION trend_directory.populate_modified(trend_directory.table_trend_store) IS
 'Populate trend_directory.modified table with modified records from a whole
 trend store. This function should only be used in recovery scenarios where the
 trend_directory.modified table has become corrupt or records are missing for
