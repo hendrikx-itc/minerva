@@ -1058,6 +1058,8 @@ $$ LANGUAGE plpgsql VOLATILE;
 CREATE OR REPLACE FUNCTION trigger.create_notifications(trigger.rule, notification.notificationstore, timestamp with time zone)
     RETURNS integer
 AS $$
+SELECT pg_notify('create_notifications', format(E'%s\n%s', $1.id, $3));
+
 SELECT CASE WHEN trigger.has_notification_function($1) THEN
     trigger.create_notifications_new($1, $2, $3)
 ELSE
