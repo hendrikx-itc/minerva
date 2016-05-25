@@ -57,11 +57,23 @@ AS $$
 DECLARE
     new_job_id integer;
 BEGIN
-    INSERT INTO system.job(size, job_source_id, type, description) VALUES (size, job_source_id, type, description) RETURNING id INTO new_job_id;
+    IF EXISTS (
+        SELECT 1
+        FROM system.job
+        WHERE job.description = create_job.description
+            AND job.size = create_job.size
+            AND job.type = create_job.type
+            AND job.job_source_id = create_job.job_source_id
+            AND create_job.type = 'harvest')
+    THEN
+        RAISE WARNING 'ignoring duplicate harvest job';
+    ELSE
+        INSERT INTO system.job(size, job_source_id, type, description) VALUES (size, job_source_id, type, description) RETURNING id INTO new_job_id;
 
-    INSERT INTO system.job_queue(job_id) VALUES (new_job_id);
+        INSERT INTO system.job_queue(job_id) VALUES (new_job_id);
+    END IF;
 
-    return new_job_id;
+    RETURN new_job_id;
 END;
 $$ LANGUAGE plpgsql VOLATILE STRICT;
 
