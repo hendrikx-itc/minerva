@@ -57,14 +57,13 @@ AS $$
 DECLARE
     new_job_id integer;
 BEGIN
-    IF EXISTS (
+    IF create_job.type = 'harvest' AND EXISTS (
         SELECT 1
         FROM system.job
         WHERE job.description = create_job.description
             AND job.size = create_job.size
             AND job.type = create_job.type
-            AND job.job_source_id = create_job.job_source_id
-            AND create_job.type = 'harvest')
+            AND job.job_source_id = create_job.job_source_id)
     THEN
         RAISE WARNING 'ignoring duplicate harvest job';
     ELSE
