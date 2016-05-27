@@ -93,10 +93,11 @@ GRANT UPDATE ON SEQUENCE directory.entitytype_id_seq TO minerva_writer;
 CREATE TABLE directory.entity (
     id integer NOT NULL,
     first_appearance timestamp with time zone NOT NULL,
-    name character varying NOT NULL,
+    name text NOT NULL,
     entitytype_id integer NOT NULL,
-    dn character varying NOT NULL,
-    parent_id integer
+    dn text NOT NULL,
+    parent_id integer,
+    CHECK (name <> '')
 );
 
 COMMENT ON TABLE directory.entity IS
