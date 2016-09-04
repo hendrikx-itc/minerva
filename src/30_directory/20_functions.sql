@@ -1,4 +1,4 @@
-CREATE FUNCTION directory.get_entity_by_dn(character varying)
+CREATE FUNCTION directory.get_entity_by_dn(text)
     RETURNS directory.entity
 AS $$
     SELECT * FROM directory.entity WHERE dn = $1;
@@ -12,21 +12,21 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION directory.get_entity_type(character varying)
+CREATE FUNCTION directory.get_entity_type(text)
     RETURNS directory.entity_type
 AS $$
     SELECT entity_type FROM directory.entity_type WHERE lower(name) = lower($1);
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION directory.get_data_source(character varying)
+CREATE FUNCTION directory.get_data_source(text)
     RETURNS directory.data_source
 AS $$
     SELECT * FROM directory.data_source WHERE name = $1;
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION directory.create_data_source(character varying)
+CREATE FUNCTION directory.create_data_source(text)
     RETURNS directory.data_source
 AS $$
     INSERT INTO directory.data_source (name, description)
@@ -35,39 +35,39 @@ AS $$
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE TYPE directory.dn_part AS (type_name character varying, name character varying);
+CREATE TYPE directory.dn_part AS (type_name text, name text);
 
 
 CREATE FUNCTION directory.dn_part_to_string(directory.dn_part)
-    RETURNS character varying
+    RETURNS text
 AS $$
     SELECT $1.type_name || '=' || $1.name;
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE CAST (directory.dn_part AS character varying)
+CREATE CAST (directory.dn_part AS text)
     WITH FUNCTION directory.dn_part_to_string (directory.dn_part);
 
 
-CREATE FUNCTION directory.array_to_dn_part(character varying[])
+CREATE FUNCTION directory.array_to_dn_part(text[])
     RETURNS directory.dn_part
 AS $$
     SELECT CAST(ROW($1[1], $1[2]) AS directory.dn_part);
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE CAST (character varying[] AS directory.dn_part)
-    WITH FUNCTION directory.array_to_dn_part (character varying[]);
+CREATE CAST (text[] AS directory.dn_part)
+    WITH FUNCTION directory.array_to_dn_part (text[]);
 
 
-CREATE FUNCTION directory.split_raw_part(character varying)
+CREATE FUNCTION directory.split_raw_part(text)
     RETURNS directory.dn_part
 AS $$
     SELECT directory.array_to_dn_part(string_to_array($1, '='));
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION directory.explode_dn(character varying)
+CREATE FUNCTION directory.explode_dn(text)
     RETURNS directory.dn_part[]
 AS $$
     SELECT array_agg(directory.split_raw_part(raw_part)) FROM unnest(string_to_array($1, ',')) AS raw_part;
@@ -75,7 +75,7 @@ $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION directory.glue_dn(directory.dn_part[])
-    RETURNS character varying
+    RETURNS text
 AS $$
     SELECT
         array_to_string(b.part_arr, ',')
@@ -88,14 +88,14 @@ AS $$
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION directory.create_entity_type(character varying)
+CREATE FUNCTION directory.create_entity_type(text)
     RETURNS directory.entity_type
 AS $$
     INSERT INTO directory.entity_type(name, description) VALUES ($1, '') RETURNING entity_type;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE FUNCTION directory.create_or_replace_entity_type(character varying)
+CREATE FUNCTION directory.create_or_replace_entity_type(text)
     RETURNS directory.entity_type
 AS $$
     INSERT INTO directory.entity_type(name, description) VALUES ($1, '')
@@ -117,14 +117,14 @@ AS $$
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION directory.parent_dn(character varying)
-    RETURNS character varying
+CREATE FUNCTION directory.parent_dn(text)
+    RETURNS text
 AS $$
     SELECT directory.glue_dn(directory.parent_dn_parts(directory.explode_dn($1)));
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION directory.name_to_entity_type(character varying)
+CREATE FUNCTION directory.name_to_entity_type(text)
     RETURNS directory.entity_type
 AS $$
     SELECT COALESCE(directory.get_entity_type($1), directory.create_or_replace_entity_type($1));
@@ -146,7 +146,7 @@ $$ LANGUAGE sql VOLATILE STRICT;
 
 
 -- Stub
-CREATE FUNCTION directory.dn_to_entity(character varying)
+CREATE FUNCTION directory.dn_to_entity(text)
     RETURNS directory.entity
 AS $$
     SELECT null::directory.entity;
@@ -160,7 +160,7 @@ AS $$
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION directory.create_entity(character varying)
+CREATE FUNCTION directory.create_entity(text)
     RETURNS directory.entity
 AS $$
     INSERT INTO directory.entity(created, name, entity_type_id, dn)
@@ -175,15 +175,15 @@ $$ LANGUAGE sql VOLATILE STRICT;
 
 
 -- Use 'CREATE OR REPLACE' to replace the dn_to_entity stub
-CREATE OR REPLACE FUNCTION directory.dn_to_entity(character varying)
+CREATE OR REPLACE FUNCTION directory.dn_to_entity(text)
     RETURNS directory.entity
 AS $$
     SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity($1));
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE FUNCTION directory.get_alias(entity_id integer, alias_type_name character varying)
-    RETURNS character varying
+CREATE FUNCTION directory.get_alias(entity_id integer, alias_type_name text)
+    RETURNS text
 AS $$
     SELECT a.name
       FROM directory.alias a
@@ -192,14 +192,14 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION directory.name_to_data_source(character varying)
+CREATE FUNCTION directory.name_to_data_source(text)
     RETURNS directory.data_source
 AS $$
     SELECT COALESCE(directory.get_data_source($1), directory.create_data_source($1));
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE FUNCTION directory.dns_to_entity_ids(character varying[])
+CREATE FUNCTION directory.dns_to_entity_ids(text[])
     RETURNS SETOF integer
 AS $$
     SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
@@ -335,7 +335,7 @@ END;
 $$ LANGUAGE plpgsql STABLE STRICT;
 
 
-CREATE FUNCTION directory.tag_entity(entity_id integer, tag character varying)
+CREATE FUNCTION directory.tag_entity(entity_id integer, tag text)
     RETURNS integer
 AS $$
     INSERT INTO directory.entity_tag_link(tag_id, entity_id)
@@ -348,8 +348,8 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION directory.tag_entity(dn character varying, tag character varying)
-    RETURNS character varying
+CREATE FUNCTION directory.tag_entity(dn text, tag text)
+    RETURNS text
 AS $$
     INSERT INTO directory.entity_tag_link(tag_id, entity_id)
     SELECT
