@@ -1,19 +1,14 @@
-.. Minerva Schema documentation master file, created by
-   sphinx-quickstart on Fri Oct  4 19:07:15 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to Minerva Schema's documentation!
+Minerva Documentation
 ==========================================
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   storage/index
-   storage/attribute
-
+   introduction
+   user_guide/index
+   schema/index
 
 
 Indices and tables
