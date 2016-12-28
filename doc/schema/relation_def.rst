@@ -3,28 +3,8 @@ relation_def
 
 
 
-Types
------
 Tables
 ------
-Views
------
-
-.. _relation_def.self:
-
-self
-````
-
-
-
-+-----------+---------+---------------+
-| Name      | Type    |   Description |
-+===========+=========+===============+
-| source_id | integer |               |
-+-----------+---------+---------------+
-| target_id | integer |               |
-+-----------+---------+---------------+
-
 Functions
 ---------
 

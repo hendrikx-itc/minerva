@@ -551,6 +551,15 @@ SELECT CASE WHEN $3 = 1 THEN true ELSE hashint4($1) BETWEEN materialization.part
 $$;
 
 
+CREATE FUNCTION materialization._dest_trendstore(materialization.type)
+    RETURNS trend.trendstore
+AS $$
+    SELECT trendstore
+    FROM trend.trendstore
+    WHERE id = $1.dst_trendstore_id;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION materialization._dest_partition(materialization.type, timestamp with time zone)
     RETURNS trend.partition
 AS $$
@@ -622,13 +631,20 @@ AS $$
 DECLARE
     row_count integer;
     columns_part text;
+    dest_partition trend.partition;
 BEGIN
     SELECT string_agg(quote_ident(name), ', ') INTO STRICT columns_part
     FROM trend.table_columns('trend', materialization.view_name(mat_type));
 
+    dest_partition := materialization._dest_partition(mat_type, trend_timestamp);
+
+    IF dest_partition IS NULL THEN
+        dest_partition := trend.create_partition(materialization._dest_trendstore(mat_type), $2);
+    END IF;
+
     EXECUTE format(
         'INSERT INTO trend.%I (%s) SELECT %s FROM trend.%I WHERE timestamp = $1',
-        (materialization._dest_partition(mat_type, trend_timestamp)).table_name,
+        dest_partition.table_name,
         columns_part,
         columns_part,
         materialization.view_name(mat_type)

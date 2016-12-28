@@ -1030,6 +1030,13 @@ AS $$
 $$ LANGUAGE SQL VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION trend.create_partition(trendstore trend.trendstore, timestamp with time zone)
+    RETURNS trend.partition
+AS $$
+    SELECT trend.create_partition($1, trend.timestamp_to_index($1.partition_size, $2));
+$$ LANGUAGE SQL VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION trend.attributes_to_partition(trendstore trend.trendstore, index integer)
     RETURNS trend.partition
 AS $$
@@ -1266,13 +1273,21 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION trend.clear(trend.trendstore, timestamp with time zone)
     RETURNS trend.trendstore
 AS $$
+DECLARE
+    partition trend.partition;
 BEGIN
-    EXECUTE format(
-        'DELETE FROM trend.%I WHERE timestamp = $1',
-        (trend.get_partition($1, $2)).table_name
-    ) USING $2;
+    partition := trend.get_partition($1, $2);
 
-    RETURN $1;
+    IF partition IS NULL THEN
+        RETURN $1;
+    ELSE
+        EXECUTE format(
+            'DELETE FROM trend.%I WHERE timestamp = $1',
+            partition.table_name
+        ) USING $2;
+
+        RETURN $1;
+    END IF;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
