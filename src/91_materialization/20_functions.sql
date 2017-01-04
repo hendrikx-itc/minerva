@@ -572,6 +572,10 @@ $$ LANGUAGE sql STABLE;
 CREATE FUNCTION materialization._clear(materialization.type, timestamp with time zone)
     RETURNS materialization.type
 AS $$
+    SELECT coalesce(trend.get_partition(trendstore, $2), trend.create_partition(trendstore, $2))
+    FROM trend.trendstore
+    WHERE id = $1.dst_trendstore_id;
+
     SELECT trend.clear(trendstore, $2)
     FROM trend.trendstore
     WHERE id = $1.dst_trendstore_id;
