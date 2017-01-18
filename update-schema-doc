@@ -1,3 +1,4 @@
 #!/bin/bash
+# script to update documentation
 
 PGHOST=127.0.0.1 PGPORT=16050 PGUSER=postgres PGDATABASE=minerva doc-postgresql --output-files doc/schema
