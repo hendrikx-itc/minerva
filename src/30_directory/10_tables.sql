@@ -136,6 +136,9 @@ CREATE TABLE directory.tag_group (
     complementary boolean NOT NULL
 );
 
+COMMENT ON TABLE directory.tag_group IS
+'Stores groups that can be related to by tags.';
+
 CREATE UNIQUE INDEX ix_directory_tag_group_name on directory.tag_group (lower(name));
 
 CREATE SEQUENCE directory.tag_group_id_seq
