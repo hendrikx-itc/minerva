@@ -289,6 +289,8 @@ AS $$
         END;
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
+COMMENT ON FUNCTION trend_directory.get_default_partition_size(granularity interval) IS
+'Return the default partition size in seconds for a particular granularity';
 
 CREATE FUNCTION trend_directory.define_table_trend_store(
         name name, data_source_name text, entity_type_name text,
