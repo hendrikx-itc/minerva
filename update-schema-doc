@@ -1,4 +1,6 @@
 #!/bin/bash
-# script to update documentation
+OUT_DIR=${1:-"doc/schema"}
 
-PGHOST=127.0.0.1 PGPORT=16050 PGUSER=postgres PGDATABASE=minerva doc-postgresql --output-files doc/schema
+mkdir -p "$OUT_DIR"
+
+PGHOST=127.0.0.1 PGPORT=16050 PGUSER=postgres PGDATABASE=minerva doc-postgresql --output-files $OUT_DIR
