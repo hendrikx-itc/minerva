@@ -1726,7 +1726,11 @@ AS $$
                 attribute_directory.create_curr_ptr_view(
                     attribute_directory.create_staging_modified_view(
                         attribute_directory.create_staging_new_view(
-                            attribute_directory.create_hash_function($1)
+                            attribute_directory.create_hash_function(
+                                attribute_directory.create_entity_at_func(
+                                    attribute_directory.create_at_func($1)
+                                )
+                            )
                         )
                     )
                 )
