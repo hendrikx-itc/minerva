@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(3);
+SELECT plan(5);
 
 SELECT attribute_directory.create_attributestore(
 	'test',
@@ -50,6 +50,13 @@ SELECT columns_are(
     ]
 );
 
+SELECT col_type_is(
+    'attribute_history'::name,
+    'test_Node'::name,
+    'x'::name,
+    'double precision'::text
+);
+
 CREATE VIEW trend.uses_attribute AS
 SELECT * FROM attribute_history."test_Node";
 
@@ -75,6 +82,13 @@ SELECT columns_are(
         'first_appearance',
         'x'
     ]
+);
+
+SELECT col_type_is(
+    'attribute_history'::name,
+    'test_Node'::name,
+    'x'::name,
+    'text'::text
 );
 
 SELECT * FROM finish();
