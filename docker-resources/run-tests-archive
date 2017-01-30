@@ -1,0 +1,8 @@
+#!/bin/bash
+find /tests -name '*.sql' | while read scriptpath
+do
+	base=${scriptpath##*/}
+	name=${base%.*}
+	echo "running tests from $scriptpath"
+	PGUSER=postgres PGDATABASE=minerva xargs pg_prove $scriptpath > /test_results/$name.txt 
+done

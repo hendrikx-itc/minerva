@@ -1,8 +1,8 @@
-FROM postgres:9.5
+FROM postgres:9.6
 MAINTAINER Hendrikx ITC
 
 RUN apt-get update
-RUN apt-get install -y make patch libpq-dev postgresql-server-dev-9.5
+RUN apt-get install -y make patch libpq-dev postgresql-server-dev-9.6
 
 ADD https://github.com/hendrikx-itc/db-deps/archive/7cd7beb062093cff389eb6761fab84bab3f7e285.tar.gz /db-deps.tar.gz
 RUN mkdir /db-deps
@@ -16,6 +16,7 @@ RUN cd /pgtap && make && make install
 RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
 
 COPY docker-resources/run-tests /usr/bin/
+COPY docker-resources/run-tests-archive /usr/bin/
 COPY docker-resources/create-minerva-database /usr/bin/
 COPY docker-resources/drop-minerva-database /usr/bin/
 COPY docker-resources/recreate-minerva-database /usr/bin/
