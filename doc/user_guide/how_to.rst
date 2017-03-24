@@ -226,9 +226,16 @@ Use function trend.alter_view() to alter an existing trendstore related view:
 
     SELECT trend.alter_view(trendstore, '<SELECT statement>' FROM trend.trendstore WHERE trendstore::text = '<trendstore_name>';
 
-Extra columns will be added automatically.
+Extra columns will be added automatically by the materialization machinery.
 
-Create extra materialization type trendstore links with:
+However, extra columns can be added ad hoc with:
+
+.. code-block:: psql
+
+    SELECT materialization.add_missing_trends(type) FROM materialization.type WHERE type::text = '<materialization_type_name>';
+
+
+Extra materialization type trendstore links can be created with:
 
 .. code-block:: psql
 
