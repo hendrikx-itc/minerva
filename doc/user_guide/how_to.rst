@@ -217,9 +217,27 @@ By default, a trend store with a granularity of 900 seconds is partitioned
 into tables with a partition size of 6 hours (21600 seconds) and has a data
 retention period of 1 month.
 
+Alter existing trendstore related view
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use function trend.alter_view() to alter an existing trendstore related view:
+
+.. code-block:: psql
+
+    SELECT trend.alter_view(trendstore, '<SELECT statement>' FROM trend.trendstore WHERE trendstore::text = '<trendstore_name>';
+
+Extra columns will be added automatically.
+
+Create extra materialization type trendstore links with:
+
+.. code-block:: psql
+
+    SELECT materialization.link_trendstores(type, ARRAY['trendstore_name_1', ..., 'trendstore_name_N'] FROM materialization.type WHERE type::text = '<type_name>';
 
 Materialize Trend Data
 ----------------------
+
+Use materialization._materialize() for ad hoc materialization of trend data.
 
 To be documented
 
