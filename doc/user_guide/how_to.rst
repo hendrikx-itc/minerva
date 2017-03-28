@@ -235,7 +235,7 @@ However, extra columns can be added ad hoc with:
     SELECT materialization.add_missing_trends(type) FROM materialization.type WHERE type::text = '<materialization_type_name>';
 
 
-Extra materialization type trendstore links can be created with:
+Extra materialization type trendstore links can be created (if needed) with:
 
 .. code-block:: psql
 
