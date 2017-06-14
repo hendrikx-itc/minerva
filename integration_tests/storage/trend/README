@@ -1,3 +1,0 @@
-Export the environment variable TEST_DB_URL to set the database to use for tests:
-
-$ export TEST_DB_URL="postgresql://tester:password@localhost/minerva"

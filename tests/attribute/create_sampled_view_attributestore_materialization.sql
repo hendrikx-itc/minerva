@@ -1,0 +1,38 @@
+BEGIN;
+
+SELECT plan(4);
+
+CREATE VIEW attribute.vsystem_state AS
+SELECT
+    999 AS entity_id,
+    '2015-07-30 12:04+02'::timestamp with time zone AS timestamp,
+    42 AS x,
+    16 AS y;
+
+CREATE FUNCTION attribute.vsystem_state_source_modified()
+    RETURNS SETOF attribute_directory.source_modified
+AS $$
+    SELECT ('test_source'::text, '2015-07-30 14:00+02')::attribute_directory.source_modified;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+SELECT attribute_directory.create_sampled_view_materialization(
+    'attribute.vsystem_state'::regclass::oid,
+    'attribute.vsystem_state_source_modified()'::regprocedure::oid,
+    'system-info',
+    'engine'
+);
+
+
+SELECT is('attribute.vsystem_state'::regclass::oid, view_class)
+FROM attribute_directory.sampled_view_materialization svam
+WHERE svam::text = 'attribute.vsystem_state -> system-info_engine';
+
+SELECT has_table('attribute_history'::name, 'system-info_engine'::name);
+SELECT has_column('attribute_history'::name, 'system-info_engine'::name, 'x'::name, 'column x should be deduced from view');
+SELECT has_column('attribute_history'::name, 'system-info_engine'::name, 'y'::name, 'column y should be deduced from view');
+
+SELECT * FROM finish();
+
+ROLLBACK;
+

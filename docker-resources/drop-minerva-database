@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+psql -d postgres -c "DROP DATABASE IF EXISTS $MINERVA_DB_NAME;"

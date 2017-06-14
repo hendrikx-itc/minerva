@@ -1,27 +1,6 @@
-# Minerva database interface library
-
-This component is the Python interface to the Minerva database.
-
-Minerva is an open-source ETL platform optimized for real-time big data processing. It relies on the advanced functionality and performance of PostgreSQL.
-
-To access an existing Minerva instance from code, or to set up a new Minerva instance, this is the component you need to use.
-
-
 ## Dependencies and requirements
 
-Minerva depends on the following software:
-
-* postgresql-libs (at least 9.1)
-* python2 (at least 2.7)
-* python2-setuptools
-* python2-yaml
-* python2-pytz
-* python2-psycopg2 (at least 2.2.1)
-
-The PostgreSQL database server version must be at least 9.1.
-
-Run `python2 setup.py install` inside the `python-package` directory to install Minerva.
-
+Minerva requires PostgreSQL >= 9.1.
 
 ## Minerva concepts
 
@@ -38,8 +17,6 @@ The **trend** data class stores periodic data with a fixed granularity — for i
 The **attribute** data class stores nonperiodic data — for instance, number of accounts.
 
 The **notification** data class stores occurrences of data — for instance, a failure.
-
-The **geospatial** data class stores nonperiodic data for a position — for instance, number of active connections at the interconnect at some coordinate.
 
 
 ### Partition size
