@@ -85,7 +85,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.cleanup_table_trend_store_on_delete()
+CREATE FUNCTION trend_directory.cleanup_table_trend_store_part_on_delete()
     RETURNS TRIGGER
 AS $$
 DECLARE

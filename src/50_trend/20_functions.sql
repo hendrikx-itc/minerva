@@ -462,7 +462,7 @@ CREATE FUNCTION trend_directory.define_table_trend_store_part(
 AS $$
     INSERT INTO trend_directory.table_trend_store_part (trend_store_id, name)
     VALUES ($1, $2)
-    RETURNING table_trend_store_part;
+    RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -470,7 +470,10 @@ CREATE FUNCTION trend_directory.define_table_trend_store_part(
         table_trend_store_id integer, name name, trends trend_directory.trend_descr[])
     RETURNS trend_directory.table_trend_store_part
 AS $$
-    SELECT trend_directory.define_table_trend_store_part($1, $2);
+    SELECT trend_directory.define_table_trends(
+        trend_directory.define_table_trend_store_part($1, $2),
+        $3
+    );
 $$ LANGUAGE sql VOLATILE;
 
 

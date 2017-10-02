@@ -22,10 +22,10 @@ CREATE TRIGGER delete_trend_stores_on_data_source_delete
     EXECUTE PROCEDURE trend_directory.cleanup_on_data_source_delete();
 
 
-CREATE TRIGGER cleanup_table_trend_store_on_delete
-    BEFORE DELETE ON trend_directory.table_trend_store
+CREATE TRIGGER cleanup_table_trend_store_part_on_delete
+    BEFORE DELETE ON trend_directory.table_trend_store_part
     FOR EACH ROW
-    EXECUTE PROCEDURE trend_directory.cleanup_table_trend_store_on_delete();
+    EXECUTE PROCEDURE trend_directory.cleanup_table_trend_store_part_on_delete();
 
 
 CREATE TRIGGER drop_view_on_delete

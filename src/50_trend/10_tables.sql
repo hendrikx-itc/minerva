@@ -62,7 +62,7 @@ CREATE TABLE trend_directory.table_trend_store (
 
 CREATE TABLE trend_directory.table_trend_store_part (
     PRIMARY KEY (id),
-    FOREIGN KEY (trend_store_id) REFERENCES trend_directory.table_trend_store(id)
+    FOREIGN KEY (trend_store_id) REFERENCES trend_directory.table_trend_store(id) ON DELETE CASCADE
 ) INHERITS (trend_directory.trend_store_part);
 
 -- Table 'trend_directory.view_trend_store'
@@ -73,13 +73,13 @@ CREATE TABLE trend_directory.view_trend_store (
 
 CREATE TABLE trend_directory.view_trend_store_part (
     PRIMARY KEY (id),
-    FOREIGN KEY (trend_store_id) REFERENCES trend_directory.view_trend_store(id)
+    FOREIGN KEY (trend_store_id) REFERENCES trend_directory.view_trend_store(id) ON DELETE CASCADE
 ) INHERITS (trend_directory.trend_store_part);
 
 -- Table 'trend_directory.trend'
 
 CREATE TABLE trend_directory.trend (
-    id integer PRIMARY KEY,
+    id serial PRIMARY KEY,
     trend_store_part_id integer NOT NULL,
     name name NOT NULL,
     data_type text NOT NULL,
