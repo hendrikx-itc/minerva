@@ -119,11 +119,11 @@ CREATE TABLE trend_directory.trend_tag_link (
 -- Table 'trend_directory.modified'
 
 CREATE TABLE trend_directory.modified (
-    table_trend_store_id integer NOT NULL REFERENCES trend_directory.table_trend_store ON DELETE CASCADE,
+    table_trend_store_part_id integer NOT NULL REFERENCES trend_directory.table_trend_store_part ON DELETE CASCADE,
     "timestamp" timestamp WITH time zone NOT NULL,
     start timestamp WITH time zone NOT NULL,
     "end" timestamp WITH time zone NOT NULL,
-    PRIMARY KEY (table_trend_store_id, "timestamp")
+    PRIMARY KEY (table_trend_store_part_id, "timestamp")
 );
 
 GRANT SELECT ON TABLE trend_directory.modified TO minerva;

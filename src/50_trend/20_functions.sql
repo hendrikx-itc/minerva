@@ -1473,24 +1473,24 @@ $$ LANGUAGE plpgsql STABLE;
 
 
 CREATE FUNCTION trend_directory.update_modified(
-        table_trend_store_id integer, "timestamp" timestamp with time zone,
+        table_trend_store_part_id integer, "timestamp" timestamp with time zone,
         modified timestamp with time zone)
     RETURNS trend_directory.modified
 AS $$
     UPDATE trend_directory.modified
     SET "end" = greatest("end", $3)
-    WHERE "timestamp" = $2 AND table_trend_store_id = $1
+    WHERE "timestamp" = $2 AND table_trend_store_part_id = $1
     RETURNING modified;
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.store_modified(
-        table_trend_store_id integer, "timestamp" timestamp with time zone,
+        table_trend_store_part_id integer, "timestamp" timestamp with time zone,
         modified timestamp with time zone)
     RETURNS trend_directory.modified
 AS $$
     INSERT INTO trend_directory.modified(
-        table_trend_store_id, "timestamp", start, "end"
+        table_trend_store_part_id, "timestamp", start, "end"
     ) VALUES (
         $1, $2, $3, $3
     ) RETURNING modified;
@@ -1498,7 +1498,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION trend_directory.mark_modified(
-        table_trend_store_id integer, "timestamp" timestamp with time zone,
+        table_trend_store_part_id integer, "timestamp" timestamp with time zone,
         modified timestamp with time zone)
     RETURNS trend_directory.modified
 AS $$
