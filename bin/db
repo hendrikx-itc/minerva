@@ -1,0 +1,20 @@
+#!/bin/bash
+
+CMD=$1
+
+
+case $CMD in
+up)
+  docker-compose -f $MINERVA_ROOT/develop-compose.yml up
+  ;;
+recreate)
+  docker exec -it minerva_minerva50db_1 recreate-minerva-database
+  ;;
+test)
+  docker exec minerva_minerva50db_1 run-tests
+  ;;
+*)
+  echo 'usage: db [up | recreate | test]'
+  ;;
+esac
+

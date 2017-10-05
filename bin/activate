@@ -1,0 +1,30 @@
+# vim: filetype=sh
+export PGHOST=localhost
+export PGPORT=16050
+export PGUSER=postgres
+export PGDATABASE=minerva
+
+function absolute_dir {
+    local old_pwd="$(pwd)"
+    cd "$1"
+    pwd
+    cd "$old_pwd"
+}
+
+SHELL_NAME="${SHELL##*/}"
+
+if [ $SHELL_NAME = "bash" ]; then
+    SCRIPT_PATH="${BASH_SOURCE[0]}"
+elif [ $SHELL_NAME = "zsh" ]; then
+    SCRIPT_PATH="${(%):-%x}"
+fi
+
+RELATIVE_SCRIPT_DIR=${SCRIPT_PATH%/*}
+
+SCRIPT_DIR=$(absolute_dir $RELATIVE_SCRIPT_DIR)
+
+echo $SCRIPT_DIR
+
+export MINERVA_ROOT=${SCRIPT_DIR%/*}
+
+export PATH=$MINERVA_ROOT/bin:$PATH
