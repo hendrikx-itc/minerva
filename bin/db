@@ -7,6 +7,9 @@ case $CMD in
 up)
   docker-compose -f $MINERVA_ROOT/develop-compose.yml up
   ;;
+stop)
+  docker-compose -f $MINERVA_ROOT/develop-compose.yml stop
+  ;;
 recreate)
   docker exec -it minerva_minerva50db_1 recreate-minerva-database
   ;;
