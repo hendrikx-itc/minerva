@@ -6,4 +6,4 @@ RUN mkdir /db-deps
 RUN tar -xzvf /db-deps.tar.gz -C /db-deps --strip-components=1
 ADD src /minerva
 
-COPY docker-resources/docker-entrypoint-initdb.d/init-minerva-db.sh /docker-entrypoint-initdb.d/
+COPY docker-resources/ /

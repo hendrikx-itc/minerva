@@ -4,14 +4,18 @@ SELECT plan(1);
 
 
 SELECT trend_directory.create_table_trend_store(
-    'test-trend-store',
     'test-data',
     'Node',
     '900',
     86400,
     ARRAY[
-        ('x', 'integer', 'some column with integer values')
-    ]::trend_directory.trend_descr[]
+        (
+            'test-trend-store',
+            ARRAY[
+                ('x', 'integer', 'some column with integer values')
+            ]::trend_directory.trend_descr[]
+        )
+    ]::trend_directory.table_trend_store_part_descr[]
 );
 
 SELECT isnt(
