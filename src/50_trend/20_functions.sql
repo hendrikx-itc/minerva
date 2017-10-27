@@ -1448,6 +1448,15 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
+CREATE FUNCTION trend_directory.partition_exists(trend_directory.table_trend_store_part, integer)
+    RETURNS boolean
+AS $$
+    SELECT count(*) = 1
+    FROM trend_directory.partition
+    WHERE table_trend_store_part_id = $1.id AND index = $2;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION trend_directory.get_trend_store(id integer)
     RETURNS trend_directory.trend_store
 AS $$
