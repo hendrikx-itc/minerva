@@ -17,6 +17,8 @@ CREATE VIEW directory.existence_staging_entitytype_ids AS
         JOIN directory.entity ON entity.dn = existence_staging.dn
         GROUP BY entitytype_id;
 
+ALTER VIEW directory.existence_staging_entitytype_ids OWNER TO minerva_admin;
+
 GRANT SELECT ON TABLE directory.existence_staging_entitytype_ids TO minerva;
 GRANT INSERT,DELETE,UPDATE ON TABLE directory.existence_staging_entitytype_ids TO minerva_writer;
 
