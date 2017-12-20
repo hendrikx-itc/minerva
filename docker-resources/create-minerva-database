@@ -3,7 +3,10 @@ set -e
 set -o pipefail
 
 psql -d postgres -c "CREATE DATABASE $MINERVA_DB_NAME;"
-psql -c "CREATE EXTENSION pgtap"
+
+if [ "$MINERVA_MODE" == 'develop' ]; then
+    psql -c "CREATE EXTENSION pgtap"
+fi
 
 find /db-deps/src/ -name '*.sql' | sort | while read filepath
 do
