@@ -281,7 +281,7 @@ AS $$
     JOIN pg_attribute ON pg_attribute.atttypid = pg_type.oid
     JOIN pg_class ON pg_class.oid = pg_attribute.attrelid
     JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-    WHERE nspname = $1 AND relname = $2 AND typname = $3 AND attnum > 0 AND not pg_attribute.attisdropped;
+    WHERE nspname = $1 AND relname = $2 AND attname = $3 AND attnum > 0 AND not pg_attribute.attisdropped;
 $$ LANGUAGE sql STABLE;
 
 
