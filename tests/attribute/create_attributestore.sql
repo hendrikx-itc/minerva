@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(2);
+SELECT plan(3);
 
 SELECT attribute_directory.create_attribute_store(
     'some_data_source_name',
@@ -28,6 +28,16 @@ SELECT columns_are(
         'x'
     ]
 );
+
+PREPARE second_try AS SELECT attribute_directory.create_attribute_store(
+    'some_other_data_source_name',
+    'some_other_entity_type_name',
+    ARRAY[
+        ('y', 'text', 'some column with text values')
+    ]::attribute_directory.attribute_descr[]
+);
+
+SELECT throws_like('second_try', '%already exists%', 'Trying to create an attribute store twice should create an error');
 
 SELECT * FROM finish();
 ROLLBACK;

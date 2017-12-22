@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(3);
+SELECT plan(5);
 
 SELECT trend_directory.create_table_trend_store(
     'test1',
@@ -50,7 +50,19 @@ SELECT columns_are(
     ]
 );
 
+SELECT col_type_is( 'trend', 'test-trend-store-2_part1', 'x', 'integer', 'x should be an integer');
 
+PREPARE repeat AS SELECT trend_directory.create_table_trend_store(
+    'test1',
+    'some_entity_type_name',
+    '450',
+    86400,
+    ARRAY[
+        ('test-trend-store-1_part1', ARRAY[]::trend_directory.trend_descr[])
+    ]::trend_directory.table_trend_store_part_descr[]
+);
+
+SELECT throws_like('repeat', '%already exists%', 'Same trend_store cannot be created twice');
 
 SELECT * FROM finish();
 ROLLBACK;

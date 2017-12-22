@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(4);
+SELECT plan(5);
 
 -- Define plain relation
 
@@ -20,6 +20,9 @@ SELECT relation_directory.define(
 
 SELECT has_table('relation'::name, 'X->Y'::name, 'relation table should exist');
 SELECT has_view('relation_def'::name, 'X->Y'::name, 'relation view should exist');
+
+-- Do not allow same relation to be defined twice
+SELECT throws_like($$SELECT relation_directory.define('A->B');$$, '%unique constraint%');
 
 SELECT * FROM finish();
 ROLLBACK;

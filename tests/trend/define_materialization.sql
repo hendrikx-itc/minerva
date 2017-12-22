@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(1);
+SELECT plan(2);
 
 
 SELECT trend_directory.create_table_trend_store(
@@ -31,6 +31,12 @@ SELECT isnt(
         trend_directory.create_table_trend_store('target-trend-store', 'test-materialized', 'Node', '900', 86400, ARRAY[]::trend_directory.trend_descr[])
     ),
     NULL
+);
+
+SELECT is(
+    '''this code'''::text,
+    '''testable code'''::text,
+    'tests to be written when the code has been made working'
 );
 
 SELECT * FROM finish();

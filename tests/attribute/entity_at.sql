@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(3);
+SELECT plan(4);
 
 SELECT attribute_directory.create_attribute_store(
     'test',
@@ -30,6 +30,12 @@ SELECT is(
     (attribute_history."test_Node_at"(id(directory.dn_to_entity('Network=A,Node=001')), '2015-01-02 10:01')).x,
     42,
     'value should be found for a timestamp after the attribute change'
+);
+
+SELECT is(
+    (attribute_history."test_Node_at"(id(directory.dn_to_entity('Network=A,Node=001')), '2015-01-02 09:59')).x,
+    null,
+    'value should not be found for a timestamp before the attribute change'
 );
 
 SELECT
