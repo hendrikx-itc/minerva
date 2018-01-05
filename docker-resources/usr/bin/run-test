@@ -1,0 +1,1 @@
+PGUSER=postgres PGDATABASE=minerva pg_prove $1 --verbose

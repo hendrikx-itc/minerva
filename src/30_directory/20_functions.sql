@@ -213,16 +213,16 @@ CREATE TYPE directory.query_row AS (id integer, dn text, entity_type_id integer)
 ------------------------------------------
 -- Example usage of run_minerva_query:
 --
--- SELECT run_minerva_query(ARRAY[(ARRAY['Cell']::text[], '15000')]::query_part[]);
+-- SELECT directory.run_minerva_query(ARRAY[(ARRAY['Cell']::text[], '15000')]::directory.query_part[]);
 --
--- SELECT run_minerva_query(ARRAY[(ARRAY['Site']::text[], '4343'), (ARRAY['Cell', '3G']::text[], NULL)]::query_part[]);
+-- SELECT directory.run_minerva_query(ARRAY[(ARRAY['Site']::text[], '4343'), (ARRAY['Cell', '3G']::text[], NULL)]::query_part[]);
 ------------------------------------------
 
 CREATE FUNCTION directory.run_minerva_query(query directory.query_part[])
     RETURNS TABLE(id integer, dn varchar, entity_type_id integer)
 AS $$
 BEGIN
-    RETURN QUERY EXECUTE compile_minerva_query(query);
+    RETURN QUERY EXECUTE directory.compile_minerva_query(query);
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
@@ -254,7 +254,7 @@ $$ LANGUAGE plpgsql STABLE STRICT;
 ------------------------------------------
 -- Example usage of compile_minerva_query:
 --
--- SELECT compile_minerva_query(ARRAY[(ARRAY['Cell']::text[], '15000')]::directory.query_part[]);
+-- SELECT directory.compile_minerva_query(ARRAY[(ARRAY['Cell']::text[], '15000')]::directory.query_part[]);
 ------------------------------------------
 
 CREATE FUNCTION directory.compile_minerva_query(query directory.query_part[])
@@ -311,9 +311,9 @@ BEGIN
 
     IF NOT entity_id_table = entity_tag_link_alias THEN
         RETURN format(' JOIN directory.entity_tag_link %I ON %I.%I = %I.entity_id', entity_tag_link_alias, entity_id_table, entity_id_column, entity_tag_link_alias) ||
-            format(' JOIN directory.entitytag %I ON %I.id = %I.entitytag_id AND lower(%I.name) = lower(%L)', entitytag_alias, entitytag_alias, entity_tag_link_alias, entitytag_alias, tag);
+            format(' JOIN directory.tag %I ON %I.id = %I.entitytag_id AND lower(%I.name) = lower(%L)', entitytag_alias, entitytag_alias, entity_tag_link_alias, entitytag_alias, tag);
     ELSE
-        RETURN format(' JOIN directory.entitytag %I ON %I.id = %I.entitytag_id AND lower(%I.name) = lower(%L)', entitytag_alias, entitytag_alias, entity_tag_link_alias, entitytag_alias, tag);
+        RETURN format(' JOIN directory.tag %I ON %I.id = %I.entitytag_id AND lower(%I.name) = lower(%L)', entitytag_alias, entitytag_alias, entity_tag_link_alias, entitytag_alias, tag);
     END IF;
 END;
 $$ LANGUAGE plpgsql STABLE STRICT;
