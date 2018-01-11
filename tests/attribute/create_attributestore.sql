@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(27);
+SELECT plan(25);
 
 SELECT attribute_directory.create_attribute_store(
     'some_data_source_name',
@@ -118,8 +118,6 @@ SELECT columns_are(
     ]
 );
 
---TODO: create tests regarding the content of these views
-
 SELECT has_view(
     'attribute_history',
     'some_data_source_name_some_entity_type_name_changes',
@@ -152,23 +150,6 @@ SELECT columns_are(
 	'first_appearance',
 	'modified',
 	'run_length'
-	]
-);
-
-SELECT has_view(
-    'attribute_staging',
-    'some_data_source_name_some_entity_type_name_new',
-    'staging new view should exist'
-);
-
-SELECT columns_are(
-    'attribute_staging',
-    'some_data_source_name_some_entity_type_name_new',
-    ARRAY[
-        'entity_id',
-	'timestamp',
-	'x',
-	'y'
 	]
 );
 

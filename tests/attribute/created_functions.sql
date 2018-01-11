@@ -1,7 +1,6 @@
 BEGIN;
 
-SELECT * FROM no_plan();
---SELECT plan(7);
+SELECT plan(18);
 
 SELECT attribute_directory.create_attribute_store(
     'some_data_source_name',
@@ -39,7 +38,7 @@ INSERT INTO attribute_history.some_data_source_name_some_entity_type_name ("enti
         '2017-07-01 00:00:00',
         'AAAAA',
         '2016-01-01 00:00:00',
-        42,
+        3,
         'old'
     );
 INSERT INTO attribute_history.some_data_source_name_some_entity_type_name ("entity_id", "timestamp", "modified", "hash", "first_appearance", "x", "y") VALUES
@@ -49,7 +48,7 @@ INSERT INTO attribute_history.some_data_source_name_some_entity_type_name ("enti
         '2017-01-01 00:00:00',
         'BBBBB',
         '2015-01-01 00:00:00',
-        17,
+        5,
         'new'
     );
 	
@@ -120,6 +119,24 @@ SELECT has_function(
     'at function should exist'
 );
 
+SELECT bag_eq(
+    $$SELECT x FROM attribute_history.some_data_source_name_some_entity_type_name_at('2018-01-01 00:00:00')$$,
+    ARRAY [42,5],
+    'attribute_history.some_data_source_name_some_entity_type_name_at should give more recent value when using recent date'
+);
+
+SELECT bag_eq(
+    $$SELECT x FROM attribute_history.some_data_source_name_some_entity_type_name_at('2016-08-01 00:00:00')$$,
+    ARRAY [17,3],
+    'attribute_history.some_data_source_name_some_entity_type_name_at should give older value when using older date'
+);
+
+SELECT bag_eq(
+    $$SELECT x FROM attribute_history.some_data_source_name_some_entity_type_name_at('2016-01-15 00:00:00')$$,
+    ARRAY [17],
+    'attribute_history.some_data_source_name_some_entity_type_name_at should give no value when using too old date'
+);
+
 SELECT has_function(
     'attribute_history',
     'some_data_source_name_some_entity_type_name_at',
@@ -128,6 +145,23 @@ SELECT has_function(
         'timestamp with time zone'
 	],
     'at function should exist'
+);
+
+SELECT results_eq(
+    $$SELECT x FROM attribute_history.some_data_source_name_some_entity_type_name_at(1,'2018-01-01 00:00:00')$$,
+    ARRAY [42],
+    'attribute_history.some_data_source_name_some_entity_type_name_at should give more recent value when using recent date'
+);
+
+SELECT results_eq(
+    $$SELECT x FROM attribute_history.some_data_source_name_some_entity_type_name_at(1,'2016-08-01 00:00:00')$$,
+    ARRAY [17],
+    'attribute_history.some_data_source_name_some_entity_type_name_at should give older value when using older date'
+);
+
+SELECT is(attribute_history.some_data_source_name_some_entity_type_name_at(1,'2015-01-01 00:00:00'),
+    null,
+    'attribute_history.some_data_source_name_some_entity_type_name_at should give no result when using too old date'
 );
 
 SELECT has_function(
