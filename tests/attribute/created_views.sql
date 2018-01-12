@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(13);
+SELECT plan(17);
 
 SELECT attribute_directory.create_attribute_store(
     'some_data_source_name',
@@ -77,6 +77,24 @@ SELECT bag_eq(
 	'2017-01-01 00:00:00'::timestamp
 	],
     'attribute_history.some_data_source_name_some_entity_type_name_changes should have correct timestamps and entities'
+);
+
+SELECT bag_eq(
+    $$SELECT change FROM attribute_history.some_data_source_name_some_entity_type_name_changes WHERE entity_id = 1 AND timestamp = '2016-01-01 00:00:00'$$,
+    ARRAY [true],
+    'attribute_history.some_data_source_name_some_entity_type_name_changes should be true for new items'
+);
+
+SELECT bag_eq(
+    $$SELECT change FROM attribute_history.some_data_source_name_some_entity_type_name_changes WHERE entity_id = 1 AND timestamp = '2016-12-31 23:00:00'$$,
+    ARRAY [true],
+    'attribute_history.some_data_source_name_some_entity_type_name_changes should be true for changed items'
+);
+
+SELECT bag_eq(
+    $$SELECT change FROM attribute_history.some_data_source_name_some_entity_type_name_changes WHERE entity_id = 1 AND timestamp = '2017-01-01 00:00:00'$$,
+    ARRAY [false],
+    'attribute_history.some_data_source_name_some_entity_type_name_changes should be false for unchanged items'
 );
 
 SELECT bag_eq(
@@ -174,6 +192,15 @@ SELECT bag_eq(
     $$SELECT timestamp FROM attribute_history.some_data_source_name_some_entity_type_name_compacted$$,
     ARRAY['2016-12-31 23:00:00'::timestamp],
     'compacted history uses start date as date'
+);
+
+SELECT bag_eq(
+    $$SELECT timestamp FROM attribute_history.some_data_source_name_some_entity_type_name_curr_selection$$,
+    ARRAY[
+        '2017-01-01 00:00:00'::timestamp,
+	'2017-02-01 00:00:00'::timestamp
+	],
+    'curr_selection should give last date for each entity'
 );
 
 SELECT * FROM finish();

@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(25);
+SELECT plan(27);
 
 SELECT attribute_directory.create_attribute_store(
     'some_data_source_name',
@@ -224,6 +224,21 @@ SELECT columns_are(
         'hash',
 	'x',
 	'y'
+	]
+);
+
+SELECT has_view(
+    'attribute_history',
+    'some_data_source_name_some_entity_type_name_curr_selection',
+    'attribute history curr selection view should exist'
+);
+
+SELECT columns_are(
+    'attribute_history',
+    'some_data_source_name_some_entity_type_name_curr_selection',
+    ARRAY[
+        'entity_id',
+	'timestamp'
 	]
 );
 
