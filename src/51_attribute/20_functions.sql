@@ -1276,6 +1276,12 @@ BEGIN
         columns_part, compacted_view_name
     );
 
+    EXECUTE format(
+        'UPDATE attribute_history.%I '
+	'SET modified = now()',
+	compacted_tmp_table_name
+    );
+
     GET DIAGNOSTICS row_count = ROW_COUNT;
 
     RAISE NOTICE 'compacted % rows', row_count;
