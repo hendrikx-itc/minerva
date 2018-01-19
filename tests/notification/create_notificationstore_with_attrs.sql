@@ -1,7 +1,6 @@
 BEGIN;
 
-SELECT * FROM no_plan();
---SELECT plan(3);
+SELECT plan(12);
 
 SELECT isa_ok(
     notification_directory.create_notification_store(
