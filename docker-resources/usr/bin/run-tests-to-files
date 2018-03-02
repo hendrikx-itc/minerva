@@ -1,9 +1,0 @@
-#!/bin/bash
-
-slash="/"
-for i in $(find /tests -name '*.sql'); do
-    target=${i//.sql/.tap}
-    target=${target//$slash/_}
-    target=${target/_tests_/"$slash"test_results"$slash"}
-    PGUSER=postgres PGDATABASE=minerva pg_prove $i > $target
-done
