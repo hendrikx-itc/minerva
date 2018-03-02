@@ -1,10 +1,4 @@
 #!/bin/bash
 
-if [ "$1" == "-f" ]
-then
-    for i in $(find /tests -name '*.sql'); do
-	PGUSER=postgres PGDATABASE=minerva pg_prove $i > ${i//.sql/.tap}
-    done
-else
-    find /tests -name '*.sql' | PGUSER=postgres PGDATABASE=minerva xargs pg_prove --verbose
-fi
+find /tests -name '*.sql' | PGUSER=postgres PGDATABASE=minerva xargs pg_prove --verbose
+

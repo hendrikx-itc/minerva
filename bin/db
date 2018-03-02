@@ -15,7 +15,7 @@ recreate)
   docker exec -it minerva_minerva50db_1 recreate-minerva-database
   ;;
 testt)
-  docker exec minerva_minerva50db_1 run-tests -f
+  docker exec minerva_minerva50db_1 run-tests-to-files
   ;;  
 test)
   docker exec minerva_minerva50db_1 run-tests
