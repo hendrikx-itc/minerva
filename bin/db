@@ -14,11 +14,14 @@ stop)
 recreate)
   docker exec -it minerva_minerva50db_1 recreate-minerva-database
   ;;
+testt)
+  docker exec minerva_minerva50db_1 run-tests -f
+  ;;  
 test)
   docker exec minerva_minerva50db_1 run-tests
   ;;
 *)
-  echo 'usage: db [up | recreate | test]'
+  echo 'usage: db [up | stop | recreate | test | testt]'
   ;;
 esac
 
