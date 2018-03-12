@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(3);
+SELECT plan(4);
 
 -- Defining the trendgroup beforehand is required
 INSERT INTO directory.tag_group(name, complementary)
@@ -21,6 +21,12 @@ SELECT has_view('entity_tag', 'technology', 'corresponding view for tag definiti
 SELECT is(entity_tag.update('technology'), (2, 2, 2, 0)::entity_tag.update_result, 'update should add 2 new links');
 
 SELECT is(entity_tag.update('technology'), (2, 0, 0, 0)::entity_tag.update_result, 'second run of update function should do nothing');
+
+SELECT bag_eq(
+    $$ SELECT name FROM directory.tag $$,
+    ARRAY [ 'Cell', 'UMTS', 'LTE' ],
+    'new entity tags should have been created'
+    );
 
 SELECT * FROM finish();
 ROLLBACK;
