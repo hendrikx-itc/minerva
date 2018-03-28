@@ -18,15 +18,15 @@ rm)
   docker-compose -f $MINERVA_ROOT/develop-compose.yml rm $@
   ;;
 recreate)
-  docker exec -it minerva_minerva50db_1 recreate-minerva-database
+  docker exec -it minerva50db recreate-minerva-database
   ;;
 test)
   if [ "$1" ]
   then
-    docker exec minerva_minerva50db_1 run-test "$1"
+    docker exec minerva50db run-test "$1"
   else
-    docker exec minerva_minerva50db_1 run-tests
-  fi  
+    docker exec minerva50db run-tests
+  fi
   ;;
 *)
   echo 'usage: db [up | stop | recreate | test | testt]'
