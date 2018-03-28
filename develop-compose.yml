@@ -1,9 +1,13 @@
-minerva50db:
-  build: ./
-  dockerfile: develop.dockerfile
-  ports:
-    - "16050:5432"
-  volumes:
-    - ./tests:/tests
-    - ./test_results:/test_results
-    - ./src:/minerva
+version: "3.3"
+services:
+  db:
+    build:
+      context: ./
+      dockerfile: develop.dockerfile
+    container_name: minerva50db
+    ports:
+      - "16050:5432"
+    volumes:
+      - ./tests:/tests
+      - ./test_results:/test_results
+      - ./src:/minerva

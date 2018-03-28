@@ -11,6 +11,12 @@ up)
 stop)
   docker-compose -f $MINERVA_ROOT/develop-compose.yml stop $@
   ;;
+build)
+  docker-compose -f $MINERVA_ROOT/develop-compose.yml build $@
+  ;;
+rm)
+  docker-compose -f $MINERVA_ROOT/develop-compose.yml rm $@
+  ;;
 recreate)
   docker exec -it minerva_minerva50db_1 recreate-minerva-database
   ;;

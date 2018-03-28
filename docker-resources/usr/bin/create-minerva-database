@@ -4,7 +4,7 @@ set -o pipefail
 
 psql -d postgres -c "CREATE DATABASE $MINERVA_DB_NAME;"
 
-find /db-deps/scripts/ -name '*.sql' | sort | while read filepath
+find /db-deps/src/ -name '*.sql' | sort | while read filepath
 do
     echo '#####################################'
     echo $filepath
