@@ -96,63 +96,6 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
 
-CREATE FUNCTION attribute_directory.dependees(attribute_directory.attribute_store)
-    RETURNS dep_recurse.obj_ref[]
-AS $$
-SELECT ARRAY[
-    dep_recurse.function_ref(
-        'attribute_history'::name,
-        attribute_directory.at_function_name($1)::name,
-        ARRAY[
-            'pg_catalog.timestamptz'
-        ]::text[]
-    ),
-    dep_recurse.function_ref(
-        'attribute_history'::name,
-        attribute_directory.at_function_name($1)::name,
-        ARRAY[
-            'pg_catalog.int4',
-            'pg_catalog.timestamptz'
-        ]::text[]
-    ),
-    dep_recurse.function_ref(
-        'attribute_history',
-        'values_hash',
-        ARRAY[
-            format('attribute_history.%I', attribute_directory.to_table_name($1))
-        ]
-    ),
-    dep_recurse.view_ref('attribute_staging', attribute_directory.staging_new_view_name($1)),
-    dep_recurse.view_ref('attribute_staging', attribute_directory.staging_modified_view_name($1)),
-    dep_recurse.view_ref('attribute_history', attribute_directory.changes_view_name($1)),
-    dep_recurse.view_ref('attribute_history', attribute_directory.run_length_view_name($1)),
-    dep_recurse.view_ref('attribute_history', attribute_directory.compacted_view_name($1)),
-    dep_recurse.view_ref('attribute_history', attribute_directory.curr_ptr_view_name($1)),
-    dep_recurse.view_ref('attribute', attribute_directory.curr_view_name($1))
-]::dep_recurse.obj_ref[];
-$$ LANGUAGE sql STABLE;
-
-COMMENT ON FUNCTION attribute_directory.dependees(attribute_directory.attribute_store) IS
-'Return array with all managed dependees of attribute_store base table\n'
-'\n'
-'This array is primarily used to alter the base table using dep_recurse.alter '
-'so that the alter function can skip the database objects that are already '
-'dynamically created and recreated';
-
-
-CREATE FUNCTION attribute_directory.upgrade_attribute_table(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-BEGIN
-    PERFORM attribute_directory.drop_curr_view($1);
-    PERFORM attribute_directory.add_first_appearance_to_attribute_table($1);
-    PERFORM attribute_directory.create_curr_view($1);
-
-    RETURN $1;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE FUNCTION attribute_directory.render_hash_query(attribute_directory.attribute_store)
     RETURNS text
 AS $$
@@ -927,29 +870,12 @@ $$ LANGUAGE plpgsql VOLATILE;
 CREATE FUNCTION attribute_directory.init(attribute_directory.attribute)
     RETURNS attribute_directory.attribute
 AS $$
-DECLARE
-    table_name name;
-    tmp_attribute_store attribute_directory.attribute_store;
-    --generated_dependees dep_recurse.dep[];
-BEGIN
-    SELECT * INTO tmp_attribute_store
-    FROM attribute_directory.attribute_store WHERE id = $1.attribute_store_id;
-
-    table_name = attribute_directory.to_char(tmp_attribute_store);
-
-    --generated_dependees = attribute_directory.dependees(tmp_attribute_store);
-
-    PERFORM dep_recurse.alter(
-        dep_recurse.table_ref('attribute_base', table_name),
+    SELECT public.action($1,
         ARRAY[
             format('SELECT attribute_directory.add_attribute_column(attribute_store, %L, %L) FROM attribute_directory.attribute_store WHERE id = %s', $1.name, $1.data_type, $1.attribute_store_id)
-        ],
-        attribute_directory.dependees(tmp_attribute_store)
-    );
-
-    RETURN $1;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
+        ]
+    )
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION attribute_directory.add_attribute_column(attribute_directory.attribute_store, name, text)

@@ -739,41 +739,6 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.modify_trend_store_column(
-        trend_directory.table_trend_store_part, column_name name, data_type text)
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-    SELECT dep_recurse.alter(
-        dep_recurse.table_ref(
-            trend_directory.base_table_schema(),
-            trend_directory.base_table_name($1)
-        ),
-        ARRAY[
-            format(
-                'ALTER TABLE %I.%I ALTER %I TYPE %s USING CAST(%I AS %s);',
-                trend_directory.base_table_schema(),
-                trend_directory.base_table_name($1),
-                $2, $3, $2, $3
-            )
-        ]
-    );
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION trend_directory.modify_trend_store_column(
-        trend_store_part_id integer, column_name name, data_type text)
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-    SELECT trend_directory.modify_trend_store_column(
-        table_trend_store_part, $2, $3
-    )
-    FROM trend_directory.table_trend_store_part
-    WHERE table_trend_store_part.id = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION trend_directory.alter_trend_name(
         trend_directory.table_trend_store_part, trend_name name, new_name name)
     RETURNS trend_directory.table_trend_store_part
@@ -838,63 +803,6 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION trend_directory.alter_column_types(
-        namespace_name name, table_name name, columns trend_directory.column_info[])
-    RETURNS dep_recurse.obj_ref
-AS $$
-    SELECT dep_recurse.alter(
-        dep_recurse.table_ref('trend', table_name),
-        ARRAY[
-            format(
-                'ALTER TABLE %I.%I %s',
-                namespace_name,
-                table_name,
-                array_to_string(
-                    array_agg(
-                        format(
-                            'ALTER %I TYPE %s USING CAST (%I AS %s)',
-                            c.name,
-                            c.data_type,
-                            c.name,
-                            c.data_type
-                        )
-                    ),
-                    ', '
-                )
-            )
-        ]
-    )
-    FROM unnest(columns) AS c;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION trend_directory.modify_trend_store_columns(
-        trend_directory.table_trend_store_part, columns trend_directory.column_info[])
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-    SELECT trend_directory.alter_column_types(
-        trend_directory.base_table_schema(),
-        trend_directory.base_table_name($1),
-        $2
-    );
-
-    SELECT $1;
-$$ LANGUAGE sql;
-
-
-CREATE FUNCTION trend_directory.modify_trend_store_columns(
-        trend_store_part_id integer, columns trend_directory.column_info[])
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-    SELECT trend_directory.modify_trend_store_columns(
-        table_trend_store_part,
-        columns
-    )
-    FROM trend_directory.table_trend_store_part
-    WHERE table_trend_store_part.id = trend_store_part_id;
-$$ LANGUAGE sql;
-
-
 CREATE FUNCTION trend_directory.drop_view_sql(trend_directory.view_trend_store_part)
     RETURNS text
 AS $$
@@ -927,38 +835,11 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION trend_directory.alter_view(trend_directory.view_trend_store, text)
-    RETURNS trend_directory.view_trend_store
-AS $$
-    SELECT dep_recurse.alter(
-        dep_recurse.view_ref(trend_directory.view_schema(), $1::name),
-        ARRAY[
-            format(
-                'SELECT trend_directory.drop_view(view_trend_store) '
-                'FROM trend_directory.view_trend_store '
-                'WHERE id = %L',
-                $1.id
-            ),
-            format(
-                'SELECT trend_directory.initialize_view_trend_store(view_trend_store, %L) '
-                'FROM trend_directory.view_trend_store '
-                'WHERE id = %L',
-                $2,
-                $1.id
-            )
-        ]
-    );
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION trend_directory.add_trend_to_trend_store(
         trend_directory.table_trend_store_part, trend_directory.table_trend)
     RETURNS trend_directory.table_trend
 AS $$
-    SELECT dep_recurse.alter(
-        dep_recurse.table_ref(trend_directory.base_table_schema(), trend_directory.base_table_name($1)),
+    SELECT public.action($2,
         ARRAY[
             format(
                 'ALTER TABLE %I.%I ADD COLUMN %I %s;',
@@ -969,8 +850,6 @@ AS $$
             )
         ]
     );
-
-    SELECT $2;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -1018,31 +897,6 @@ AS $$
     FROM trend_directory.missing_table_trends($1, $2) t;
 
     SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION trend_directory.modify_data_type(trend_directory.table_trend_store_part, trend_directory.trend, required_data_type text)
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-    UPDATE trend_directory.trend SET data_type = $3;
-
-    SELECT trend_directory.modify_trend_store_column($1, $2.name, $3);
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION trend_directory.assure_data_types(trend_directory.table_trend_store_part, trend_directory.trend_descr[])
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-    SELECT trend_directory.modify_data_type($1, trend, required.data_type)
-    FROM unnest($2) required
-    JOIN trend_directory.trend ON
-        trend.name = required.name
-            AND
-        trend.trend_store_part_id = $1.id
-            AND
-        trend.data_type <> required.data_type;
 $$ LANGUAGE sql VOLATILE;
 
 
