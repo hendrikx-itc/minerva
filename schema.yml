@@ -6046,6 +6046,15 @@ objects:
               attribute_directory.create_staging_new_view_sql($1)
           );
 - function:
+    name: staging_modified_view_name
+    schema: attribute_directory
+    return_type: name
+    language: sql
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT (attribute_directory.to_table_name($1) || '_modified')::name;
+- function:
     name: create_staging_modified_view_sql
     schema: attribute_directory
     return_type: _text
@@ -6305,6 +6314,20 @@ objects:
               ]
           )
 - function:
+    name: define_attribute_store
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    arguments:
+    - name: data_source_name
+      data_type: text
+    - name: entity_type_name
+      data_type: text
+    source: |-
+      INSERT INTO attribute_directory.attribute_store(data_source_id, entity_type_id)
+          VALUES ((directory.name_to_data_source($1)).id, (directory.name_to_entity_type($2)).id)
+          RETURNING attribute_store;
+- function:
     name: create_attribute_store
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -6351,6 +6374,50 @@ objects:
               attribute_directory.init(attribute_directory.define_attribute($1, $2, $3, $4))
           );
 - function:
+    name: direct_dependers
+    schema: attribute_directory
+    return_type: name
+    language: sql
+    arguments:
+    - name: name
+      data_type: text
+    source: |-
+      SELECT dependee.relname AS name
+          FROM pg_depend
+          JOIN pg_rewrite ON pg_depend.objid = pg_rewrite.oid
+          JOIN pg_class as dependee ON pg_rewrite.ev_class = dependee.oid
+          JOIN pg_class as dependent ON pg_depend.refobjid = dependent.oid
+          JOIN pg_namespace as n ON dependent.relnamespace = n.oid
+          JOIN pg_attribute ON
+                  pg_depend.refobjid = pg_attribute.attrelid
+                  AND
+                  pg_depend.refobjsubid = pg_attribute.attnum
+          WHERE pg_attribute.attnum > 0 AND dependent.relname = $1;
+- function:
+    name: dependers
+    schema: attribute_directory
+    return_type: record
+    language: sql
+    arguments:
+    - name: name
+      data_type: name
+    - name: level
+      data_type: integer
+    - name: name
+      data_type: name
+      mode: t
+    - name: level
+      data_type: integer
+      mode: t
+    source: |-
+      SELECT (d.dependers).* FROM (
+              SELECT attribute_directory.dependers(depender, $2 + 1)
+              FROM attribute_directory.direct_dependers($1) depender
+          ) d
+          UNION ALL
+          SELECT depender, $2
+          FROM attribute_directory.direct_dependers($1) depender;
+- function:
     name: dependers
     schema: attribute_directory
     return_type: record
@@ -6366,6 +6433,35 @@ objects:
       mode: t
     source: |-
       SELECT * FROM attribute_directory.dependers($1, 1);
+- function:
+    name: update_modified
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store_modified
+    language: sql
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    - name: modified
+      data_type: timestamptz
+    source: |-
+      UPDATE attribute_directory.attribute_store_modified
+          SET modified = greatest(modified, $2)
+          WHERE attribute_store_id = $1
+          RETURNING attribute_store_modified;
+- function:
+    name: store_modified
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store_modified
+    language: sql
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    - name: modified
+      data_type: timestamptz
+    source: |-
+      INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
+          VALUES ($1, $2)
+          RETURNING attribute_store_modified;
 - function:
     name: mark_modified
     schema: attribute_directory
@@ -6500,6 +6596,15 @@ objects:
           EXECUTE format('ALTER TABLE attribute_base.%I ALTER %I TYPE %s USING CAST(%I AS %s)', table_name, column_name, data_type, column_name, data_type);
       END;
 - function:
+    name: drop_staging_modified_view_sql
+    schema: attribute_directory
+    return_type: varchar
+    language: sql
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT format('DROP VIEW attribute_staging.%I', attribute_directory.staging_modified_view_name($1));
+- function:
     name: drop_staging_modified_view
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -6523,20 +6628,6 @@ objects:
 
           RETURN NEW;
       END;
-- function:
-    name: define_attribute_store
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    arguments:
-    - name: data_source_name
-      data_type: text
-    - name: entity_type_name
-      data_type: text
-    source: |-
-      INSERT INTO attribute_directory.attribute_store(data_source_id, entity_type_id)
-          VALUES ((directory.name_to_data_source($1)).id, (directory.name_to_entity_type($2)).id)
-          RETURNING attribute_store;
 - function:
     name: to_attribute_store
     schema: attribute_directory
@@ -6592,6 +6683,47 @@ objects:
           attribute_directory.at_function_name($1)
       );
 - function:
+    name: update_compacted
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store_compacted
+    language: sql
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    - name: compacted
+      data_type: timestamptz
+    source: |-
+      UPDATE attribute_directory.attribute_store_compacted
+          SET compacted = greatest(compacted, $2)
+          WHERE attribute_store_id = $1
+          RETURNING attribute_store_compacted;
+- function:
+    name: store_compacted
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store_compacted
+    language: sql
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    - name: compacted
+      data_type: timestamptz
+    source: |-
+      INSERT INTO attribute_directory.attribute_store_compacted (attribute_store_id, compacted)
+          VALUES ($1, $2)
+          RETURNING attribute_store_compacted;
+- function:
+    name: mark_compacted
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store_compacted
+    language: sql
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    - name: compacted
+      data_type: timestamptz
+    source: |-
+      SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_directory.store_compacted($1, $2));
+- function:
     name: mark_compacted
     schema: attribute_directory
     return_type: attribute_directory.attribute_store_compacted
@@ -6643,6 +6775,15 @@ objects:
 
           RETURN $1;
       END;
+- function:
+    name: drop_compacted_view_sql
+    schema: attribute_directory
+    return_type: text
+    language: sql
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT format('DROP VIEW attribute_history.%I', attribute_directory.compacted_view_name($1));
 - function:
     name: drop_compacted_view
     schema: attribute_directory
@@ -6757,20 +6898,6 @@ objects:
           RETURN $1;
       END;
 - function:
-    name: store_modified
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store_modified
-    language: sql
-    arguments:
-    - name: attribute_store_id
-      data_type: integer
-    - name: modified
-      data_type: timestamptz
-    source: |-
-      INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
-          VALUES ($1, $2)
-          RETURNING attribute_store_modified;
-- function:
     name: transfer_staged
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -6839,27 +6966,6 @@ objects:
     source: |-
       SELECT attribute_directory.requires_compacting($1.id);
 - function:
-    name: mark_compacted
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store_compacted
-    language: sql
-    arguments:
-    - name: attribute_store_id
-      data_type: integer
-    - name: compacted
-      data_type: timestamptz
-    source: |-
-      SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_directory.store_compacted($1, $2));
-- function:
-    name: staging_modified_view_name
-    schema: attribute_directory
-    return_type: name
-    language: sql
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT (attribute_directory.to_table_name($1) || '_modified')::name;
-- function:
     name: check_attributes_exist
     schema: attribute_directory
     return_type: attribute_directory.attribute
@@ -6873,6 +6979,48 @@ objects:
           LEFT JOIN attribute_directory.attribute
           ON attribute.attribute_store_id = $1.id AND n.name = attribute.name
           WHERE attribute.name IS NULL;
+- function:
+    name: drop_curr_view
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT public.action(
+              $1,
+              attribute_directory.drop_curr_view_sql($1)
+          );
+- function:
+    name: curr_ptr_view_name
+    schema: attribute_directory
+    return_type: name
+    language: sql
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT (attribute_directory.to_table_name($1) || '_curr_selection')::name;
+- function:
+    name: drop_curr_ptr_view_sql
+    schema: attribute_directory
+    return_type: varchar
+    language: sql
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT format('DROP VIEW attribute_history.%I', attribute_directory.curr_ptr_view_name($1));
+- function:
+    name: drop_curr_ptr_view
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT public.action(
+              $1,
+              attribute_directory.drop_curr_ptr_view_sql($1)
+          );
 - function:
     name: drop_dependees
     schema: attribute_directory
@@ -6908,21 +7056,6 @@ objects:
           SET materialized = greatest(materialized, $2)
           WHERE attribute_store_id = $1
           RETURNING attribute_store_curr_materialized;
-- function:
-    name: update_modified
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store_modified
-    language: sql
-    arguments:
-    - name: attribute_store_id
-      data_type: integer
-    - name: modified
-      data_type: timestamptz
-    source: |-
-      UPDATE attribute_directory.attribute_store_modified
-          SET modified = greatest(modified, $2)
-          WHERE attribute_store_id = $1
-          RETURNING attribute_store_modified;
 - function:
     name: create_attribute_store
     schema: attribute_directory
@@ -6961,21 +7094,6 @@ objects:
           RETURN OLD;
       END;
 - function:
-    name: update_compacted
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store_compacted
-    language: sql
-    arguments:
-    - name: attribute_store_id
-      data_type: integer
-    - name: compacted
-      data_type: timestamptz
-    source: |-
-      UPDATE attribute_directory.attribute_store_compacted
-          SET compacted = greatest(compacted, $2)
-          WHERE attribute_store_id = $1
-          RETURNING attribute_store_compacted;
-- function:
     name: modify_column_type
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -6993,47 +7111,6 @@ objects:
 
           SELECT $1;
 - function:
-    name: drop_curr_ptr_view
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-              $1,
-              attribute_directory.drop_curr_ptr_view_sql($1)
-          );
-- function:
-    name: curr_ptr_view_name
-    schema: attribute_directory
-    return_type: name
-    language: sql
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT (attribute_directory.to_table_name($1) || '_curr_selection')::name;
-- function:
-    name: direct_dependers
-    schema: attribute_directory
-    return_type: name
-    language: sql
-    arguments:
-    - name: name
-      data_type: text
-    source: |-
-      SELECT dependee.relname AS name
-          FROM pg_depend
-          JOIN pg_rewrite ON pg_depend.objid = pg_rewrite.oid
-          JOIN pg_class as dependee ON pg_rewrite.ev_class = dependee.oid
-          JOIN pg_class as dependent ON pg_depend.refobjid = dependent.oid
-          JOIN pg_namespace as n ON dependent.relnamespace = n.oid
-          JOIN pg_attribute ON
-                  pg_depend.refobjid = pg_attribute.attrelid
-                  AND
-                  pg_depend.refobjsubid = pg_attribute.attnum
-          WHERE pg_attribute.attnum > 0 AND dependent.relname = $1;
-- function:
     name: mark_curr_materialized
     schema: attribute_directory
     return_type: attribute_directory.attribute_store_curr_materialized
@@ -7045,44 +7122,6 @@ objects:
       data_type: timestamptz
     source: |-
       SELECT COALESCE(attribute_directory.update_curr_materialized($1, $2), attribute_directory.store_curr_materialized($1, $2));
-- function:
-    name: store_compacted
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store_compacted
-    language: sql
-    arguments:
-    - name: attribute_store_id
-      data_type: integer
-    - name: compacted
-      data_type: timestamptz
-    source: |-
-      INSERT INTO attribute_directory.attribute_store_compacted (attribute_store_id, compacted)
-          VALUES ($1, $2)
-          RETURNING attribute_store_compacted;
-- function:
-    name: dependers
-    schema: attribute_directory
-    return_type: record
-    language: sql
-    arguments:
-    - name: name
-      data_type: name
-    - name: level
-      data_type: integer
-    - name: name
-      data_type: name
-      mode: t
-    - name: level
-      data_type: integer
-      mode: t
-    source: |-
-      SELECT (d.dependers).* FROM (
-              SELECT attribute_directory.dependers(depender, $2 + 1)
-              FROM attribute_directory.direct_dependers($1) depender
-          ) d
-          UNION ALL
-          SELECT depender, $2
-          FROM attribute_directory.direct_dependers($1) depender;
 - function:
     name: modify_data_type
     schema: attribute_directory
@@ -7104,33 +7143,6 @@ objects:
 
           SELECT $1;
 - function:
-    name: drop_curr_ptr_view_sql
-    schema: attribute_directory
-    return_type: varchar
-    language: sql
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT format('DROP VIEW attribute_history.%I', attribute_directory.curr_ptr_view_name($1));
-- function:
-    name: drop_staging_modified_view_sql
-    schema: attribute_directory
-    return_type: varchar
-    language: sql
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT format('DROP VIEW attribute_staging.%I', attribute_directory.staging_modified_view_name($1));
-- function:
-    name: drop_compacted_view_sql
-    schema: attribute_directory
-    return_type: text
-    language: sql
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT format('DROP VIEW attribute_history.%I', attribute_directory.compacted_view_name($1));
-- function:
     name: cleanup_on_data_source_delete
     schema: attribute_directory
     return_type: trigger
@@ -7151,18 +7163,6 @@ objects:
     - data_type: attribute_directory.attribute_store
     source: |-
       SELECT (attribute_directory.to_table_name($1) || '_new')::name;
-- function:
-    name: drop_curr_view
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-              $1,
-              attribute_directory.drop_curr_view_sql($1)
-          );
 - function:
     name: mark_curr_materialized
     schema: attribute_directory
@@ -7321,6 +7321,25 @@ objects:
     return_type: name
     language: sql
     arguments:
+    - name: namespace_name
+      data_type: name
+    - name: table_name
+      data_type: name
+    - name: column_name
+      data_type: name
+    source: |-
+      SELECT typname
+          FROM pg_type
+          JOIN pg_attribute ON pg_attribute.atttypid = pg_type.oid
+          JOIN pg_class ON pg_class.oid = pg_attribute.attrelid
+          JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
+          WHERE nspname = $1 AND relname = $2 AND attname = $3 AND attnum > 0 AND not pg_attribute.attisdropped;
+- function:
+    name: get_column_type_name
+    schema: notification_directory
+    return_type: name
+    language: sql
+    arguments:
     - data_type: notification_directory.notification_store
     - data_type: name
     source: |-
@@ -7328,6 +7347,52 @@ objects:
               notification_directory.notification_store_schema(),
               notification_directory.table_name($1),
               $2
+          );
+- function:
+    name: init_notification_set_store
+    schema: notification_directory
+    return_type: notification_directory.notification_set_store
+    language: plpgsql
+    arguments:
+    - data_type: notification_directory.notification_set_store
+    source: |-
+      BEGIN
+          EXECUTE format(
+              'CREATE TABLE %I.%I('
+              '  id serial PRIMARY KEY'
+              ')',
+              notification_directory.notification_store_schema(),
+              $1.name
+          );
+
+          EXECUTE format(
+              'CREATE TABLE %I.%I('
+              '  notification_id integer REFERENCES %I.%I ON DELETE CASCADE,'
+              '  set_id integer REFERENCES %I.%I ON DELETE CASCADE'
+              ')',
+              notification_directory.notification_store_schema(),
+              $1.name || '_link',
+              notification_directory.notification_store_schema(),
+              notification_directory.table_name(notification_directory.notification_store($1)),
+              notification_directory.notification_store_schema(),
+              $1.name
+          );
+
+          RETURN $1;
+      END;
+- function:
+    name: create_notification_set_store
+    schema: notification_directory
+    return_type: notification_directory.notification_set_store
+    language: sql
+    arguments:
+    - name: name
+      data_type: name
+    - name: notification_store_id
+      data_type: integer
+    source: |-
+      SELECT notification_directory.init_notification_set_store(
+              notification_directory.define_notification_set_store($1, $2)
           );
 - function:
     name: create_notification_set_store
@@ -7351,20 +7416,6 @@ objects:
     source: |-
       SELECT notification_directory.create_notification_store(
               $1, ARRAY[]::notification_directory.attr_def[]
-          );
-- function:
-    name: create_notification_set_store
-    schema: notification_directory
-    return_type: notification_directory.notification_set_store
-    language: sql
-    arguments:
-    - name: name
-      data_type: name
-    - name: notification_store_id
-      data_type: integer
-    source: |-
-      SELECT notification_directory.init_notification_set_store(
-              notification_directory.define_notification_set_store($1, $2)
           );
 - function:
     name: add_attribute_column_sql
@@ -7435,57 +7486,6 @@ objects:
     - data_type: notification_directory.notification_set_store
     source: |-
       SELECT notification_store FROM notification_directory.notification_store WHERE id = $1.notification_store_id;
-- function:
-    name: get_column_type_name
-    schema: notification_directory
-    return_type: name
-    language: sql
-    arguments:
-    - name: namespace_name
-      data_type: name
-    - name: table_name
-      data_type: name
-    - name: column_name
-      data_type: name
-    source: |-
-      SELECT typname
-          FROM pg_type
-          JOIN pg_attribute ON pg_attribute.atttypid = pg_type.oid
-          JOIN pg_class ON pg_class.oid = pg_attribute.attrelid
-          JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-          WHERE nspname = $1 AND relname = $2 AND attname = $3 AND attnum > 0 AND not pg_attribute.attisdropped;
-- function:
-    name: init_notification_set_store
-    schema: notification_directory
-    return_type: notification_directory.notification_set_store
-    language: plpgsql
-    arguments:
-    - data_type: notification_directory.notification_set_store
-    source: |-
-      BEGIN
-          EXECUTE format(
-              'CREATE TABLE %I.%I('
-              '  id serial PRIMARY KEY'
-              ')',
-              notification_directory.notification_store_schema(),
-              $1.name
-          );
-
-          EXECUTE format(
-              'CREATE TABLE %I.%I('
-              '  notification_id integer REFERENCES %I.%I ON DELETE CASCADE,'
-              '  set_id integer REFERENCES %I.%I ON DELETE CASCADE'
-              ')',
-              notification_directory.notification_store_schema(),
-              $1.name || '_link',
-              notification_directory.notification_store_schema(),
-              notification_directory.table_name(notification_directory.notification_store($1)),
-              notification_directory.notification_store_schema(),
-              $1.name
-          );
-
-          RETURN $1;
-      END;
 - function:
     name: cleanup_on_data_source_delete
     schema: notification_directory
@@ -8581,82 +8581,6 @@ objects:
 
 
 - function:
-    name: create_trigger_notification_store
-    schema: trigger
-    return_type: notification_directory.notification_store
-    language: sql
-    arguments:
-    - data_type: name
-    source: |-
-      SELECT trigger.add_insert_trigger(
-          notification_directory.create_staging_table(
-              notification_directory.create_notification_store($1, ARRAY[
-                  ('created', 'timestamp with time zone', 'time of notification creation'),
-                  ('rule_id', 'integer', 'source rule for this notification'),
-                  ('weight', 'integer', 'weight/importance of the notification'),
-                  ('details', 'text', 'extra information')
-              ]::notification_directory.attr_def[])
-          )
-      );
-- function:
-    name: drop_kpi_view_sql
-    schema: trigger
-    return_type: text
-    language: sql
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT format('DROP VIEW trigger_rule.%I CASCADE', "trigger".kpi_view_name($1));
-- function:
-    name: truncate
-    schema: trigger
-    return_type: timestamptz
-    language: sql
-    arguments:
-    - data_type: timestamptz
-    - data_type: interval
-    source: |-
-      SELECT CASE
-              WHEN $2 = '1 day' THEN
-                  date_trunc('day', $1)
-              WHEN $2 = '1 week' THEN
-                  date_trunc('week', $1)
-              ELSE
-                  to_timestamp((
-                      extract(epoch FROM $1)::integer / extract(epoch FROM $2)::integer
-                  )::integer * extract(epoch FROM $2))
-              END;
-- function:
-    name: define
-    schema: trigger
-    return_type: trigger.rule
-    language: sql
-    arguments:
-    - data_type: name
-    source: |-
-      SELECT COALESCE(trigger.get_rule($1), trigger.add_rule($1));
-- function:
-    name: set_thresholds
-    schema: trigger
-    return_type: trigger.rule
-    language: sql
-    arguments:
-    - data_type: name
-    - name: exprs
-      data_type: text
-    source: |-
-      SELECT trigger.set_thresholds(trigger.get_rule($1), $2);
-- function:
-    name: add_rule
-    schema: trigger
-    return_type: trigger.rule
-    language: sql
-    arguments:
-    - data_type: name
-    source: |-
-      INSERT INTO "trigger".rule (name)
-          VALUES ($1) RETURNING rule;
-- function:
     name: add_insert_trigger
     schema: trigger
     return_type: notification_directory.notification_store
@@ -8698,6 +8622,63 @@ objects:
           RETURN $1;
       END;
 - function:
+    name: create_trigger_notification_store
+    schema: trigger
+    return_type: notification_directory.notification_store
+    language: sql
+    arguments:
+    - data_type: name
+    source: |-
+      SELECT trigger.add_insert_trigger(
+          notification_directory.create_staging_table(
+              notification_directory.create_notification_store($1, ARRAY[
+                  ('created', 'timestamp with time zone', 'time of notification creation'),
+                  ('rule_id', 'integer', 'source rule for this notification'),
+                  ('weight', 'integer', 'weight/importance of the notification'),
+                  ('details', 'text', 'extra information')
+              ]::notification_directory.attr_def[])
+          )
+      );
+- function:
+    name: drop_kpi_view_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT format('DROP VIEW trigger_rule.%I CASCADE', "trigger".kpi_view_name($1));
+- function:
+    name: add_rule
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    arguments:
+    - data_type: name
+    source: |-
+      INSERT INTO "trigger".rule (name)
+          VALUES ($1) RETURNING rule;
+- function:
+    name: define
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    arguments:
+    - data_type: name
+    source: |-
+      SELECT COALESCE(trigger.get_rule($1), trigger.add_rule($1));
+- function:
+    name: set_thresholds
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    arguments:
+    - data_type: name
+    - name: exprs
+      data_type: text
+    source: |-
+      SELECT trigger.set_thresholds(trigger.get_rule($1), $2);
+- function:
     name: drop_exception_weight_table_sql
     schema: trigger
     return_type: text
@@ -8706,6 +8687,27 @@ objects:
     - data_type: trigger.rule
     source: |-
       SELECT format('DROP TABLE IF EXISTS trigger_rule.%I', trigger.exception_weight_table_name($1));
+- function:
+    name: create_notifications
+    schema: trigger
+    return_type: integer
+    language: sql
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT trigger.create_notifications($1, notification_store, $1.default_interval)
+          FROM notification_directory.notification_store
+          WHERE id = $1.notification_store_id;
+- function:
+    name: create_notifications
+    schema: trigger
+    return_type: integer
+    language: sql
+    arguments:
+    - name: rule_name
+      data_type: name
+    source: |-
+      SELECT trigger.create_notifications(trigger.get_rule($1));
 - function:
     name: create_notifications
     schema: trigger
@@ -8759,16 +8761,6 @@ objects:
 
           RETURN $1;
       END;
-- function:
-    name: create_notifications
-    schema: trigger
-    return_type: integer
-    language: sql
-    arguments:
-    - name: rule_name
-      data_type: name
-    source: |-
-      SELECT trigger.create_notifications(trigger.get_rule($1));
 - function:
     name: drop_notification_type_sql
     schema: trigger
@@ -8905,14 +8897,3 @@ objects:
           trigger.notification_fn_name($1),
           $1.name
       );
-- function:
-    name: create_notifications
-    schema: trigger
-    return_type: integer
-    language: sql
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT trigger.create_notifications($1, notification_store, $1.default_interval)
-          FROM notification_directory.notification_store
-          WHERE id = $1.notification_store_id;
