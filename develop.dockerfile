@@ -6,7 +6,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
   make \
   patch \
   perl \
-  postgresql-server-dev-9.6
+  postgresql-server-dev-10
 
 ADD https://github.com/theory/pgtap/archive/master.tar.gz /pgtap.tar.gz
 RUN mkdir /pgtap
