@@ -1,4 +1,119 @@
 objects:
+- sequence:
+    name: job_source_id_seq
+    schema: system
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: job_id_seq
+    schema: system
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: setting_id_seq
+    schema: system
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: data_source_id_seq
+    schema: directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: entity_type_id_seq
+    schema: directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: entity_id_seq
+    schema: directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: tag_group_id_seq
+    schema: directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: tag_id_seq
+    schema: directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: alias_type_id_seq
+    schema: directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: type_id_seq
+    schema: relation_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: trend_store_id_seq
+    schema: trend_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: trend_store_part_id_seq
+    schema: trend_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: trend_id_seq
+    schema: trend_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: materialization_id_seq
+    schema: trend_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: attribute_store_id_seq
+    schema: attribute_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: attribute_id_seq
+    schema: attribute_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: notification_store_id_seq
+    schema: notification_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: attribute_id_seq
+    schema: notification_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: notification_set_store_id_seq
+    schema: notification_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: set_attribute_id_seq
+    schema: notification_directory
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: type_id_seq
+    schema: entity_tag
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: rule_id_seq
+    schema: trigger
+    startvalue: '1'
+    increment: '1'
+- sequence:
+    name: exception_base_id_seq
+    schema: trigger
+    startvalue: '1'
+    increment: '1'
 - function:
     name: divide_array
     schema: public
@@ -160,7 +275,7 @@ objects:
     arguments:
     - data_type: anyelement
     - name: sql
-      data_type: _text
+      data_type: text[]
     source: |-
       DECLARE
           statement text;
@@ -287,7 +402,7 @@ objects:
     schema: directory
     columns:
     - name: c
-      data_type: _text
+      data_type: text[]
       nullable: false
     - name: s
       data_type: text
@@ -451,7 +566,7 @@ objects:
       data_type: integer
       nullable: false
     - name: tags
-      data_type: _text
+      data_type: text[]
       nullable: false
     - name: name
       data_type: text
@@ -675,7 +790,7 @@ objects:
     return_type: directory.dn_part
     language: sql
     arguments:
-    - data_type: _text
+    - data_type: text[]
     source: |-
       SELECT CAST(ROW($1[1], $1[2]) AS directory.dn_part);
 - function:
@@ -930,7 +1045,7 @@ objects:
     return_type: integer
     language: sql
     arguments:
-    - data_type: _text
+    - data_type: text[]
     source: |-
       SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
 - composite_type:
@@ -1070,7 +1185,7 @@ objects:
 - function:
     name: create_view_sql
     schema: entity_tag
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - name: type_name
@@ -1714,7 +1829,7 @@ objects:
 - function:
     name: create_relation_table_sql
     schema: relation_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: relation_directory.type
@@ -2283,7 +2398,7 @@ objects:
 - function:
     name: create_table_sql
     schema: notification_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: notification_directory.notification_store
@@ -2370,7 +2485,7 @@ objects:
 - function:
     name: create_staging_table_sql
     schema: notification_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: notification_directory.notification_store
@@ -2738,6 +2853,45 @@ objects:
         columns:
         - id
 - table:
+    name: trend_store
+    schema: trend_directory
+    columns:
+    - name: entity_type_id
+      data_type: integer
+      nullable: false
+    - name: data_source_id
+      data_type: integer
+      nullable: false
+    - name: granularity
+      data_type: interval
+      nullable: false
+    - name: id
+      data_type: integer
+      nullable: false
+    primary_key:
+      name: trend_store_pkey
+      columns:
+      - id
+    foreign_keys:
+    - name: trend_store_entity_type_id_fkey
+      columns:
+      - entity_type_id
+      references:
+        table:
+          name: entity_type
+          schema: directory
+        columns:
+        - id
+    - name: trend_store_data_source_id_fkey
+      columns:
+      - data_source_id
+      references:
+        table:
+          name: data_source
+          schema: directory
+        columns:
+        - id
+- table:
     name: table_trend_store
     schema: trend_directory
     columns:
@@ -2857,45 +3011,6 @@ objects:
         table:
           name: table_trend_store_part
           schema: trend_directory
-        columns:
-        - id
-- table:
-    name: trend_store
-    schema: trend_directory
-    columns:
-    - name: entity_type_id
-      data_type: integer
-      nullable: false
-    - name: data_source_id
-      data_type: integer
-      nullable: false
-    - name: granularity
-      data_type: interval
-      nullable: false
-    - name: id
-      data_type: integer
-      nullable: false
-    primary_key:
-      name: trend_store_pkey
-      columns:
-      - id
-    foreign_keys:
-    - name: trend_store_entity_type_id_fkey
-      columns:
-      - entity_type_id
-      references:
-        table:
-          name: entity_type
-          schema: directory
-        columns:
-        - id
-    - name: trend_store_data_source_id_fkey
-      columns:
-      - data_source_id
-      references:
-        table:
-          name: data_source
-          schema: directory
         columns:
         - id
 - table:
@@ -3119,7 +3234,7 @@ objects:
 - function:
     name: create_base_table_sql
     schema: trend_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - name: name
@@ -3237,7 +3352,7 @@ objects:
 - function:
     name: create_staging_table_sql
     schema: trend_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: trend_directory.table_trend_store_part
@@ -4095,7 +4210,7 @@ objects:
 - function:
     name: create_partition_table_sql
     schema: trend_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: trend_directory.partition
@@ -4256,7 +4371,7 @@ objects:
 - function:
     name: create_view_sql
     schema: trend_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: trend_directory.view_trend_store_part
@@ -4521,7 +4636,7 @@ objects:
     - name: timestamp
       data_type: timestamptz
     - name: trend_names
-      data_type: _text
+      data_type: text[]
     source: |-
       DECLARE
           columns_part text;
@@ -4724,7 +4839,7 @@ objects:
     source: |-
       SELECT $1;
 - function:
-    name: granularity_to_text
+    name: granularity_totext[]
     schema: trend_directory
     return_type: text
     language: sql
@@ -5295,7 +5410,7 @@ objects:
 - function:
     name: create_run_length_view_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5382,7 +5497,7 @@ objects:
 - function:
     name: create_modified_triggers_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5456,7 +5571,7 @@ objects:
 - function:
     name: base_columns
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments: []
     source: |-
@@ -5467,7 +5582,7 @@ objects:
 - function:
     name: column_specs
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5478,7 +5593,7 @@ objects:
 - function:
     name: create_base_table_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5510,7 +5625,7 @@ objects:
 - function:
     name: create_history_table_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5553,7 +5668,7 @@ objects:
 - function:
     name: create_staging_table_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5588,7 +5703,7 @@ objects:
 - function:
     name: create_compacted_tmp_table_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5629,7 +5744,7 @@ objects:
 - function:
     name: create_curr_ptr_table_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5678,7 +5793,7 @@ objects:
 - function:
     name: create_at_func_ptr_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5763,7 +5878,7 @@ objects:
 - function:
     name: create_entity_at_func_ptr_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5802,7 +5917,7 @@ objects:
 - function:
     name: create_entity_at_func_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5843,7 +5958,7 @@ objects:
 - function:
     name: create_hash_triggers_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5873,7 +5988,7 @@ objects:
 - function:
     name: create_modified_trigger_function_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5924,7 +6039,7 @@ objects:
 - function:
     name: create_changes_view_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5968,7 +6083,7 @@ objects:
 - function:
     name: create_hash_function_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -5997,7 +6112,7 @@ objects:
 - function:
     name: create_staging_new_view_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: plpgsql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -6057,7 +6172,7 @@ objects:
 - function:
     name: create_staging_modified_view_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: plpgsql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -6093,7 +6208,7 @@ objects:
 - function:
     name: create_curr_ptr_view_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: plpgsql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -6148,7 +6263,7 @@ objects:
 - function:
     name: create_curr_view_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -6214,7 +6329,7 @@ objects:
 - function:
     name: create_compacted_view_sql
     schema: attribute_directory
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: attribute_directory.attribute_store
@@ -7749,9 +7864,43 @@ objects:
           "trigger".kpi_view_name($1), $2
       );
 - function:
+    name: action
+    schema: trigger
+    return_type: anyelement
+    language: plpgsql
+    arguments:
+    - data_type: anyelement
+    - name: sql
+      data_type: text
+    source: |-
+      BEGIN
+          EXECUTE sql;
+
+          RETURN $1;
+      END;
+- function:
+    name: action
+    schema: trigger
+    return_type: anyelement
+    language: plpgsql
+    arguments:
+    - data_type: anyelement
+    - name: sql
+      data_type: text[]
+    source: |-
+      DECLARE
+          statement text;
+      BEGIN
+          FOREACH statement IN ARRAY sql LOOP
+              EXECUTE statement;
+          END LOOP;
+
+          RETURN $1;
+      END;
+- function:
     name: create_kpi_view_sql
     schema: trigger
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: trigger.rule
@@ -8056,7 +8205,7 @@ objects:
 - function:
     name: create_rule_view_sql
     schema: trigger
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: trigger.rule
@@ -8243,7 +8392,7 @@ objects:
 - function:
     name: create_notification_view_sql
     schema: trigger
-    return_type: _text
+    return_type: text[]
     language: sql
     arguments:
     - data_type: trigger.rule
@@ -8356,21 +8505,6 @@ objects:
               JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
               WHERE relname = $2 AND relkind = 'v' AND pg_namespace.nspname = $1
           );
-- function:
-    name: action
-    schema: trigger
-    return_type: anyelement
-    language: plpgsql
-    arguments:
-    - data_type: anyelement
-    - name: sql
-      data_type: text
-    source: |-
-      BEGIN
-          EXECUTE sql;
-
-          RETURN $1;
-      END;
 - function:
     name: get_weight_fn_sql
     schema: trigger
@@ -8495,25 +8629,6 @@ objects:
     - data_type: trigger.rule
     source: |-
       SELECT ($1.name || '_notification_test_threshold')::name;
-- function:
-    name: action
-    schema: trigger
-    return_type: anyelement
-    language: plpgsql
-    arguments:
-    - data_type: anyelement
-    - name: sql
-      data_type: _text
-    source: |-
-      DECLARE
-          statement text;
-      BEGIN
-          FOREACH statement IN ARRAY sql LOOP
-              EXECUTE statement;
-          END LOOP;
-
-          RETURN $1;
-      END;
 - function:
     name: table_exists
     schema: trigger
