@@ -84,8 +84,7 @@ CREATE TABLE directory.entity (
     id integer NOT NULL,
     created timestamp with time zone NOT NULL,
     name character varying NOT NULL,
-    entity_type_id integer NOT NULL,
-    dn character varying NOT NULL
+    entity_type_id integer NOT NULL
 );
 
 COMMENT ON TABLE directory.entity IS
@@ -119,9 +118,6 @@ ALTER TABLE ONLY directory.entity
     ADD CONSTRAINT entity_entity_type_id_fkey
     FOREIGN KEY (entity_type_id) REFERENCES directory.entity_type(id)
     ON DELETE CASCADE;
-
-CREATE UNIQUE INDEX ix_directory_entity_dn
-    ON directory.entity USING btree (dn);
 
 CREATE INDEX ix_directory_entity_name
     ON directory.entity USING btree (name);
@@ -250,67 +246,4 @@ CREATE INDEX ON directory.entity_tag_link_denorm (name);
 GRANT SELECT ON TABLE directory.entity_tag_link_denorm TO minerva;
 GRANT UPDATE, INSERT, DELETE ON TABLE directory.entity_tag_link_denorm TO minerva_writer;
 
-
--- Table 'directory.alias_type'
-
-CREATE TABLE directory.alias_type
-(
-    id integer NOT NULL,
-    "name" character varying NOT NULL
-);
-
-CREATE SEQUENCE directory.alias_type_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-ALTER SEQUENCE directory.alias_type_id_seq OWNED BY directory.alias_type.id;
-ALTER TABLE directory.alias_type
-    ALTER COLUMN id
-    SET DEFAULT nextval('directory.alias_type_id_seq'::regclass);
-
-GRANT SELECT ON SEQUENCE directory.alias_type_id_seq TO minerva;
-GRANT UPDATE ON SEQUENCE directory.alias_type_id_seq TO minerva_writer;
-
-ALTER TABLE ONLY directory.alias_type
-    ADD CONSTRAINT alias_type_pkey PRIMARY KEY (id);
-
-CREATE UNIQUE INDEX ix_directory_alias_type_name
-    ON directory.alias_type (lower(name));
-
-GRANT SELECT ON TABLE directory.alias_type TO minerva;
-GRANT INSERT,DELETE,UPDATE ON TABLE directory.alias_type TO minerva_writer;
-
-INSERT INTO directory.alias_type (name) VALUES ('name');
-
--- Table 'directory.alias'
-
-CREATE TABLE directory.alias
-(
-    entity_id integer NOT NULL,
-    "name" character varying NOT NULL,
-    type_id integer NOT NULL
-);
-
-ALTER TABLE ONLY directory.alias
-    ADD CONSTRAINT alias_pkey PRIMARY KEY (entity_id, type_id);
-
-ALTER TABLE ONLY directory.alias
-    ADD CONSTRAINT alias_entity_id_fkey
-    FOREIGN KEY (entity_id) REFERENCES directory.entity(id)
-    ON DELETE CASCADE;
-
-ALTER TABLE ONLY directory.alias
-    ADD CONSTRAINT alias_alias_type_id_fkey
-    FOREIGN KEY (type_id) REFERENCES directory.alias_type(id)
-    ON DELETE CASCADE;
-
-CREATE INDEX ON directory.alias USING btree (name);
-
-CREATE INDEX ON directory.alias (lower(name));
-
-GRANT SELECT ON TABLE directory.alias TO minerva;
-GRANT INSERT,DELETE,UPDATE ON TABLE directory.alias TO minerva_writer;
 

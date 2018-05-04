@@ -18,18 +18,3 @@ BEGIN
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
-
-
-SELECT relation_directory.define('self');
-
-
-CREATE FUNCTION relation_directory.create_self_relation()
-    RETURNS TRIGGER
-AS $$
-BEGIN
-    INSERT INTO relation.self (source_id, target_id)
-    VALUES (NEW.id, NEW.id);
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;

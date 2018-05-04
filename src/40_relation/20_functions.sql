@@ -72,21 +72,24 @@ AS $$
 $$ LANGUAGE SQL STABLE STRICT;
 
 
-CREATE FUNCTION relation_directory.create_type(name)
+CREATE FUNCTION relation_directory.define(name)
     RETURNS relation_directory.type
 AS $$
     INSERT INTO relation_directory.type (name) VALUES ($1) RETURNING type;
 $$ LANGUAGE SQL VOLATILE STRICT;
 
 
-CREATE FUNCTION relation_directory.name_to_type(name)
+CREATE FUNCTION relation_directory.create_type(name)
     RETURNS relation_directory.type
 AS $$
-    SELECT COALESCE(
-        relation_directory.get_type($1),
-        relation_directory.create_type($1)
+    SELECT relation_directory.create_relation_table(
+        relation_directory.define($1)
     );
-$$ LANGUAGE sql VOLATILE STRICT;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION relation_directory.create_type(name) IS
+'Defines a new relation type, creates the corresponding table and then returns
+the new type record';
 
 
 CREATE FUNCTION relation_directory.create_relation_view_sql(relation_directory.type, text)
@@ -111,6 +114,30 @@ AS $$
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
+CREATE FUNCTION relation_directory.create_type(name, view_sql text)
+    RETURNS relation_directory.type
+AS $$
+    SELECT relation_directory.create_relation_view(
+        relation_directory.create_type($1),
+        $2
+    );
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION relation_directory.create_type(name, view_sql text) IS
+'Defines a new relation type (just like relation_directory.define(name)),
+including a view that will be used to populate the relation table.';
+
+
+CREATE FUNCTION relation_directory.name_to_type(name)
+    RETURNS relation_directory.type
+AS $$
+    SELECT COALESCE(
+        relation_directory.get_type($1),
+        relation_directory.create_type($1)
+    );
+$$ LANGUAGE sql VOLATILE STRICT;
+
+
 CREATE FUNCTION relation_directory.drop_relation_view_sql(relation_directory.type)
     RETURNS text
 AS $$
@@ -130,33 +157,6 @@ AS $$
         relation_directory.drop_relation_view_sql($1)
     );
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
-
-
-CREATE FUNCTION relation_directory.define(name)
-    RETURNS relation_directory.type
-AS $$
-    SELECT relation_directory.create_relation_table(
-        relation_directory.create_type($1)
-    );
-$$ LANGUAGE sql VOLATILE;
-
-COMMENT ON FUNCTION relation_directory.define(name) IS
-'Defines a new relation type, creates the corresponding table and then returns
-the new type record';
-
-
-CREATE FUNCTION relation_directory.define(name, view_sql text)
-    RETURNS relation_directory.type
-AS $$
-    SELECT relation_directory.create_relation_view(
-        relation_directory.define($1),
-        $2
-    );
-$$ LANGUAGE sql VOLATILE;
-
-COMMENT ON FUNCTION relation_directory.define(name, view_sql text) IS
-'Defines a new relation type (just like relation_directory.define(name)),
-including a view that will be used to populate the relation table.';
 
 
 CREATE FUNCTION relation_directory.remove(name)
@@ -194,10 +194,10 @@ AS $$
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
-CREATE FUNCTION relation_directory.define_reverse(reverse name, original name)
+CREATE FUNCTION relation_directory.create_reverse(reverse name, original name)
     RETURNS relation_directory.type
 AS $$
-SELECT relation_directory.define(
+SELECT relation_directory.create_type(
     $1,
     format(
         $query$SELECT
@@ -211,10 +211,10 @@ FROM %I.%I$query$,
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION relation_directory.define_reverse(reverse name, original relation_directory.type)
+CREATE FUNCTION relation_directory.create_reverse(reverse name, original relation_directory.type)
     RETURNS relation_directory.type
 AS $$
-SELECT relation_directory.define(
+SELECT relation_directory.create_type(
     $1,
     format(
         $query$SELECT

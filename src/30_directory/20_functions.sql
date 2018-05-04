@@ -1,10 +1,3 @@
-CREATE FUNCTION directory.get_entity_by_dn(text)
-    RETURNS directory.entity
-AS $$
-    SELECT * FROM directory.entity WHERE dn = $1;
-$$ LANGUAGE sql STABLE;
-
-
 CREATE FUNCTION directory.get_entity_by_id(integer)
     RETURNS directory.entity
 AS $$
@@ -35,59 +28,6 @@ AS $$
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE TYPE directory.dn_part AS (type_name text, name text);
-
-
-CREATE FUNCTION directory.dn_part_to_string(directory.dn_part)
-    RETURNS text
-AS $$
-    SELECT $1.type_name || '=' || $1.name;
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE CAST (directory.dn_part AS text)
-    WITH FUNCTION directory.dn_part_to_string (directory.dn_part);
-
-
-CREATE FUNCTION directory.array_to_dn_part(text[])
-    RETURNS directory.dn_part
-AS $$
-    SELECT CAST(ROW($1[1], $1[2]) AS directory.dn_part);
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE CAST (text[] AS directory.dn_part)
-    WITH FUNCTION directory.array_to_dn_part (text[]);
-
-
-CREATE FUNCTION directory.split_raw_part(text)
-    RETURNS directory.dn_part
-AS $$
-    SELECT directory.array_to_dn_part(string_to_array($1, '='));
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION directory.explode_dn(text)
-    RETURNS directory.dn_part[]
-AS $$
-    SELECT array_agg(directory.split_raw_part(raw_part)) FROM unnest(string_to_array($1, ',')) AS raw_part;
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION directory.glue_dn(directory.dn_part[])
-    RETURNS text
-AS $$
-    SELECT
-        array_to_string(b.part_arr, ',')
-    FROM (
-        SELECT array_agg(parts.p) part_arr
-        FROM (
-            SELECT directory.dn_part_to_string(part) p FROM unnest($1) part
-        ) parts
-    ) b;
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
 CREATE FUNCTION directory.create_entity_type(text)
     RETURNS directory.entity_type
 AS $$
@@ -102,26 +42,6 @@ AS $$
     ON CONFLICT DO NOTHING
     RETURNING entity_type;
 $$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION directory.parent_dn_parts(directory.dn_part[])
-    RETURNS directory.dn_part[]
-AS $$
-    SELECT
-        CASE
-            WHEN array_length($1, 1) > 1 THEN
-                $1[1:array_length($1, 1) - 1]
-            ELSE
-                NULL
-        END;
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION directory.parent_dn(text)
-    RETURNS text
-AS $$
-    SELECT directory.glue_dn(directory.parent_dn_parts(directory.explode_dn($1)));
-$$ LANGUAGE sql IMMUTABLE STRICT;
 
 
 CREATE FUNCTION directory.name_to_entity_type(text)
@@ -145,194 +65,11 @@ AS $$
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
--- Stub
-CREATE FUNCTION directory.dn_to_entity(text)
-    RETURNS directory.entity
-AS $$
-    SELECT null::directory.entity;
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION directory.last_dn_part(directory.dn_part[])
-    RETURNS directory.dn_part
-AS $$
-    SELECT $1[array_length($1, 1)];
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION directory.create_entity(text)
-    RETURNS directory.entity
-AS $$
-    INSERT INTO directory.entity(created, name, entity_type_id, dn)
-        VALUES (
-            now(),
-            (directory.last_dn_part(directory.explode_dn($1))).name,
-            directory.entity_type_id(directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)),
-            $1
-        )
-        RETURNING entity;
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
--- Use 'CREATE OR REPLACE' to replace the dn_to_entity stub
-CREATE OR REPLACE FUNCTION directory.dn_to_entity(text)
-    RETURNS directory.entity
-AS $$
-    SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity($1));
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION directory.get_alias(entity_id integer, alias_type_name text)
-    RETURNS text
-AS $$
-    SELECT a.name
-      FROM directory.alias a
-      JOIN directory.alias_type at on at.id = a.type_id
-     WHERE a.entity_id = $1 and at.name = $2;
-$$ LANGUAGE sql STABLE;
-
-
 CREATE FUNCTION directory.name_to_data_source(text)
     RETURNS directory.data_source
 AS $$
     SELECT COALESCE(directory.get_data_source($1), directory.create_data_source($1));
 $$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION directory.dns_to_entity_ids(text[])
-    RETURNS SETOF integer
-AS $$
-    SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE TYPE directory.query_part AS (c text[], s text);
-
-CREATE TYPE directory.query_row AS (id integer, dn text, entity_type_id integer);
-
-------------------------------------------
--- Example usage of run_minerva_query:
---
--- SELECT directory.run_minerva_query(ARRAY[(ARRAY['Cell']::text[], '15000')]::directory.query_part[]);
---
--- SELECT directory.run_minerva_query(ARRAY[(ARRAY['Site']::text[], '4343'), (ARRAY['Cell', '3G']::text[], NULL)]::query_part[]);
-------------------------------------------
-
-CREATE FUNCTION directory.run_minerva_query(query directory.query_part[])
-    RETURNS TABLE(id integer, dn varchar, entity_type_id integer)
-AS $$
-BEGIN
-    RETURN QUERY EXECUTE directory.compile_minerva_query(query);
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION directory.compile_minerva_query(query text)
-    RETURNS text
-AS $$
-DECLARE
-    parts text[];
-    c_str text;
-    cs text[];
-    s_str text;
-    minerva_query directory.query_part[];
-BEGIN
-    parts = regexp_split_to_array(query, E'(\\w)[ ]+(?=\\w)');
-
-    for i in 1..2 LOOP
-        c_str = parts[i];
-        cs = regexp_split_to_array(c_str, E'[+ ]+');
-        s_str = parts[i + 1];
-
-        minerva_query = minerva_query || (cs, s_str)::directory.query_part;
-    end loop;
-
-    return directory.compile_minerva_query(minerva_query);
-END;
-$$ LANGUAGE plpgsql STABLE STRICT;
-
-------------------------------------------
--- Example usage of compile_minerva_query:
---
--- SELECT directory.compile_minerva_query(ARRAY[(ARRAY['Cell']::text[], '15000')]::directory.query_part[]);
-------------------------------------------
-
-CREATE FUNCTION directory.compile_minerva_query(query directory.query_part[])
-    RETURNS text
-AS $$
-DECLARE
-    sql text;
-    entity_id_table text;
-    entity_id_column text;
-    q_part directory.query_part;
-    tag text;
-BEGIN
-    sql = 'SELECT entity.id, entity.dn, entity.entity_type_id FROM directory.entity_tag_link tl_1_1';
-
-    entity_id_table = 'tl_1_1';
-    entity_id_column = 'entity_id';
-
-    FOR index IN array_lower(query, 1)..array_upper(query, 1) LOOP
-        q_part = query[index];
-
-        IF index > 1 THEN
-            sql = sql || format(' JOIN directory.relation r_%s ON r_%s.source_id = %I.%I', index, index, entity_id_table, entity_id_column);
-
-            entity_id_table = format('r_%s', index);
-            entity_id_column = 'target_id';
-        END IF;
-
-        FOR i IN array_lower(q_part.c, 1)..array_upper(q_part.c, 1) LOOP
-            tag = q_part.c[i];
-
-            sql = sql || directory.make_c_join(index, entity_id_table, entity_id_column, i, tag);
-        END LOOP;
-
-        IF NOT q_part.s IS NULL THEN
-            sql = sql || directory.make_s_join(index, entity_id_table, entity_id_column, q_part.s);
-        END IF;
-
-    END LOOP;
-
-    RETURN sql || format(' JOIN directory.entity entity ON entity.id = %I.%I', entity_id_table, entity_id_column);
-END;
-$$ LANGUAGE plpgsql STABLE STRICT;
-
-
-CREATE FUNCTION directory.make_c_join(index integer, entity_id_table text, entity_id_column text, tag_index integer, tag text)
-    RETURNS text
-AS $$
-DECLARE
-    entity_tag_link_alias text;
-    entitytag_alias text;
-BEGIN
-    entity_tag_link_alias = 'tl_' || index || '_' || tag_index;
-    entitytag_alias = 't_' || index || '_' || tag_index;
-
-    IF NOT entity_id_table = entity_tag_link_alias THEN
-        RETURN format(' JOIN directory.entity_tag_link %I ON %I.%I = %I.entity_id', entity_tag_link_alias, entity_id_table, entity_id_column, entity_tag_link_alias) ||
-            format(' JOIN directory.tag %I ON %I.id = %I.entitytag_id AND lower(%I.name) = lower(%L)', entitytag_alias, entitytag_alias, entity_tag_link_alias, entitytag_alias, tag);
-    ELSE
-        RETURN format(' JOIN directory.tag %I ON %I.id = %I.entitytag_id AND lower(%I.name) = lower(%L)', entitytag_alias, entitytag_alias, entity_tag_link_alias, entitytag_alias, tag);
-    END IF;
-END;
-$$ LANGUAGE plpgsql STABLE STRICT;
-
-
-CREATE FUNCTION directory.make_s_join(index integer, entity_id_table text, entity_id_column text, alias text)
-    RETURNS text
-AS $$
-DECLARE
-    alias_alias text;
-    aliastype_alias text;
-BEGIN
-    alias_alias = 'a_' || index;
-    aliastype_alias = 'at_' || index;
-
-    RETURN format(' JOIN directory.alias %I ON %I.entity_id = %I.%I', alias_alias, alias_alias, entity_id_table, entity_id_column) ||
-        format(' JOIN directory.aliastype %I ON %I.id = %I.type_id and %I.name = %L AND lower(%I.name) = lower(%L)', aliastype_alias, aliastype_alias, alias_alias, aliastype_alias, 'name', alias_alias, alias);
-END;
-$$ LANGUAGE plpgsql STABLE STRICT;
 
 
 CREATE FUNCTION directory.tag_entity(entity_id integer, tag text)
@@ -343,27 +80,6 @@ AS $$
     FROM directory.tag
     LEFT JOIN directory.entity_tag_link ON entity_tag_link.tag_id = tag.id AND entity_tag_link.entity_id = $1
     WHERE name = $2 AND entity_tag_link.entity_id IS NULL;
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION directory.tag_entity(dn text, tag text)
-    RETURNS text
-AS $$
-    INSERT INTO directory.entity_tag_link(tag_id, entity_id)
-    SELECT
-        f.tag_id,
-        f.entity_id
-    FROM (
-        SELECT
-            tag.id AS tag_id,
-            entity.id AS entity_id
-        FROM directory.tag, directory.entity
-        WHERE tag.name = $2 AND entity.dn = $1
-    ) f
-    LEFT JOIN directory.entity_tag_link ON entity_tag_link.tag_id = f.tag_id AND entity_tag_link.entity_id = f.entity_id
-    WHERE entity_tag_link.entity_id IS NULL;
 
     SELECT $1;
 $$ LANGUAGE sql VOLATILE;

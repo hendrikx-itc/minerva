@@ -1,18 +1,4 @@
-CREATE FUNCTION directory."create alias for new entity (func)"()
-    RETURNS trigger
-AS $$
-BEGIN
-    INSERT INTO directory.alias (entity_id, name, type_id)
-        SELECT NEW.id, NEW.name, id FROM directory.alias_type WHERE name = 'name';
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-ALTER FUNCTION directory."create alias for new entity (func)"() OWNER TO postgres;
-
-
-CREATE FUNCTION directory."create tag for new entity_types (func)"()
+CREATE FUNCTION directory.create_entity_type_tag()
     RETURNS trigger
 AS $$
 BEGIN
@@ -26,10 +12,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
-ALTER FUNCTION directory."create tag for new entity_types (func)"() OWNER TO postgres;
+ALTER FUNCTION directory.create_entity_type_tag() OWNER TO postgres;
 
 
-CREATE FUNCTION directory."create entity_tag_link for new entity (func)"()
+CREATE FUNCTION directory.create_entity_tag_link()
     RETURNS trigger
 AS $$
 BEGIN
@@ -43,7 +29,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
-ALTER FUNCTION directory."create entity_tag_link for new entity (func)"() OWNER TO postgres;
+ALTER FUNCTION directory.create_entity_tag_link() OWNER TO postgres;
 
 
 CREATE FUNCTION directory.update_entity_tag_link_denorm_for_insert()
