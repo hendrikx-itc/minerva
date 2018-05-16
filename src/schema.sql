@@ -126,23 +126,15 @@ GRANT minerva TO minerva_admin;
 GRANT minerva_writer TO minerva_admin;
 
 
-CREATE SEQUENCE directory.entity_type_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
-
-
-CREATE SEQUENCE directory.entity_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
-
-
 CREATE SEQUENCE system.job_source_id_seq
+START WITH 1
+INCREMENT BY 1
+NO MINVALUE
+NO MAXVALUE
+CACHE 1;
+
+
+CREATE SEQUENCE system.job_id_seq
 START WITH 1
 INCREMENT BY 1
 NO MINVALUE
@@ -158,7 +150,23 @@ NO MAXVALUE
 CACHE 1;
 
 
-CREATE SEQUENCE system.job_id_seq
+CREATE SEQUENCE directory.data_source_id_seq
+START WITH 1
+INCREMENT BY 1
+NO MINVALUE
+NO MAXVALUE
+CACHE 1;
+
+
+CREATE SEQUENCE directory.entity_type_id_seq
+START WITH 1
+INCREMENT BY 1
+NO MINVALUE
+NO MAXVALUE
+CACHE 1;
+
+
+CREATE SEQUENCE directory.entity_id_seq
 START WITH 1
 INCREMENT BY 1
 NO MINVALUE
@@ -198,23 +206,7 @@ NO MAXVALUE
 CACHE 1;
 
 
-CREATE SEQUENCE directory.data_source_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
-
-
 CREATE SEQUENCE alias.dn_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
-
-
-CREATE SEQUENCE trend_directory.trend_id_seq
 START WITH 1
 INCREMENT BY 1
 NO MINVALUE
@@ -238,6 +230,14 @@ NO MAXVALUE
 CACHE 1;
 
 
+CREATE SEQUENCE trend_directory.trend_id_seq
+START WITH 1
+INCREMENT BY 1
+NO MINVALUE
+NO MAXVALUE
+CACHE 1;
+
+
 CREATE SEQUENCE trend_directory.materialization_id_seq
 START WITH 1
 INCREMENT BY 1
@@ -254,23 +254,7 @@ NO MAXVALUE
 CACHE 1;
 
 
-CREATE SEQUENCE trigger.rule_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
-
-
 CREATE SEQUENCE attribute_directory.attribute_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
-
-
-CREATE SEQUENCE notification_directory.set_attribute_id_seq
 START WITH 1
 INCREMENT BY 1
 NO MINVALUE
@@ -286,14 +270,6 @@ NO MAXVALUE
 CACHE 1;
 
 
-CREATE SEQUENCE notification_directory.notification_set_store_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
-
-
 CREATE SEQUENCE notification_directory.attribute_id_seq
 START WITH 1
 INCREMENT BY 1
@@ -302,7 +278,31 @@ NO MAXVALUE
 CACHE 1;
 
 
+CREATE SEQUENCE notification_directory.notification_set_store_id_seq
+START WITH 1
+INCREMENT BY 1
+NO MINVALUE
+NO MAXVALUE
+CACHE 1;
+
+
+CREATE SEQUENCE notification_directory.set_attribute_id_seq
+START WITH 1
+INCREMENT BY 1
+NO MINVALUE
+NO MAXVALUE
+CACHE 1;
+
+
 CREATE SEQUENCE entity_tag.type_id_seq
+START WITH 1
+INCREMENT BY 1
+NO MINVALUE
+NO MAXVALUE
+CACHE 1;
+
+
+CREATE SEQUENCE trigger.rule_id_seq
 START WITH 1
 INCREMENT BY 1
 NO MINVALUE
@@ -336,18 +336,18 @@ CREATE TYPE "relation_directory"."type_cardinality_enum" AS ENUM (
 
 
 CREATE TYPE "system"."version_tuple" AS (
-  "major" int2,
-  "minor" int2,
-  "patch" int2
+  "major" smallint,
+  "minor" smallint,
+  "patch" smallint
 );
 
 
 
 CREATE TYPE "system"."job_type" AS (
-  "id" int4,
+  "id" integer,
   "type" varchar,
   "description" varchar,
-  "size" int8,
+  "size" bigint,
   "config" text
 );
 
@@ -382,32 +382,16 @@ CREATE TYPE "trend_directory"."table_trend_store_part_descr" AS (
 
 
 
-CREATE TYPE "trend_directory"."transfer_result" AS (
-  "row_count" int4,
-  "max_modified" timestamptz
-);
-
-
-
-CREATE TYPE "entity_tag"."update_result" AS (
-  "staged" int8,
-  "tags_added" int8,
-  "links_added" int8,
-  "links_removed" int8
-);
-
-
-
 CREATE TYPE "trend_directory"."source_fragment" AS (
-  "trend_store_id" int4,
-  "timestamp" timestamptz
+  "trend_store_id" integer,
+  "timestamp" timestamp with time zone
 );
 
 
 
 CREATE TYPE "trend_directory"."source_fragment_state" AS (
   "fragment" trend_directory.source_fragment,
-  "modified" timestamptz
+  "modified" timestamp with time zone
 );
 
 
@@ -420,8 +404,15 @@ CREATE TYPE "trend_directory"."column_info" AS (
 
 
 CREATE TYPE "trend_directory"."upgrade_record" AS (
-  "timestamp" timestamptz,
-  "number_of_rows" int4
+  "timestamp" timestamp with time zone,
+  "number_of_rows" integer
+);
+
+
+
+CREATE TYPE "trend_directory"."transfer_result" AS (
+  "row_count" integer,
+  "max_modified" timestamp with time zone
 );
 
 
@@ -430,13 +421,6 @@ CREATE TYPE "attribute_directory"."attribute_descr" AS (
   "name" name,
   "data_type" text,
   "description" text
-);
-
-
-
-CREATE TYPE "trigger"."kpi_def" AS (
-  "name" name,
-  "data_type" name
 );
 
 
@@ -457,9 +441,25 @@ CREATE TYPE "notification_directory"."attr_def" AS (
 
 
 CREATE TYPE "entity_tag"."process_staged_links_result" AS (
-  "tags_added" int8,
-  "links_added" int8,
-  "links_removed" int8
+  "tags_added" bigint,
+  "links_added" bigint,
+  "links_removed" bigint
+);
+
+
+
+CREATE TYPE "entity_tag"."update_result" AS (
+  "staged" bigint,
+  "tags_added" bigint,
+  "links_added" bigint,
+  "links_removed" bigint
+);
+
+
+
+CREATE TYPE "trigger"."kpi_def" AS (
+  "name" name,
+  "data_type" name
 );
 
 
@@ -494,7 +494,7 @@ CREATE UNIQUE INDEX ix_directory_entity_type_name ON directory.entity_type USING
 
 CREATE TABLE "directory"."entity"
 (
-  "created" timestamptz NOT NULL,
+  "created" timestamp with time zone NOT NULL,
   "name" varchar NOT NULL,
   "entity_type_id" integer NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('directory.entity_id_seq'::regclass),
@@ -616,9 +616,9 @@ CREATE TABLE "system"."setting"
 
 CREATE TABLE "dimension"."5m"
 (
-  "timestamp" timestamptz NOT NULL,
-  "start" timestamptz,
-  "end" timestamptz,
+  "timestamp" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone,
+  "end" timestamp with time zone,
   PRIMARY KEY (timestamp)
 );
 
@@ -628,7 +628,7 @@ CREATE TABLE "directory"."entity_tag_link"
 (
   "tag_id" integer NOT NULL,
   "entity_id" integer NOT NULL,
-  PRIMARY KEY (entity_id, tag_id)
+  PRIMARY KEY (tag_id, entity_id)
 );
 
 CREATE INDEX ix_directory_entity_tag_link_entity_id ON directory.entity_tag_link USING btree (entity_id);
@@ -723,8 +723,8 @@ registered in the src_function column to populate the target trend store.';
 CREATE TABLE "trend_directory"."state"
 (
   "materialization_id" integer NOT NULL,
-  "timestamp" timestamptz NOT NULL,
-  "max_modified" timestamptz NOT NULL,
+  "timestamp" timestamp with time zone NOT NULL,
+  "max_modified" timestamp with time zone NOT NULL,
   "source_states" trend_directory.source_fragment_state[],
   "processed_states" trend_directory.source_fragment_state[],
   "job_id" integer,
@@ -763,9 +763,9 @@ the actual source data used in the views and/or functions.';
 
 CREATE TABLE "dimension"."quarter"
 (
-  "timestamp" timestamptz NOT NULL,
-  "start" timestamptz,
-  "end" timestamptz,
+  "timestamp" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone,
+  "end" timestamp with time zone,
   PRIMARY KEY (timestamp)
 );
 
@@ -773,9 +773,9 @@ CREATE TABLE "dimension"."quarter"
 
 CREATE TABLE "dimension"."four_consec_qtr"
 (
-  "timestamp" timestamptz NOT NULL,
-  "start" timestamptz,
-  "end" timestamptz,
+  "timestamp" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone,
+  "end" timestamp with time zone,
   PRIMARY KEY (timestamp)
 );
 
@@ -783,9 +783,9 @@ CREATE TABLE "dimension"."four_consec_qtr"
 
 CREATE TABLE "dimension"."week"
 (
-  "timestamp" timestamptz NOT NULL,
-  "start" timestamptz,
-  "end" timestamptz,
+  "timestamp" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone,
+  "end" timestamp with time zone,
   "year" smallint,
   "week_iso_8601" smallint,
   PRIMARY KEY (timestamp)
@@ -795,8 +795,8 @@ CREATE TABLE "dimension"."week"
 
 CREATE TABLE "dimension"."week_15m"
 (
-  "timestamp" timestamptz,
-  "timestamp_15m" timestamptz NOT NULL,
+  "timestamp" timestamp with time zone,
+  "timestamp_15m" timestamp with time zone NOT NULL,
   PRIMARY KEY (timestamp_15m)
 );
 
@@ -820,7 +820,7 @@ CREATE TABLE "trend_directory"."trend_tag_link"
 (
   "trend_id" integer NOT NULL,
   "tag_id" integer NOT NULL,
-  PRIMARY KEY (tag_id, trend_id)
+  PRIMARY KEY (trend_id, tag_id)
 );
 
 
@@ -838,8 +838,8 @@ CREATE INDEX ix_parent_target_id ON relation.parent USING btree (target_id);
 
 CREATE TABLE "dimension"."day_15m"
 (
-  "timestamp" timestamptz,
-  "timestamp_15m" timestamptz NOT NULL,
+  "timestamp" timestamp with time zone,
+  "timestamp_15m" timestamp with time zone NOT NULL,
   PRIMARY KEY (timestamp_15m)
 );
 
@@ -886,7 +886,7 @@ CREATE UNIQUE INDEX attribute_store_uniqueness ON attribute_directory.attribute_
 CREATE TABLE "attribute_directory"."attribute_store_curr_materialized"
 (
   "attribute_store_id" integer NOT NULL,
-  "materialized" timestamptz NOT NULL,
+  "materialized" timestamp with time zone NOT NULL,
   PRIMARY KEY (attribute_store_id)
 );
 
@@ -895,7 +895,7 @@ CREATE TABLE "attribute_directory"."attribute_store_curr_materialized"
 CREATE TABLE "attribute_directory"."attribute_store_compacted"
 (
   "attribute_store_id" integer NOT NULL,
-  "compacted" timestamptz NOT NULL,
+  "compacted" timestamp with time zone NOT NULL,
   PRIMARY KEY (attribute_store_id)
 );
 
@@ -904,7 +904,7 @@ CREATE TABLE "attribute_directory"."attribute_store_compacted"
 CREATE TABLE "attribute_directory"."attribute_store_modified"
 (
   "attribute_store_id" integer NOT NULL,
-  "modified" timestamptz NOT NULL,
+  "modified" timestamp with time zone NOT NULL,
   PRIMARY KEY (attribute_store_id)
 );
 
@@ -964,7 +964,7 @@ CREATE TABLE "trend_directory"."partition"
 (
   "table_trend_store_part_id" integer NOT NULL,
   "index" integer NOT NULL,
-  PRIMARY KEY (index, table_trend_store_part_id)
+  PRIMARY KEY (table_trend_store_part_id, index)
 );
 
 
@@ -972,9 +972,9 @@ CREATE TABLE "trend_directory"."partition"
 CREATE TABLE "trend_directory"."modified"
 (
   "table_trend_store_part_id" integer NOT NULL,
-  "timestamp" timestamptz NOT NULL,
-  "start" timestamptz NOT NULL,
-  "end" timestamptz NOT NULL,
+  "timestamp" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone NOT NULL,
+  "end" timestamp with time zone NOT NULL,
   PRIMARY KEY (table_trend_store_part_id, timestamp)
 );
 
@@ -982,9 +982,9 @@ CREATE TABLE "trend_directory"."modified"
 
 CREATE TABLE "dimension"."day"
 (
-  "timestamp" timestamptz NOT NULL,
-  "start" timestamptz,
-  "end" timestamptz,
+  "timestamp" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone,
+  "end" timestamp with time zone,
   PRIMARY KEY (timestamp)
 );
 
@@ -1070,19 +1070,19 @@ CREATE UNIQUE INDEX alias_type_name_lower_idx ON alias_directory.alias_type USIN
 CREATE TABLE "trigger"."exception_base"
 (
   "entity_id" integer,
-  "start" timestamptz,
-  "expires" timestamptz,
+  "start" timestamp with time zone,
+  "expires" timestamp with time zone,
   "id" integer NOT NULL DEFAULT nextval('trigger.exception_base_id_seq'::regclass),
-  "created" timestamptz DEFAULT now()
+  "created" timestamp with time zone DEFAULT now()
 );
 
 
 
 CREATE TABLE "dimension"."month"
 (
-  "timestamp" timestamptz NOT NULL,
-  "start" timestamptz,
-  "end" timestamptz,
+  "timestamp" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone,
+  "end" timestamp with time zone,
   PRIMARY KEY (timestamp)
 );
 
@@ -1126,8 +1126,8 @@ CREATE TABLE "trend_directory"."view_trend"
 
 CREATE TABLE "dimension"."month_15m"
 (
-  "timestamp" timestamptz,
-  "timestamp_15m" timestamptz NOT NULL,
+  "timestamp" timestamp with time zone,
+  "timestamp_15m" timestamp with time zone NOT NULL,
   PRIMARY KEY (timestamp_15m)
 );
 
@@ -1137,9 +1137,9 @@ CREATE INDEX month_15m_timestamp_idx ON dimension.month_15m USING btree ("timest
 
 CREATE TABLE "dimension"."hour"
 (
-  "timestamp" timestamptz NOT NULL,
-  "start" timestamptz,
-  "end" timestamptz,
+  "timestamp" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone,
+  "end" timestamp with time zone,
   PRIMARY KEY (timestamp)
 );
 
@@ -1163,10 +1163,10 @@ CREATE TABLE "system"."job"
   "type" varchar NOT NULL,
   "description" json NOT NULL,
   "size" bigint NOT NULL,
-  "started" timestamptz,
-  "finished" timestamptz,
+  "started" timestamp with time zone,
+  "finished" timestamp with time zone,
   "job_source_id" integer NOT NULL,
-  "created" timestamptz NOT NULL DEFAULT now(),
+  "created" timestamp with time zone NOT NULL DEFAULT now(),
   "state" system.job_state_enum NOT NULL DEFAULT 'queued'::system.job_state_enum,
   "id" integer NOT NULL DEFAULT nextval('system.job_id_seq'::regclass),
   PRIMARY KEY (id)
@@ -1183,7 +1183,7 @@ CREATE TABLE "system"."job_queue"
 
 
 CREATE FUNCTION "trend_directory"."get_default_partition_size"("granularity" interval)
-    RETURNS int4
+    RETURNS integer
 AS $$
 SELECT CASE $1
         WHEN '300'::interval THEN
@@ -1206,7 +1206,7 @@ SELECT CASE $1
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION "trigger"."tag"("tag_name" varchar, "rule_id" int4)
+CREATE FUNCTION "trigger"."tag"("tag_name" varchar, "rule_id" integer)
     RETURNS trigger.rule_tag_link
 AS $$
 INSERT INTO trigger.rule_tag_link (rule_id, tag_id)
@@ -1228,7 +1228,7 @@ SELECT EXISTS(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "directory"."update_denormalized_entity_tags"("entity_id" int4)
+CREATE FUNCTION "directory"."update_denormalized_entity_tags"("entity_id" integer)
     RETURNS directory.entity_tag_link_denorm
 AS $$
 DELETE FROM directory.entity_tag_link_denorm WHERE entity_id = $1;
@@ -1281,15 +1281,6 @@ INSERT INTO directory.entity_tag_link(tag_id, entity_id)
     WHERE entity_tag_link.entity_id IS NULL;
 
     SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."store_modified"("attribute_store_id" int4, "modified" timestamptz)
-    RETURNS attribute_directory.attribute_store_modified
-AS $$
-INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
-    VALUES ($1, $2)
-    RETURNING attribute_store_modified;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -1350,7 +1341,7 @@ SELECT format('DROP VIEW trigger_rule.%I CASCADE', "trigger".kpi_view_name($1));
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trend_directory"."partition_exists"(trend_directory.table_trend_store_part, int4)
+CREATE FUNCTION "trend_directory"."partition_exists"(trend_directory.table_trend_store_part, integer)
     RETURNS bool
 AS $$
 SELECT count(*) = 1
@@ -1359,18 +1350,7 @@ SELECT count(*) = 1
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."store_modified"("table_trend_store_part_id" int4, "timestamp" timestamptz, "modified" timestamptz)
-    RETURNS trend_directory.modified
-AS $$
-INSERT INTO trend_directory.modified(
-        table_trend_store_part_id, "timestamp", start, "end"
-    ) VALUES (
-        $1, $2, $3, $3
-    ) RETURNING modified;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "directory"."get_entity_by_id"(int4)
+CREATE FUNCTION "directory"."get_entity_by_id"(integer)
     RETURNS directory.entity
 AS $$
 SELECT * FROM directory.entity WHERE id = $1;
@@ -1460,16 +1440,6 @@ SELECT $1.name::text;
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION "attribute_directory"."update_curr_materialized"("attribute_store_id" int4, "materialized" timestamptz)
-    RETURNS attribute_directory.attribute_store_curr_materialized
-AS $$
-UPDATE attribute_directory.attribute_store_curr_materialized
-    SET materialized = greatest(materialized, $2)
-    WHERE attribute_store_id = $1
-    RETURNING attribute_store_curr_materialized;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "trigger"."get_kpi_view_sql"(trigger.rule)
     RETURNS text
 AS $$
@@ -1504,8 +1474,8 @@ SELECT dependee.relname AS name
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "attribute_directory"."dependers"("name" name, "level" int4)
-    RETURNS TABLE("name" name, "level" int4)
+CREATE FUNCTION "attribute_directory"."dependers"("name" name, "level" integer)
+    RETURNS TABLE("name" name, "level" integer)
 AS $$
 SELECT (d.dependers).* FROM (
         SELECT attribute_directory.dependers(depender, $2 + 1)
@@ -1528,7 +1498,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "trend_directory"."delete_obsolete_state"()
-    RETURNS int4
+    RETURNS integer
 AS $$
 DECLARE
     count integer;
@@ -1615,25 +1585,15 @@ SELECT required
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "attribute_directory"."update_modified"("attribute_store_id" int4, "modified" timestamptz)
-    RETURNS attribute_directory.attribute_store_modified
-AS $$
-UPDATE attribute_directory.attribute_store_modified
-    SET modified = greatest(modified, $2)
-    WHERE attribute_store_id = $1
-    RETURNING attribute_store_modified;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."index_to_timestamp"("partition_size" int4, "index" int4)
-    RETURNS timestamptz
+CREATE FUNCTION "trend_directory"."index_to_timestamp"("partition_size" integer, "index" integer)
+    RETURNS timestamp with time zone
 AS $$
 SELECT to_timestamp($1 * $2 + 1);
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
 CREATE FUNCTION "relation_directory"."materialize_relation"("type" relation_directory.type)
-    RETURNS int4
+    RETURNS integer
 AS $$
 DECLARE
     result integer;
@@ -1658,7 +1618,7 @@ SELECT format(
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trend_directory"."define_table_trend"("trend_store_part_id" int4, "name" name, "data_type" text, "description" text)
+CREATE FUNCTION "trend_directory"."define_table_trend"("trend_store_part_id" integer, "name" name, "data_type" text, "description" text)
     RETURNS trend_directory.table_trend
 AS $$
 INSERT INTO trend_directory.table_trend (trend_store_part_id, name, data_type, description)
@@ -1674,7 +1634,7 @@ SELECT $1;
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION "system"."define_job"("type" varchar, "description" json, "size" int8, "job_source_id" int4)
+CREATE FUNCTION "system"."define_job"("type" varchar, "description" json, "size" bigint, "job_source_id" integer)
     RETURNS system.job
 AS $$
 INSERT INTO system.job(
@@ -1685,15 +1645,15 @@ INSERT INTO system.job(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "system"."finish_job"("job_id" int4)
+CREATE FUNCTION "system"."finish_job"("job_id" integer)
     RETURNS void
 AS $$
 UPDATE system.job SET state = 'finished', finished = NOW() WHERE system.job.id = $1;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "directory"."tag_entity"("entity_id" int4, "tag" text)
-    RETURNS int4
+CREATE FUNCTION "directory"."tag_entity"("entity_id" integer, "tag" text)
+    RETURNS integer
 AS $$
 INSERT INTO directory.entity_tag_link(tag_id, entity_id)
     SELECT id, $1
@@ -1746,7 +1706,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."get_attribute_store"("data_source_id" int4, "entity_type_id" int4)
+CREATE FUNCTION "attribute_directory"."get_attribute_store"("data_source_id" integer, "entity_type_id" integer)
     RETURNS attribute_directory.attribute_store
 AS $$
 SELECT attribute_store
@@ -1762,7 +1722,7 @@ SELECT 'trend'::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trend_directory"."get_trend_store"("id" int4)
+CREATE FUNCTION "trend_directory"."get_trend_store"("id" integer)
     RETURNS trend_directory.trend_store
 AS $$
 SELECT * FROM trend_directory.trend_store WHERE id = $1
@@ -1819,7 +1779,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "trend_directory"."data_start"(trend_directory.partition)
-    RETURNS timestamptz
+    RETURNS timestamp with time zone
 AS $$
 SELECT trend_directory.index_to_timestamp(
         (trend_directory.table_trend_store(trend_directory.table_trend_store_part($1))).partition_size, $1.index
@@ -1870,7 +1830,7 @@ WHERE proname = trigger.weight_fn_name($1);
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "alias_directory"."get_alias"("entity_id" int4, "alias_type_name" text)
+CREATE FUNCTION "alias_directory"."get_alias"("entity_id" integer, "alias_type_name" text)
     RETURNS text
 AS $$
 DECLARE
@@ -1903,7 +1863,7 @@ $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trend_directory"."create_base_table_sql"("name" text, trend_directory.trend[])
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format(
@@ -2033,8 +1993,8 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "public"."smallint_to_timestamp_without_time_zone"(int2)
-    RETURNS timestamp
+CREATE FUNCTION "public"."smallint_to_timestamp_without_time_zone"(smallint)
+    RETURNS timestamp without time zone
 AS $$
 BEGIN
     RETURN NULL;
@@ -2065,7 +2025,7 @@ $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trigger"."create_kpi_view_sql"(trigger.rule, "sql" text)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     trigger.kpi_view_sql($1, $2),
@@ -2114,7 +2074,7 @@ SELECT setting FROM system.setting WHERE name = $1;
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION "trend_directory"."define_view_trend"("trend_store_part_id" int4, "name" name, "data_type" text, "description" text)
+CREATE FUNCTION "trend_directory"."define_view_trend"("trend_store_part_id" integer, "name" name, "data_type" text, "description" text)
     RETURNS trend_directory.view_trend
 AS $$
 INSERT INTO trend_directory.view_trend (trend_store_part_id, name, data_type, description)
@@ -2123,7 +2083,7 @@ INSERT INTO trend_directory.view_trend (trend_store_part_id, name, data_type, de
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "system"."fail_job"("job_id" int4)
+CREATE FUNCTION "system"."fail_job"("job_id" integer)
     RETURNS void
 AS $$
 UPDATE system.job SET state = 'failed', finished = NOW() WHERE system.job.id = $1;
@@ -2147,30 +2107,11 @@ TRUNCATE dimension.day_15m;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."store_compacted"("attribute_store_id" int4, "compacted" timestamptz)
-    RETURNS attribute_directory.attribute_store_compacted
-AS $$
-INSERT INTO attribute_directory.attribute_store_compacted (attribute_store_id, compacted)
-    VALUES ($1, $2)
-    RETURNING attribute_store_compacted;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "directory"."entity_id"(directory.entity)
-    RETURNS int4
+    RETURNS integer
 AS $$
 SELECT $1.id;
 $$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "trend_directory"."update_modified"("table_trend_store_part_id" int4, "timestamp" timestamptz, "modified" timestamptz)
-    RETURNS trend_directory.modified
-AS $$
-UPDATE trend_directory.modified
-    SET "end" = greatest("end", $3)
-    WHERE "timestamp" = $2 AND table_trend_store_part_id = $1
-    RETURNING modified;
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "notification_directory"."to_char"(notification_directory.notification_store)
@@ -2183,7 +2124,7 @@ $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE FUNCTION "entity_tag"."create_view_sql"("type_name" name, "sql" text)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format('CREATE VIEW entity_tag.%I AS %s;', type_name, sql),
@@ -2274,7 +2215,7 @@ $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trigger"."create_rule_view_sql"(trigger.rule, "rule_view_sql" text)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format('CREATE OR REPLACE VIEW trigger_rule.%I AS %s', trigger.rule_view_name($1), $2),
@@ -2300,7 +2241,7 @@ $function$,
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trigger"."action"(anyelement, "sql" _text)
+CREATE FUNCTION "trigger"."action"(anyelement, "sql" text[])
     RETURNS anyelement
 AS $$
 DECLARE
@@ -2322,7 +2263,7 @@ SELECT 'trend_partition'::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "system"."fail_job"("job_id" int4, "message" text)
+CREATE FUNCTION "system"."fail_job"("job_id" integer, "message" text)
     RETURNS void
 AS $$
 UPDATE system.job SET state = 'failed', finished = NOW() WHERE system.job.id = $1;
@@ -2340,32 +2281,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."store_curr_materialized"("attribute_store_id" int4, "materialized" timestamptz)
-    RETURNS attribute_directory.attribute_store_curr_materialized
-AS $$
-INSERT INTO attribute_directory.attribute_store_curr_materialized (attribute_store_id, materialized)
-    VALUES ($1, $2)
-    RETURNING attribute_store_curr_materialized;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."mark_curr_materialized"("attribute_store_id" int4, "materialized" timestamptz)
-    RETURNS attribute_directory.attribute_store_curr_materialized
-AS $$
-SELECT COALESCE(attribute_directory.update_curr_materialized($1, $2), attribute_directory.store_curr_materialized($1, $2));
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."mark_curr_materialized"("attribute_store_id" int4)
-    RETURNS attribute_directory.attribute_store_curr_materialized
-AS $$
-SELECT attribute_directory.mark_curr_materialized(attribute_store_id, modified)
-    FROM attribute_directory.attribute_store_modified
-    WHERE attribute_store_id = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "system"."set_version"(int4, int4, int4)
+CREATE FUNCTION "system"."set_version"(integer, integer, integer)
     RETURNS system.version_tuple
 AS $$
 SELECT system.set_version(($1, $2, $3)::system.version_tuple);
@@ -2379,7 +2295,7 @@ SELECT ($1.name || '_set_thresholds')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "notification_directory"."define_notification_set_store"("name" name, "notification_store_id" int4)
+CREATE FUNCTION "notification_directory"."define_notification_set_store"("name" name, "notification_store_id" integer)
     RETURNS notification_directory.notification_set_store
 AS $$
 INSERT INTO notification_directory.notification_set_store(name, notification_store_id)
@@ -2430,7 +2346,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."data_end"(trend_directory.partition)
-    RETURNS timestamptz
+    RETURNS timestamp with time zone
 AS $$
 SELECT trend_directory.index_to_timestamp(
         (trend_directory.table_trend_store(trend_directory.table_trend_store_part($1))).partition_size, $1.index + 1
@@ -2438,7 +2354,7 @@ SELECT trend_directory.index_to_timestamp(
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."define_table_trend_store_part"("table_trend_store_id" int4, "name" name)
+CREATE FUNCTION "trend_directory"."define_table_trend_store_part"("table_trend_store_id" integer, "name" name)
     RETURNS trend_directory.table_trend_store_part
 AS $$
 INSERT INTO trend_directory.table_trend_store_part (trend_store_id, name)
@@ -2447,7 +2363,7 @@ INSERT INTO trend_directory.table_trend_store_part (trend_store_id, name)
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."define_table_trend_store_part"("table_trend_store_id" int4, "name" name, "trends" trend_directory.trend_descr[])
+CREATE FUNCTION "trend_directory"."define_table_trend_store_part"("table_trend_store_id" integer, "name" name, "trends" trend_directory.trend_descr[])
     RETURNS trend_directory.table_trend_store_part
 AS $$
 SELECT trend_directory.define_table_trends(
@@ -2473,32 +2389,6 @@ INSERT INTO system.setting (name, value) VALUES ($1, $2) RETURNING setting;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE FUNCTION "attribute_directory"."update_compacted"("attribute_store_id" int4, "compacted" timestamptz)
-    RETURNS attribute_directory.attribute_store_compacted
-AS $$
-UPDATE attribute_directory.attribute_store_compacted
-    SET compacted = greatest(compacted, $2)
-    WHERE attribute_store_id = $1
-    RETURNING attribute_store_compacted;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."mark_compacted"("attribute_store_id" int4, "compacted" timestamptz)
-    RETURNS attribute_directory.attribute_store_compacted
-AS $$
-SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_directory.store_compacted($1, $2));
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."mark_compacted"("attribute_store_id" int4)
-    RETURNS attribute_directory.attribute_store_compacted
-AS $$
-SELECT attribute_directory.mark_compacted(attribute_store_id, modified)
-    FROM attribute_directory.attribute_store_modified
-    WHERE attribute_store_id = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "trend_directory"."to_char"(trend_directory.materialization)
     RETURNS text
 AS $$
@@ -2508,7 +2398,7 @@ SELECT table_trend_store::name::text
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION "trend_directory"."define_partition"("trend_store_part" trend_directory.table_trend_store_part, "index" int4)
+CREATE FUNCTION "trend_directory"."define_partition"("trend_store_part" trend_directory.table_trend_store_part, "index" integer)
     RETURNS trend_directory.partition
 AS $$
 INSERT INTO trend_directory.partition(
@@ -2575,7 +2465,7 @@ $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE FUNCTION "trend_directory"."add_new_state"()
-    RETURNS int4
+    RETURNS integer
 AS $$
 DECLARE
     count integer;
@@ -2602,55 +2492,6 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."truncate"(timestamptz, interval)
-    RETURNS timestamptz
-AS $$
-SELECT CASE
-        WHEN $2 = '1 day' THEN
-            date_trunc('day', $1)
-        WHEN $2 = '1 week' THEN
-            date_trunc('week', $1)
-        ELSE
-            to_timestamp((
-                extract(epoch FROM $1)::integer / extract(epoch FROM $2)::integer
-            )::integer * extract(epoch FROM $2))
-        END;
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "trend_directory"."mark_modified"("table_trend_store_part_id" int4, "timestamp" timestamptz, "modified" timestamptz)
-    RETURNS trend_directory.modified
-AS $$
-SELECT COALESCE(
-        trend_directory.update_modified($1, $2, $3),
-        trend_directory.store_modified($1, $2, $3)
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."populate_modified"("partition" trend_directory.partition)
-    RETURNS SETOF trend_directory.modified
-AS $$
-BEGIN
-    RETURN QUERY EXECUTE format(
-        'SELECT (trend_directory.mark_modified($1, "timestamp", max(modified))).* '
-        'FROM trend_directory.%I GROUP BY timestamp',
-        partition.trend_store_id, partition.table_name
-    );
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."populate_modified"(trend_directory.table_trend_store_part)
-    RETURNS SETOF trend_directory.modified
-AS $$
-SELECT
-        trend_directory.populate_modified(partition)
-    FROM trend_directory.partition
-    WHERE table_trend_store_part_id = $1.id;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "alias_directory"."define_alias_type"("name" name)
     RETURNS alias_directory.alias_type
 AS $$
@@ -2659,7 +2500,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."dependers"("name" name)
-    RETURNS TABLE("name" name, "level" int4)
+    RETURNS TABLE("name" name, "level" integer)
 AS $$
 SELECT * FROM attribute_directory.dependers($1, 1);
 $$ LANGUAGE sql STABLE;
@@ -2695,13 +2536,6 @@ CREATE FUNCTION "system"."set_setting"("name" text, "value" text)
 AS $$
 SELECT COALESCE(system.update_setting($1, $2), system.add_setting($1, $2));
 $$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" int4, "modified" timestamptz)
-    RETURNS attribute_directory.attribute_store_modified
-AS $$
-SELECT COALESCE(attribute_directory.update_modified($1, $2), attribute_directory.store_modified($1, $2));
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trigger"."notification_fn_name"(trigger.rule)
@@ -2747,8 +2581,8 @@ SELECT format('DROP TABLE IF EXISTS trigger_rule.%I', trigger.exception_weight_t
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "public"."smallint_to_timestamp_with_time_zone"(int2)
-    RETURNS timestamptz
+CREATE FUNCTION "public"."smallint_to_timestamp_with_time_zone"(smallint)
+    RETURNS timestamp with time zone
 AS $$
 BEGIN
     RETURN NULL;
@@ -2815,54 +2649,6 @@ SELECT format(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."get_most_recent_timestamp"("dest_granularity" interval, "ts" timestamptz)
-    RETURNS timestamptz
-AS $$
-DECLARE
-    minute integer;
-    rounded_minutes integer;
-BEGIN
-    IF dest_granularity < '1 hour'::interval THEN
-        minute := extract(minute FROM ts);
-        rounded_minutes := minute - (minute % (dest_granularity / 60));
-
-        return date_trunc('hour', ts) + (rounded_minutes || 'minutes')::INTERVAL;
-    ELSIF dest_granularity = '1 hour'::interval THEN
-        return date_trunc('hour', ts);
-    ELSIF dest_granularity = '1 day'::interval THEN
-        return date_trunc('day', ts);
-    ELSIF dest_granularity = '1 week'::interval THEN
-        return date_trunc('week', ts);
-    ELSE
-        RAISE EXCEPTION 'Invalid granularity: %', dest_granularity;
-    END IF;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
-
-CREATE FUNCTION "trend_directory"."get_most_recent_timestamp"("dest_granularity" varchar, "ts" timestamptz)
-    RETURNS timestamptz
-AS $$
-DECLARE
-    minute integer;
-    rounded_minutes integer;
-    seconds integer;
-BEGIN
-    IF trend_directory.is_integer(dest_granularity) THEN
-        seconds = cast(dest_granularity as integer);
-
-        return trend_directory.get_most_recent_timestamp(seconds, ts);
-    ELSIF dest_granularity = 'month' THEN
-        return date_trunc('month', ts);
-    ELSE
-        RAISE EXCEPTION 'Invalid granularity: %', dest_granularity;
-    END IF;
-
-    return seconds;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
-
 CREATE FUNCTION "trigger"."create_notification_fn_sql"(trigger.rule, "expression" text)
     RETURNS text
 AS $$
@@ -2921,7 +2707,7 @@ SELECT table_trend
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."get_partition"("trend_store_part" trend_directory.table_trend_store_part, "index" int4)
+CREATE FUNCTION "trend_directory"."get_partition"("trend_store_part" trend_directory.table_trend_store_part, "index" integer)
     RETURNS trend_directory.partition
 AS $$
 SELECT partition
@@ -2941,36 +2727,11 @@ SELECT format(
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."get_trends_for_trend_store_part"("trend_store_part_id" int4)
+CREATE FUNCTION "trend_directory"."get_trends_for_trend_store_part"("trend_store_part_id" integer)
     RETURNS SETOF trend_directory.trend
 AS $$
 SELECT * FROM trend_directory.trend WHERE trend.trend_store_part_id = $1;
 $$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "trend_directory"."get_timestamp_for"("granularity" varchar, "ts" timestamptz)
-    RETURNS timestamptz
-AS $$
-DECLARE
-    most_recent_timestamp timestamp with time zone;
-BEGIN
-    most_recent_timestamp = trend_directory.get_most_recent_timestamp($1, $2);
-
-    IF most_recent_timestamp != ts THEN
-        IF trend_directory.is_integer(granularity) THEN
-            IF granularity = '86400' THEN
-                return most_recent_timestamp + ('1 day')::INTERVAL;
-            ELSE
-                return most_recent_timestamp + ($1 || ' seconds')::INTERVAL;
-            END IF;
-        ELSIF granularity = 'month' THEN
-            return most_recent_timestamp + '1 month'::INTERVAL;
-        END IF;
-    ELSE
-        return most_recent_timestamp;
-    END IF;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
 
 
 CREATE FUNCTION "trigger"."drop_notification_fn_sql"(trigger.rule)
@@ -2980,7 +2741,7 @@ SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.notifica
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "alias_directory"."create_alias"("entity_id" int4, "alias_type_name" text, "alias" text)
+CREATE FUNCTION "alias_directory"."create_alias"("entity_id" integer, "alias_type_name" text, "alias" text)
     RETURNS text
 AS $$
 BEGIN
@@ -3011,7 +2772,7 @@ SELECT array_agg(arr / $2) FROM
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION "directory"."array_to_dn_part"(_text)
+CREATE FUNCTION "directory"."array_to_dn_part"(text[])
     RETURNS directory.dn_part
 AS $$
 SELECT CAST(ROW($1[1], $1[2]) AS directory.dn_part);
@@ -3048,8 +2809,8 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "public"."integer_to_array"("value" int4)
-    RETURNS _int4
+CREATE FUNCTION "public"."integer_to_array"("value" integer)
+    RETURNS integer[]
 AS $$
 BEGIN
     RETURN ARRAY[value];
@@ -3057,28 +2818,7 @@ END;
 $$ LANGUAGE plpgsql STABLE STRICT;
 
 
-CREATE FUNCTION "trend_directory"."timestamp_to_index"("partition_size" int4, "timestamp" timestamptz)
-    RETURNS int4
-AS $$
-DECLARE
-    unix_timestamp integer;
-    div integer;
-    modulo integer;
-BEGIN
-    unix_timestamp = extract(EPOCH FROM "timestamp")::integer;
-    div = unix_timestamp / partition_size;
-    modulo = mod(unix_timestamp, partition_size);
-
-    IF modulo > 0 THEN
-        return div;
-    ELSE
-        return div - 1;
-    END IF;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION "system"."get_job_source"(int4)
+CREATE FUNCTION "system"."get_job_source"(integer)
     RETURNS system.job_source
 AS $$
 SELECT * FROM system.job_source WHERE id = $1;
@@ -3086,7 +2826,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."base_columns"()
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         'entity_id integer NOT NULL',
@@ -3096,7 +2836,7 @@ $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "attribute_directory"."column_specs"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT attribute_directory.base_columns() || array_agg(format('%I %s', name, data_type))
     FROM attribute_directory.attribute
@@ -3196,17 +2936,6 @@ SELECT 'trend'::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trigger"."timestamps"(trigger.rule)
-    RETURNS SETOF timestamptz
-AS $$
-SELECT generate_series(
-        trigger.truncate(now(), $1.granularity),
-        trigger.truncate(now(), $1.granularity) - $1.default_interval,
-        - $1.granularity
-    );
-$$ LANGUAGE sql STABLE;
-
-
 CREATE FUNCTION "alias_directory"."alias_schema"()
     RETURNS name
 AS $$
@@ -3214,7 +2943,7 @@ SELECT 'alias'::name;
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."show_trends"("trend_store_part_id" int4)
+CREATE FUNCTION "trend_directory"."show_trends"("trend_store_part_id" integer)
     RETURNS SETOF trend_directory.trend_descr
 AS $$
 SELECT trend_directory.show_trends(trend_store_part)
@@ -3250,7 +2979,7 @@ SELECT ns
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "notification_directory"."define_notification_store"("data_source_id" int4)
+CREATE FUNCTION "notification_directory"."define_notification_store"("data_source_id" integer)
     RETURNS notification_directory.notification_store
 AS $$
 INSERT INTO notification_directory.notification_store(data_source_id)
@@ -3291,7 +3020,7 @@ INSERT INTO trend_directory.view_trend_store (
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."define_table_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" int4)
+CREATE FUNCTION "trend_directory"."define_table_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" integer)
     RETURNS trend_directory.table_trend_store
 AS $$
 INSERT INTO trend_directory.table_trend_store (
@@ -3319,7 +3048,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "alias_directory"."initialize_alias_type_sql"(alias_directory.alias_type)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -3402,7 +3131,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "trend_directory"."create_view_sql"(trend_directory.view_trend_store_part, "sql" text)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format('CREATE VIEW %I.%I AS %s;', trend_directory.view_schema(), trend_directory.view_name($1), $2),
@@ -3426,8 +3155,8 @@ SELECT
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "public"."smallint_to_array"("value" int2)
-    RETURNS _int2
+CREATE FUNCTION "public"."smallint_to_array"("value" smallint)
+    RETURNS smallint[]
 AS $$
 BEGIN
     RETURN ARRAY[value];
@@ -3435,7 +3164,7 @@ END;
 $$ LANGUAGE plpgsql STABLE STRICT;
 
 
-CREATE FUNCTION "attribute_directory"."requires_compacting"("attribute_store_id" int4)
+CREATE FUNCTION "attribute_directory"."requires_compacting"("attribute_store_id" integer)
     RETURNS bool
 AS $$
 SELECT modified <> compacted OR compacted IS NULL
@@ -3457,25 +3186,6 @@ CREATE FUNCTION "trend_directory"."base_table_name"(trend_directory.table_trend_
 AS $$
 SELECT trend_directory.base_object_name($1);
 $$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION "trend_directory"."clear"(trend_directory.table_trend_store_part, timestamptz)
-    RETURNS int4
-AS $$
-DECLARE
-    row_count integer;
-BEGIN
-    EXECUTE format(
-        'DELETE FROM %I.%I WHERE timestamp = $1',
-        trend_directory.base_table_schema(),
-        trend_directory.base_table_name($1)
-    ) USING $2;
-
-    GET DIAGNOSTICS row_count = ROW_COUNT;
-
-    RETURN row_count;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."staging_table_name"(trend_directory.table_trend_store_part)
@@ -3525,7 +3235,7 @@ $$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."staged_timestamps"("trend_store_part" trend_directory.table_trend_store_part)
-    RETURNS SETOF timestamptz
+    RETURNS SETOF timestamp with time zone
 AS $$
 BEGIN
     RETURN QUERY EXECUTE format(
@@ -3533,22 +3243,6 @@ BEGIN
         trend_directory.staging_table_schema(),
         trend_directory.staging_table_name(trend_store_part)
     );
-END;
-$$ LANGUAGE plpgsql STABLE;
-
-
-CREATE FUNCTION "trend_directory"."get_max_modified"(trend_directory.trend_store, timestamptz)
-    RETURNS timestamptz
-AS $$
-DECLARE
-    max_modified timestamp with time zone;
-BEGIN
-    EXECUTE format(
-        'SELECT max(modified) FROM trend_directory.%I WHERE timestamp = $1',
-        trend_directory.base_table_name($1)
-    ) INTO max_modified USING $2;
-
-    RETURN max_modified;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
@@ -3586,7 +3280,7 @@ $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
 CREATE FUNCTION "trend_directory"."update_modified_state"()
-    RETURNS int4
+    RETURNS integer
 AS $$
 DECLARE
     count integer;
@@ -3614,37 +3308,6 @@ SELECT 'added: ' || trend_directory.add_new_state() || ', updated: ' || trend_di
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."mark_modified"("table_trend_store_id" int4, "timestamp" timestamptz)
-    RETURNS trend_directory.modified
-AS $$
-SELECT COALESCE(
-        trend_directory.update_modified($1, $2, now()),
-        trend_directory.store_modified($1, $2, now())
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."get_timestamp_for"("granularity" interval, "ts" timestamptz)
-    RETURNS timestamptz
-AS $$
-DECLARE
-    most_recent_timestamp timestamp with time zone;
-BEGIN
-    most_recent_timestamp = trend_directory.get_most_recent_timestamp($1, $2);
-
-    IF most_recent_timestamp != ts THEN
-        IF granularity = 86400 THEN
-            return most_recent_timestamp + ('1 day')::INTERVAL;
-        ELSE
-            return most_recent_timestamp + ($1 || ' seconds')::INTERVAL;
-        END IF;
-    ELSE
-        return most_recent_timestamp;
-    END IF;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
-
 CREATE FUNCTION "public"."safe_division"("numerator" anyelement, "denominator" anyelement)
     RETURNS anyelement
 AS $$
@@ -3667,16 +3330,6 @@ SELECT
             $1.src_view::oid
         );
 $$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "system"."remove_jobs"("before" timestamptz, "max" int8 DEFAULT 100000)
-    RETURNS int8
-AS $$
-WITH deleted AS (
-        DELETE FROM system.job WHERE id IN (SELECT id FROM system.job WHERE created < $1 ORDER BY created ASC LIMIT $2) RETURNING *
-    )
-    SELECT count(*) FROM deleted;
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."delete_table_trend_store"("name" name)
@@ -3746,39 +3399,6 @@ TRUNCATE dimension.day;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" int4)
-    RETURNS attribute_directory.attribute_store_modified
-AS $$
-SELECT CASE
-        WHEN current_setting('minerva.trigger_mark_modified') = 'off' THEN
-            (SELECT asm FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1)
-
-        ELSE
-            attribute_directory.mark_modified($1, now())
-
-        END;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_trigger_function_sql"(attribute_directory.attribute_store)
-    RETURNS _text
-AS $function$
-SELECT ARRAY[
-    format('CREATE FUNCTION attribute_history.mark_modified_%s()
-RETURNS TRIGGER
-AS $$
-BEGIN
-    PERFORM attribute_directory.mark_modified(%s);
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql', $1.id, $1.id),
-    format('ALTER FUNCTION attribute_history.mark_modified_%s()
-        OWNER TO minerva_writer', $1.id)
-];
-$function$ LANGUAGE sql STABLE;
-
-
 CREATE FUNCTION "notification_directory"."table_name"(notification_directory.notification_store)
     RETURNS name
 AS $$
@@ -3789,7 +3409,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "notification_directory"."create_table_sql"(notification_directory.notification_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -3876,7 +3496,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "notification_directory"."create_notification_set_store"("name" name, "notification_store_id" int4)
+CREATE FUNCTION "notification_directory"."create_notification_set_store"("name" name, "notification_store_id" integer)
     RETURNS notification_directory.notification_set_store
 AS $$
 SELECT notification_directory.init_notification_set_store(
@@ -3927,7 +3547,7 @@ SELECT format('DROP TYPE IF EXISTS trigger_rule.%I', trigger.notification_type_n
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "attribute_directory"."define_attribute_store"("data_source_id" int4, "entity_type_id" int4)
+CREATE FUNCTION "attribute_directory"."define_attribute_store"("data_source_id" integer, "entity_type_id" integer)
     RETURNS attribute_directory.attribute_store
 AS $$
 INSERT INTO attribute_directory.attribute_store(data_source_id, entity_type_id)
@@ -3953,7 +3573,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "relation_directory"."create_relation_table_sql"(relation_directory.type)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -4087,7 +3707,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "directory"."entity_type_id"(directory.entity_type)
-    RETURNS int4
+    RETURNS integer
 AS $$
 SELECT $1.id;
 $$ LANGUAGE sql VOLATILE STRICT;
@@ -4101,7 +3721,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."data_type_order"("data_type" text)
-    RETURNS int4
+    RETURNS integer
 AS $$
 BEGIN
     CASE data_type
@@ -4194,7 +3814,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "notification_directory"."create_staging_table_sql"(notification_directory.notification_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -4249,7 +3869,7 @@ $$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trigger"."transfer_notifications_from_staging"(notification_directory.notification_store)
-    RETURNS int4
+    RETURNS integer
 AS $$
 DECLARE
     num_rows integer;
@@ -4273,30 +3893,8 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, notification_directory.notification_store, timestamptz)
-    RETURNS int4
-AS $$
-DECLARE
-    num_rows integer;
-BEGIN
-    EXECUTE format(
-$query$
-INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
-(SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I WHERE timestamp = $2)
-$query$,
-        notification_directory.staging_table_name($2), trigger.notification_view_name($1)
-    )
-    USING $1.id, $3;
-
-    SELECT trigger.transfer_notifications_from_staging($2) INTO num_rows;
-
-    RETURN num_rows;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, notification_directory.notification_store, interval)
-    RETURNS int4
+    RETURNS integer
 AS $$
 DECLARE
     num_rows integer;
@@ -4334,7 +3932,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."create_staging_table_sql"(trend_directory.table_trend_store_part)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format(
@@ -4391,7 +3989,7 @@ SELECT notification_directory.define_attribute($1, name, data_type, description)
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "notification_directory"."define_notification_store"("data_source_id" int4, notification_directory.attr_def[])
+CREATE FUNCTION "notification_directory"."define_notification_store"("data_source_id" integer, notification_directory.attr_def[])
     RETURNS notification_directory.notification_store
 AS $$
 SELECT notification_directory.define_attributes(
@@ -4402,7 +4000,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "entity_tag"."transfer_to_staging"("name" name)
-    RETURNS int8
+    RETURNS bigint
 AS $$
 DECLARE
     insert_count bigint;
@@ -4449,7 +4047,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "public"."to_pdf"(text)
-    RETURNS _int4
+    RETURNS integer[]
 AS $$
 SELECT array_agg(nullif(x, '')::int)
     FROM unnest(string_to_array($1, ',')) AS x;
@@ -4525,7 +4123,7 @@ $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trigger"."create_notification_view_sql"(trigger.rule)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     trigger.notification_view_sql($1),
@@ -4559,7 +4157,7 @@ $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE FUNCTION "attribute_directory"."create_hash_function_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $function$
 SELECT ARRAY[
     format('CREATE FUNCTION attribute_history.values_hash(attribute_history.%I)
@@ -4613,7 +4211,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_compacted_tmp_table_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format(
@@ -4640,7 +4238,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_staging_table_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format(
@@ -4661,7 +4259,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_at_func_ptr_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $function$
 SELECT ARRAY[
         format(
@@ -4694,7 +4292,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_changes_view_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format('CREATE VIEW attribute_history.%I AS %s',
@@ -4781,77 +4379,6 @@ SELECT (attribute_directory.to_table_name($1) || '_compacted')::name;
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "attribute_directory"."compact"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-DECLARE
-    table_name name := attribute_directory.to_table_name($1);
-    compacted_tmp_table_name name := table_name || '_compacted_tmp';
-    compacted_view_name name := attribute_directory.compacted_view_name($1);
-    default_columns text[] := ARRAY['entity_id', 'timestamp', '"end"', 'hash', 'modified'];
-    attribute_columns text[];
-    columns_part text;
-    row_count integer;
-BEGIN
-    SELECT array_agg(quote_ident(name)) INTO attribute_columns
-    FROM attribute_directory.attribute
-    WHERE attribute_store_id = $1.id;
-
-    columns_part = array_to_string(default_columns || attribute_columns, ',');
-
-    EXECUTE format(
-        'TRUNCATE attribute_history.%I',
-        compacted_tmp_table_name
-    );
-
-    EXECUTE format(
-        'INSERT INTO attribute_history.%I(%s) '
-        'SELECT %s FROM attribute_history.%I;',
-        compacted_tmp_table_name, columns_part,
-        columns_part, compacted_view_name
-    );
-
-    EXECUTE format(
-        'UPDATE attribute_history.%I '
-	'SET modified = now()',
-	compacted_tmp_table_name
-    );
-
-    GET DIAGNOSTICS row_count = ROW_COUNT;
-
-    RAISE NOTICE 'compacted % rows', row_count;
-
-    EXECUTE format(
-        'DELETE FROM attribute_history.%I history '
-        'USING attribute_history.%I tmp '
-        'WHERE '
-        '	history.entity_id = tmp.entity_id AND '
-        '	history.timestamp >= tmp.timestamp AND '
-        '	history.timestamp <= tmp."end";',
-        table_name, compacted_tmp_table_name
-    );
-
-    columns_part = array_to_string(
-        ARRAY['entity_id', 'timestamp', 'modified', 'hash'] || attribute_columns,
-        ','
-    );
-
-    EXECUTE format(
-        'INSERT INTO attribute_history.%I(%s) '
-        'SELECT %s '
-        'FROM attribute_history.%I',
-        table_name, columns_part,
-        columns_part,
-        compacted_tmp_table_name
-    );
-
-    PERFORM attribute_directory.mark_compacted($1.id);
-
-    RETURN $1;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE FUNCTION "attribute_directory"."drop_compacted_view_sql"(attribute_directory.attribute_store)
     RETURNS text
 AS $$
@@ -4906,7 +4433,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_history_table_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -4945,7 +4472,7 @@ $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_entity_at_func_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $function$
 SELECT ARRAY[
         format(
@@ -4982,7 +4509,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_modified_triggers_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format('CREATE TRIGGER mark_modified_on_update
@@ -5008,34 +4535,6 @@ SELECT (attribute_directory.to_table_name($1) || '_curr_ptr')::name;
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "attribute_directory"."materialize_curr_ptr"(attribute_directory.attribute_store)
-    RETURNS int4
-AS $$
-DECLARE
-    table_name name := attribute_directory.curr_ptr_table_name($1);
-    view_name name := attribute_directory.curr_ptr_view_name($1);
-    row_count integer;
-BEGIN
-    IF attribute_directory.requires_compacting($1) THEN
-        PERFORM attribute_directory.compact($1);
-    END IF;
-
-    EXECUTE format('TRUNCATE attribute_history.%I', table_name);
-    EXECUTE format(
-        'INSERT INTO attribute_history.%I (entity_id, timestamp) '
-        'SELECT entity_id, timestamp '
-        'FROM attribute_history.%I', table_name, view_name
-    );
-
-    GET DIAGNOSTICS row_count = ROW_COUNT;
-
-    PERFORM attribute_directory.mark_curr_materialized($1.id);
-
-    RETURN row_count;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE FUNCTION "attribute_directory"."curr_view_query"(attribute_directory.attribute_store)
     RETURNS text
 AS $$
@@ -5048,7 +4547,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_curr_ptr_table_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format('CREATE TABLE attribute_history.%I (
@@ -5094,7 +4593,7 @@ $$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_entity_at_func_ptr_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $function$
 SELECT ARRAY[
         format(
@@ -5126,7 +4625,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_curr_view_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -5147,7 +4646,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_base_table_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -5168,7 +4667,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_curr_ptr_view_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 DECLARE
     table_name name := attribute_directory.to_table_name($1);
@@ -5253,7 +4752,7 @@ INSERT INTO system.job_queue(job_id) VALUES ($1.id);
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "system"."create_job"("type" varchar, "description" json, "size" int8, "job_source_id" int4)
+CREATE FUNCTION "system"."create_job"("type" varchar, "description" json, "size" bigint, "job_source_id" integer)
     RETURNS system.job
 AS $$
 SELECT system.enqueue_job(system.define_job($1, $2, $3, $4));
@@ -5343,7 +4842,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "public"."action"(anyelement, "sql" _text)
+CREATE FUNCTION "public"."action"(anyelement, "sql" text[])
     RETURNS anyelement
 AS $$
 DECLARE
@@ -5362,16 +4861,6 @@ CREATE FUNCTION "alias_directory"."initialize_alias_type"(alias_directory.alias_
     RETURNS alias_directory.alias_type
 AS $$
 SELECT public.action($1, alias_directory.initialize_alias_type_sql($1));
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_trigger_function"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.create_modified_trigger_function_sql($1)
-);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -5784,7 +5273,7 @@ SELECT notification_directory.create_table($1);
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "notification_directory"."create_notification_store"("data_source_id" int4, notification_directory.attr_def[])
+CREATE FUNCTION "notification_directory"."create_notification_store"("data_source_id" integer, notification_directory.attr_def[])
     RETURNS notification_directory.notification_store
 AS $$
 SELECT notification_directory.initialize_notification_store(
@@ -5802,7 +5291,7 @@ SELECT notification_directory.create_notification_store(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "notification_directory"."create_notification_store"("data_source_id" int4)
+CREATE FUNCTION "notification_directory"."create_notification_store"("data_source_id" integer)
     RETURNS notification_directory.notification_store
 AS $$
 SELECT notification_directory.create_notification_store(
@@ -6045,7 +5534,7 @@ FROM %I.%I$query$,
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."partition_name"("base_table_name" name, "index" int4)
+CREATE FUNCTION "trend_directory"."partition_name"("base_table_name" name, "index" integer)
     RETURNS name
 AS $$
 SELECT ($1 || '_' || $2)::name;
@@ -6085,7 +5574,7 @@ $$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_staging_modified_view_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 DECLARE
     table_name name;
@@ -6158,7 +5647,7 @@ $$ LANGUAGE sql VOLATILE STRICT;
 
 
 CREATE FUNCTION "virtual_entity"."update"("name" name)
-    RETURNS int4
+    RETURNS integer
 AS $$
 DECLARE
     result integer;
@@ -6178,8 +5667,8 @@ SELECT directory.create_dn_alias(new_entity, $1)
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "directory"."dns_to_entity_ids"(_text)
-    RETURNS SETOF int4
+CREATE FUNCTION "directory"."dns_to_entity_ids"(text[])
+    RETURNS SETOF integer
 AS $$
 SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
 $$ LANGUAGE sql VOLATILE STRICT;
@@ -6202,7 +5691,7 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 
-CREATE FUNCTION "trigger"."create_dummy_thresholds"(trigger.rule, _name)
+CREATE FUNCTION "trigger"."create_dummy_thresholds"(trigger.rule, name[])
     RETURNS trigger.rule
 AS $$
 SELECT trigger.set_thresholds(
@@ -6214,7 +5703,7 @@ SELECT trigger.set_thresholds(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."create_exception_threshold_table_sql"(trigger.rule, _name)
+CREATE FUNCTION "trigger"."create_exception_threshold_table_sql"(trigger.rule, name[])
     RETURNS text
 AS $$
 SELECT format(
@@ -6237,7 +5726,7 @@ FROM (
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trigger"."create_exception_threshold_table"(trigger.rule, _name)
+CREATE FUNCTION "trigger"."create_exception_threshold_table"(trigger.rule, name[])
     RETURNS trigger.rule
 AS $$
 SELECT "trigger".action($1, trigger.create_exception_threshold_table_sql($1, $2));
@@ -6254,7 +5743,7 @@ SELECT trigger.action(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."setup_rule"(trigger.rule, "kpi_sql" text, _name, "sql" text)
+CREATE FUNCTION "trigger"."setup_rule"(trigger.rule, "kpi_sql" text, name[], "sql" text)
     RETURNS trigger.rule
 AS $$
 SELECT trigger.create_kpi_view($1, $2);
@@ -6271,7 +5760,7 @@ SELECT trigger.create_kpi_view($1, $2);
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."create_rule"(name, "kpi_sql" text, _name, "sql" text)
+CREATE FUNCTION "trigger"."create_rule"(name, "kpi_sql" text, name[], "sql" text)
     RETURNS trigger.rule
 AS $$
 SELECT trigger.setup_rule(trigger.define($1), $2, $3, $4);
@@ -6279,7 +5768,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_hash_triggers_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format('CREATE TRIGGER set_hash_on_update
@@ -6332,7 +5821,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_compacted_view_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -6413,7 +5902,7 @@ SELECT trigger.add_insert_trigger(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."define_table_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" int4, "trends" trend_directory.table_trend_store_part_descr[])
+CREATE FUNCTION "trend_directory"."define_table_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" integer, "trends" trend_directory.table_trend_store_part_descr[])
     RETURNS trend_directory.table_trend_store
 AS $$
 SELECT trend_directory.define_table_trend_store(
@@ -6423,7 +5912,7 @@ SELECT trend_directory.define_table_trend_store(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."create_table_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" int4, "parts" trend_directory.table_trend_store_part_descr[])
+CREATE FUNCTION "trend_directory"."create_table_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" integer, "parts" trend_directory.table_trend_store_part_descr[])
     RETURNS trend_directory.table_trend_store
 AS $$
 SELECT trend_directory.initialize_table_trend_store(
@@ -6444,8 +5933,8 @@ SELECT array_agg(public.safe_division(arr1, arr2)) FROM
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE AGGREGATE public.first (anyelement) (
-    SFUNC = public.fst,
+CREATE AGGREGATE first (anyelement) (
+    SFUNC = fst,
     STYPE = anyelement
 );
 
@@ -6477,7 +5966,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."create_run_length_view_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
     format(
@@ -6503,22 +5992,22 @@ SELECT public.action(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE AGGREGATE public.sum_array (anyarray) (
-    SFUNC = public.add_array,
+CREATE AGGREGATE sum_array (anyarray) (
+    SFUNC = add_array,
     STYPE = anyarray
 );
 
 
 
-CREATE AGGREGATE public.last (anyelement) (
-    SFUNC = public.snd,
+CREATE AGGREGATE last (anyelement) (
+    SFUNC = snd,
     STYPE = anyelement
 );
 
 
 
 CREATE FUNCTION "attribute_directory"."create_staging_new_view_sql"(attribute_directory.attribute_store)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 DECLARE
     table_name name;
@@ -6638,42 +6127,6 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."init"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
--- Base/parent table
-    SELECT attribute_directory.create_base_table($1);
-
-    -- Inherited table definitions
-    SELECT attribute_directory.create_history_table($1);
-    SELECT attribute_directory.create_staging_table($1);
-    SELECT attribute_directory.create_compacted_tmp_table($1);
-
-    -- Separate table
-    SELECT attribute_directory.create_curr_ptr_table($1);
-
-    -- Other
-    SELECT attribute_directory.create_at_func_ptr($1);
-    SELECT attribute_directory.create_at_func($1);
-
-    SELECT attribute_directory.create_entity_at_func_ptr($1);
-    SELECT attribute_directory.create_entity_at_func($1);
-
-    SELECT attribute_directory.create_hash_triggers($1);
-
-    SELECT attribute_directory.create_modified_trigger_function($1);
-    SELECT attribute_directory.create_modified_triggers($1);
-
-    SELECT attribute_directory.create_changes_view($1);
-
-    SELECT attribute_directory.create_run_length_view($1);
-
-    SELECT attribute_directory.create_dependees($1);
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "attribute_directory"."add_attribute_column"(attribute_directory.attribute_store, name, text)
     RETURNS attribute_directory.attribute_store
 AS $$
@@ -6696,62 +6149,6 @@ SELECT public.action($1,
             format('SELECT attribute_directory.add_attribute_column(attribute_store, %L, %L) FROM attribute_directory.attribute_store WHERE id = %s', $1.name, $1.data_type, $1.attribute_store_id)
         ]
     )
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT attribute_directory.init(attribute_directory.define_attribute_store($1, $2));
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text, "attributes" attribute_directory.attribute_descr[])
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT attribute_directory.init(
-    attribute_directory.add_attributes(attribute_directory.define_attribute_store($1, $2), $3)
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_id" int4, "entity_type_id" int4, "attributes" attribute_directory.attribute_descr[])
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT attribute_directory.init(
-        attribute_directory.add_attributes(attribute_directory.define_attribute_store($1, $2), $3)
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."to_attribute"(attribute_directory.attribute_store, "name" name, "data_type" text, "description" text)
-    RETURNS attribute_directory.attribute
-AS $$
-SELECT COALESCE(
-        attribute_directory.get_attribute($1, $2),
-        attribute_directory.init(attribute_directory.define_attribute($1, $2, $3, $4))
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."check_attributes_exist"(attribute_directory.attribute_store, attribute_directory.attribute_descr[])
-    RETURNS SETOF attribute_directory.attribute
-AS $$
-SELECT attribute_directory.to_attribute($1, n.name, n.data_type, n.description)
-    FROM unnest($2) n
-    LEFT JOIN attribute_directory.attribute
-    ON attribute.attribute_store_id = $1.id AND n.name = attribute.name
-    WHERE attribute.name IS NULL;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."to_attribute_store"("data_source_id" int4, "entity_type_id" int4, attribute_directory.attribute_descr[])
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT COALESCE(
-        attribute_directory.get_attribute_store($1, $2),
-        attribute_directory.create_attribute_store($1, $2, $3)
-    );
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -6793,8 +6190,8 @@ CREATE VIEW "entity_tag"."_new_links_in_staging" AS
   WHERE (etl.entity_id IS NULL);
 
 
-CREATE FUNCTION "entity_tag"."add_new_links"("add_limit" int4)
-    RETURNS int8
+CREATE FUNCTION "entity_tag"."add_new_links"("add_limit" integer)
+    RETURNS bigint
 AS $$
 WITH t AS (
         INSERT INTO directory.entity_tag_link(entity_id, tag_id)
@@ -6819,7 +6216,7 @@ CREATE VIEW "entity_tag"."_obsolete_links" AS
 
 
 CREATE FUNCTION "entity_tag"."remove_obsolete_links"()
-    RETURNS int8
+    RETURNS bigint
 AS $$
 WITH t AS (
         DELETE FROM directory.entity_tag_link
@@ -6939,10 +6336,16 @@ FOR EACH ROW
 EXECUTE PROCEDURE "trigger"."cleanup_on_rule_delete"();
 
 
+CREATE CAST (integer AS integer[]) WITH FUNCTION "public"."integer_to_array"(integer);
+
+
+CREATE CAST (smallint AS smallint[]) WITH FUNCTION "public"."smallint_to_array"(smallint);
+
+
 CREATE CAST (directory.dn_part AS text) WITH FUNCTION "directory"."dn_part_to_string"(directory.dn_part);
 
 
-CREATE CAST (_text AS directory.dn_part) WITH FUNCTION "directory"."array_to_dn_part"(_text);
+CREATE CAST (text[] AS directory.dn_part) WITH FUNCTION "directory"."array_to_dn_part"(text[]);
 
 
 CREATE CAST ("trend_directory"."trend_store_part" AS text) WITH FUNCTION "trend_directory"."to_char"("trend_directory"."trend_store_part") AS IMPLICIT;
@@ -6969,50 +6372,639 @@ CREATE CAST ("attribute_directory"."attribute_store" AS text) WITH FUNCTION "att
 CREATE CAST ("notification_directory"."notification_store" AS text) WITH FUNCTION "notification_directory"."to_char"("notification_directory"."notification_store");
 
 
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, interval)
-    RETURNS int4
+CREATE FUNCTION "attribute_directory"."store_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_modified
 AS $$
-SELECT trigger.create_notifications(
-        trigger.get_rule($1),
-        notification_directory.get_notification_store($2),
-        $3
+INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
+    VALUES ($1, $2)
+    RETURNING attribute_store_modified;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."store_modified"("table_trend_store_part_id" integer, "timestamp" timestamp with time zone, "modified" timestamp with time zone)
+    RETURNS trend_directory.modified
+AS $$
+INSERT INTO trend_directory.modified(
+        table_trend_store_part_id, "timestamp", start, "end"
+    ) VALUES (
+        $1, $2, $3, $3
+    ) RETURNING modified;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."update_curr_materialized"("attribute_store_id" integer, "materialized" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_curr_materialized
+AS $$
+UPDATE attribute_directory.attribute_store_curr_materialized
+    SET materialized = greatest(materialized, $2)
+    WHERE attribute_store_id = $1
+    RETURNING attribute_store_curr_materialized;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."update_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_modified
+AS $$
+UPDATE attribute_directory.attribute_store_modified
+    SET modified = greatest(modified, $2)
+    WHERE attribute_store_id = $1
+    RETURNING attribute_store_modified;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."store_compacted"("attribute_store_id" integer, "compacted" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_compacted
+AS $$
+INSERT INTO attribute_directory.attribute_store_compacted (attribute_store_id, compacted)
+    VALUES ($1, $2)
+    RETURNING attribute_store_compacted;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."update_modified"("table_trend_store_part_id" integer, "timestamp" timestamp with time zone, "modified" timestamp with time zone)
+    RETURNS trend_directory.modified
+AS $$
+UPDATE trend_directory.modified
+    SET "end" = greatest("end", $3)
+    WHERE "timestamp" = $2 AND table_trend_store_part_id = $1
+    RETURNING modified;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."store_curr_materialized"("attribute_store_id" integer, "materialized" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_curr_materialized
+AS $$
+INSERT INTO attribute_directory.attribute_store_curr_materialized (attribute_store_id, materialized)
+    VALUES ($1, $2)
+    RETURNING attribute_store_curr_materialized;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."mark_curr_materialized"("attribute_store_id" integer, "materialized" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_curr_materialized
+AS $$
+SELECT COALESCE(attribute_directory.update_curr_materialized($1, $2), attribute_directory.store_curr_materialized($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."mark_curr_materialized"("attribute_store_id" integer)
+    RETURNS attribute_directory.attribute_store_curr_materialized
+AS $$
+SELECT attribute_directory.mark_curr_materialized(attribute_store_id, modified)
+    FROM attribute_directory.attribute_store_modified
+    WHERE attribute_store_id = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."update_compacted"("attribute_store_id" integer, "compacted" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_compacted
+AS $$
+UPDATE attribute_directory.attribute_store_compacted
+    SET compacted = greatest(compacted, $2)
+    WHERE attribute_store_id = $1
+    RETURNING attribute_store_compacted;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."mark_compacted"("attribute_store_id" integer, "compacted" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_compacted
+AS $$
+SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_directory.store_compacted($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."mark_compacted"("attribute_store_id" integer)
+    RETURNS attribute_directory.attribute_store_compacted
+AS $$
+SELECT attribute_directory.mark_compacted(attribute_store_id, modified)
+    FROM attribute_directory.attribute_store_modified
+    WHERE attribute_store_id = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."compact"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+DECLARE
+    table_name name := attribute_directory.to_table_name($1);
+    compacted_tmp_table_name name := table_name || '_compacted_tmp';
+    compacted_view_name name := attribute_directory.compacted_view_name($1);
+    default_columns text[] := ARRAY['entity_id', 'timestamp', '"end"', 'hash', 'modified'];
+    attribute_columns text[];
+    columns_part text;
+    row_count integer;
+BEGIN
+    SELECT array_agg(quote_ident(name)) INTO attribute_columns
+    FROM attribute_directory.attribute
+    WHERE attribute_store_id = $1.id;
+
+    columns_part = array_to_string(default_columns || attribute_columns, ',');
+
+    EXECUTE format(
+        'TRUNCATE attribute_history.%I',
+        compacted_tmp_table_name
+    );
+
+    EXECUTE format(
+        'INSERT INTO attribute_history.%I(%s) '
+        'SELECT %s FROM attribute_history.%I;',
+        compacted_tmp_table_name, columns_part,
+        columns_part, compacted_view_name
+    );
+
+    EXECUTE format(
+        'UPDATE attribute_history.%I '
+	'SET modified = now()',
+	compacted_tmp_table_name
+    );
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RAISE NOTICE 'compacted % rows', row_count;
+
+    EXECUTE format(
+        'DELETE FROM attribute_history.%I history '
+        'USING attribute_history.%I tmp '
+        'WHERE '
+        '	history.entity_id = tmp.entity_id AND '
+        '	history.timestamp >= tmp.timestamp AND '
+        '	history.timestamp <= tmp."end";',
+        table_name, compacted_tmp_table_name
+    );
+
+    columns_part = array_to_string(
+        ARRAY['entity_id', 'timestamp', 'modified', 'hash'] || attribute_columns,
+        ','
+    );
+
+    EXECUTE format(
+        'INSERT INTO attribute_history.%I(%s) '
+        'SELECT %s '
+        'FROM attribute_history.%I',
+        table_name, columns_part,
+        columns_part,
+        compacted_tmp_table_name
+    );
+
+    PERFORM attribute_directory.mark_compacted($1.id);
+
+    RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."materialize_curr_ptr"(attribute_directory.attribute_store)
+    RETURNS integer
+AS $$
+DECLARE
+    table_name name := attribute_directory.curr_ptr_table_name($1);
+    view_name name := attribute_directory.curr_ptr_view_name($1);
+    row_count integer;
+BEGIN
+    IF attribute_directory.requires_compacting($1) THEN
+        PERFORM attribute_directory.compact($1);
+    END IF;
+
+    EXECUTE format('TRUNCATE attribute_history.%I', table_name);
+    EXECUTE format(
+        'INSERT INTO attribute_history.%I (entity_id, timestamp) '
+        'SELECT entity_id, timestamp '
+        'FROM attribute_history.%I', table_name, view_name
+    );
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    PERFORM attribute_directory.mark_curr_materialized($1.id);
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."truncate"(timestamp with time zone, interval)
+    RETURNS timestamp with time zone
+AS $$
+SELECT CASE
+        WHEN $2 = '1 day' THEN
+            date_trunc('day', $1)
+        WHEN $2 = '1 week' THEN
+            date_trunc('week', $1)
+        ELSE
+            to_timestamp((
+                extract(epoch FROM $1)::integer / extract(epoch FROM $2)::integer
+            )::integer * extract(epoch FROM $2))
+        END;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trigger"."timestamps"(trigger.rule)
+    RETURNS SETOF timestamp with time zone
+AS $$
+SELECT generate_series(
+        trigger.truncate(now(), $1.granularity),
+        trigger.truncate(now(), $1.granularity) - $1.default_interval,
+        - $1.granularity
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."mark_modified"("table_trend_store_part_id" integer, "timestamp" timestamp with time zone, "modified" timestamp with time zone)
+    RETURNS trend_directory.modified
+AS $$
+SELECT COALESCE(
+        trend_directory.update_modified($1, $2, $3),
+        trend_directory.store_modified($1, $2, $3)
     );
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, timestamptz)
-    RETURNS int4
+CREATE FUNCTION "trend_directory"."populate_modified"("partition" trend_directory.partition)
+    RETURNS SETOF trend_directory.modified
 AS $$
-SELECT trigger.create_notifications(
-        trigger.get_rule($1),
-        notification_directory.get_notification_store($2),
-        $3
+BEGIN
+    RETURN QUERY EXECUTE format(
+        'SELECT (trend_directory.mark_modified($1, "timestamp", max(modified))).* '
+        'FROM trend_directory.%I GROUP BY timestamp',
+        partition.trend_store_id, partition.table_name
     );
-$$ LANGUAGE sql VOLATILE;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, timestamptz)
-    RETURNS int4
-AS $$
-SELECT trigger.create_notifications(rule, notification_store, $2)
-    FROM trigger.rule
-    JOIN notification_directory.notification_store ON notification_store.id = rule.notification_store_id
-    WHERE rule.name = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, timestamptz)
-    RETURNS int4
+CREATE FUNCTION "trend_directory"."populate_modified"(trend_directory.table_trend_store_part)
+    RETURNS SETOF trend_directory.modified
 AS $$
 SELECT
-        trigger.create_notifications($1, notification_store, $2)
-    FROM notification_directory.notification_store
-    WHERE id = $1.notification_store_id;
+        trend_directory.populate_modified(partition)
+    FROM trend_directory.partition
+    WHERE table_trend_store_part_id = $1.id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
+    RETURNS attribute_directory.attribute_store_modified
+AS $$
+SELECT COALESCE(attribute_directory.update_modified($1, $2), attribute_directory.store_modified($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer)
+    RETURNS attribute_directory.attribute_store_modified
+AS $$
+SELECT CASE
+        WHEN current_setting('minerva.trigger_mark_modified') = 'off' THEN
+            (SELECT asm FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1)
+
+        ELSE
+            attribute_directory.mark_modified($1, now())
+
+        END;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."create_modified_trigger_function_sql"(attribute_directory.attribute_store)
+    RETURNS text[]
+AS $function$
+SELECT ARRAY[
+    format('CREATE FUNCTION attribute_history.mark_modified_%s()
+RETURNS TRIGGER
+AS $$
+BEGIN
+    PERFORM attribute_directory.mark_modified(%s);
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql', $1.id, $1.id),
+    format('ALTER FUNCTION attribute_history.mark_modified_%s()
+        OWNER TO minerva_writer', $1.id)
+];
+$function$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "attribute_directory"."create_modified_trigger_function"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action(
+    $1,
+    attribute_directory.create_modified_trigger_function_sql($1)
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."init"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+-- Base/parent table
+    SELECT attribute_directory.create_base_table($1);
+
+    -- Inherited table definitions
+    SELECT attribute_directory.create_history_table($1);
+    SELECT attribute_directory.create_staging_table($1);
+    SELECT attribute_directory.create_compacted_tmp_table($1);
+
+    -- Separate table
+    SELECT attribute_directory.create_curr_ptr_table($1);
+
+    -- Other
+    SELECT attribute_directory.create_at_func_ptr($1);
+    SELECT attribute_directory.create_at_func($1);
+
+    SELECT attribute_directory.create_entity_at_func_ptr($1);
+    SELECT attribute_directory.create_entity_at_func($1);
+
+    SELECT attribute_directory.create_hash_triggers($1);
+
+    SELECT attribute_directory.create_modified_trigger_function($1);
+    SELECT attribute_directory.create_modified_triggers($1);
+
+    SELECT attribute_directory.create_changes_view($1);
+
+    SELECT attribute_directory.create_run_length_view($1);
+
+    SELECT attribute_directory.create_dependees($1);
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT attribute_directory.init(attribute_directory.define_attribute_store($1, $2));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text, "attributes" attribute_directory.attribute_descr[])
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT attribute_directory.init(
+    attribute_directory.add_attributes(attribute_directory.define_attribute_store($1, $2), $3)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_id" integer, "entity_type_id" integer, "attributes" attribute_directory.attribute_descr[])
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT attribute_directory.init(
+        attribute_directory.add_attributes(attribute_directory.define_attribute_store($1, $2), $3)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."to_attribute"(attribute_directory.attribute_store, "name" name, "data_type" text, "description" text)
+    RETURNS attribute_directory.attribute
+AS $$
+SELECT COALESCE(
+        attribute_directory.get_attribute($1, $2),
+        attribute_directory.init(attribute_directory.define_attribute($1, $2, $3, $4))
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."check_attributes_exist"(attribute_directory.attribute_store, attribute_directory.attribute_descr[])
+    RETURNS SETOF attribute_directory.attribute
+AS $$
+SELECT attribute_directory.to_attribute($1, n.name, n.data_type, n.description)
+    FROM unnest($2) n
+    LEFT JOIN attribute_directory.attribute
+    ON attribute.attribute_store_id = $1.id AND n.name = attribute.name
+    WHERE attribute.name IS NULL;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."to_attribute_store"("data_source_id" integer, "entity_type_id" integer, attribute_directory.attribute_descr[])
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT COALESCE(
+        attribute_directory.get_attribute_store($1, $2),
+        attribute_directory.create_attribute_store($1, $2, $3)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."get_most_recent_timestamp"("dest_granularity" interval, "ts" timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+DECLARE
+    minute integer;
+    rounded_minutes integer;
+BEGIN
+    IF dest_granularity < '1 hour'::interval THEN
+        minute := extract(minute FROM ts);
+        rounded_minutes := minute - (minute % (dest_granularity / 60));
+
+        return date_trunc('hour', ts) + (rounded_minutes || 'minutes')::INTERVAL;
+    ELSIF dest_granularity = '1 hour'::interval THEN
+        return date_trunc('hour', ts);
+    ELSIF dest_granularity = '1 day'::interval THEN
+        return date_trunc('day', ts);
+    ELSIF dest_granularity = '1 week'::interval THEN
+        return date_trunc('week', ts);
+    ELSE
+        RAISE EXCEPTION 'Invalid granularity: %', dest_granularity;
+    END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
+CREATE FUNCTION "trend_directory"."get_most_recent_timestamp"("dest_granularity" varchar, "ts" timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+DECLARE
+    minute integer;
+    rounded_minutes integer;
+    seconds integer;
+BEGIN
+    IF trend_directory.is_integer(dest_granularity) THEN
+        seconds = cast(dest_granularity as integer);
+
+        return trend_directory.get_most_recent_timestamp(seconds, ts);
+    ELSIF dest_granularity = 'month' THEN
+        return date_trunc('month', ts);
+    ELSE
+        RAISE EXCEPTION 'Invalid granularity: %', dest_granularity;
+    END IF;
+
+    return seconds;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
+CREATE FUNCTION "trend_directory"."get_timestamp_for"("granularity" varchar, "ts" timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+DECLARE
+    most_recent_timestamp timestamp with time zone;
+BEGIN
+    most_recent_timestamp = trend_directory.get_most_recent_timestamp($1, $2);
+
+    IF most_recent_timestamp != ts THEN
+        IF trend_directory.is_integer(granularity) THEN
+            IF granularity = '86400' THEN
+                return most_recent_timestamp + ('1 day')::INTERVAL;
+            ELSE
+                return most_recent_timestamp + ($1 || ' seconds')::INTERVAL;
+            END IF;
+        ELSIF granularity = 'month' THEN
+            return most_recent_timestamp + '1 month'::INTERVAL;
+        END IF;
+    ELSE
+        return most_recent_timestamp;
+    END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
+CREATE FUNCTION "trend_directory"."timestamp_to_index"("partition_size" integer, "timestamp" timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    unix_timestamp integer;
+    div integer;
+    modulo integer;
+BEGIN
+    unix_timestamp = extract(EPOCH FROM "timestamp")::integer;
+    div = unix_timestamp / partition_size;
+    modulo = mod(unix_timestamp, partition_size);
+
+    IF modulo > 0 THEN
+        return div;
+    ELSE
+        return div - 1;
+    END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE STRICT;
+
+
+CREATE FUNCTION "trend_directory"."clear"(trend_directory.table_trend_store_part, timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
+    EXECUTE format(
+        'DELETE FROM %I.%I WHERE timestamp = $1',
+        trend_directory.base_table_schema(),
+        trend_directory.base_table_name($1)
+    ) USING $2;
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."get_max_modified"(trend_directory.trend_store, timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+DECLARE
+    max_modified timestamp with time zone;
+BEGIN
+    EXECUTE format(
+        'SELECT max(modified) FROM trend_directory.%I WHERE timestamp = $1',
+        trend_directory.base_table_name($1)
+    ) INTO max_modified USING $2;
+
+    RETURN max_modified;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."mark_modified"("table_trend_store_id" integer, "timestamp" timestamp with time zone)
+    RETURNS trend_directory.modified
+AS $$
+SELECT COALESCE(
+        trend_directory.update_modified($1, $2, now()),
+        trend_directory.store_modified($1, $2, now())
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."get_timestamp_for"("granularity" interval, "ts" timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+DECLARE
+    most_recent_timestamp timestamp with time zone;
+BEGIN
+    most_recent_timestamp = trend_directory.get_most_recent_timestamp($1, $2);
+
+    IF most_recent_timestamp != ts THEN
+        IF granularity = 86400 THEN
+            return most_recent_timestamp + ('1 day')::INTERVAL;
+        ELSE
+            return most_recent_timestamp + ($1 || ' seconds')::INTERVAL;
+        END IF;
+    ELSE
+        return most_recent_timestamp;
+    END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
+CREATE FUNCTION "system"."remove_jobs"("before" timestamp with time zone, "max" bigint DEFAULT 100000)
+    RETURNS bigint
+AS $$
+WITH deleted AS (
+        DELETE FROM system.job WHERE id IN (SELECT id FROM system.job WHERE created < $1 ORDER BY created ASC LIMIT $2) RETURNING *
+    )
+    SELECT count(*) FROM deleted;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, notification_directory.notification_store, timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    num_rows integer;
+BEGIN
+    EXECUTE format(
+$query$
+INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
+(SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I WHERE timestamp = $2)
+$query$,
+        notification_directory.staging_table_name($2), trigger.notification_view_name($1)
+    )
+    USING $1.id, $3;
+
+    SELECT trigger.transfer_notifications_from_staging($2) INTO num_rows;
+
+    RETURN num_rows;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE CAST (smallint AS timestamp without time zone) WITH FUNCTION "public"."smallint_to_timestamp_without_time_zone"(smallint);
+
+
+CREATE CAST (smallint AS timestamp with time zone) WITH FUNCTION "public"."smallint_to_timestamp_with_time_zone"(smallint);
+
+
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, interval)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(
+        trigger.get_rule($1),
+        notification_directory.get_notification_store($2),
+        $3
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, timestamp with time zone)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(
+        trigger.get_rule($1),
+        notification_directory.get_notification_store($2),
+        $3
+    );
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, interval)
-    RETURNS int4
+    RETURNS integer
 AS $$
 SELECT trigger.create_notifications($1, notification_store, $2)
     FROM notification_directory.notification_store
@@ -7020,15 +7012,8 @@ SELECT trigger.create_notifications($1, notification_store, $2)
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, interval)
-    RETURNS int4
-AS $$
-SELECT trigger.create_notifications(trigger.get_rule($1), $2);
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "trigger"."create_notifications"(trigger.rule)
-    RETURNS int4
+    RETURNS integer
 AS $$
 SELECT trigger.create_notifications($1, notification_store, $1.default_interval)
     FROM notification_directory.notification_store
@@ -7037,20 +7022,65 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trigger"."create_notifications"("rule_name" name)
-    RETURNS int4
+    RETURNS integer
 AS $$
 SELECT trigger.create_notifications(trigger.get_rule($1));
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."partition_name"(trend_directory.table_trend_store_part, "index" int4)
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, timestamp with time zone)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(rule, notification_store, $2)
+    FROM trigger.rule
+    JOIN notification_directory.notification_store ON notification_store.id = rule.notification_store_id
+    WHERE rule.name = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, timestamp with time zone)
+    RETURNS integer
+AS $$
+SELECT
+        trigger.create_notifications($1, notification_store, $2)
+    FROM notification_directory.notification_store
+    WHERE id = $1.notification_store_id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, interval)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(trigger.get_rule($1), $2);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_directory.table_trend_store_part)
+    RETURNS trend_directory.table_trend_store_part
+AS $$
+SELECT
+        trend_directory.transfer_staged(trend_store_part, timestamp)
+    FROM trend_directory.staged_timestamps(trend_store_part) timestamp;
+
+    SELECT public.action(
+        $1,
+        format(
+            'TRUNCATE %I.%I',
+            trend_directory.staging_table_schema(),
+            trend_directory.staging_table_name(trend_store_part)
+        )
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."partition_name"(trend_directory.table_trend_store_part, "index" integer)
     RETURNS name
 AS $$
 SELECT trend_directory.partition_name(trend_directory.base_table_name($1), $2);
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION "trend_directory"."partition_name"(trend_directory.table_trend_store_part, timestamptz)
+CREATE FUNCTION "trend_directory"."partition_name"(trend_directory.table_trend_store_part, timestamp with time zone)
     RETURNS name
 AS $$
 SELECT trend_directory.partition_name(
@@ -7104,7 +7134,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."create_partition_table_sql"(trend_directory.partition)
-    RETURNS _text
+    RETURNS text[]
 AS $$
 SELECT ARRAY[
         format(
@@ -7152,7 +7182,7 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "trend_directory"."available_timestamps"("partition" trend_directory.partition)
-    RETURNS SETOF timestamptz
+    RETURNS SETOF timestamp with time zone
 AS $$
 BEGIN
     RETURN QUERY EXECUTE format(
@@ -7198,7 +7228,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."create_partition"("trend_store_part" trend_directory.table_trend_store_part, "index" int4)
+CREATE FUNCTION "trend_directory"."create_partition"("trend_store_part" trend_directory.table_trend_store_part, "index" integer)
     RETURNS trend_directory.partition
 AS $$
 SELECT trend_directory.create_partition_table(
@@ -7207,7 +7237,7 @@ SELECT trend_directory.create_partition_table(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."attributes_to_partition"(trend_directory.table_trend_store_part, "index" int4)
+CREATE FUNCTION "trend_directory"."attributes_to_partition"(trend_directory.table_trend_store_part, "index" integer)
     RETURNS trend_directory.partition
 AS $$
 SELECT COALESCE(
@@ -7217,7 +7247,23 @@ SELECT COALESCE(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."attributes_to_partition"(trend_directory.table_trend_store_part, timestamptz)
+CREATE FUNCTION "trend_directory"."partition_exists"(trend_directory.partition)
+    RETURNS bool
+AS $$
+SELECT public.table_exists(
+        trend_directory.partition_table_schema(),
+        trend_directory.table_name($1)
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE TRIGGER drop_table_on_delete
+AFTER DELETE ON "trend_directory"."partition"
+FOR EACH ROW
+EXECUTE PROCEDURE "trend_directory"."drop_partition_table_on_delete"();
+
+
+CREATE FUNCTION "trend_directory"."attributes_to_partition"(trend_directory.table_trend_store_part, timestamp with time zone)
     RETURNS trend_directory.partition
 AS $$
 SELECT trend_directory.attributes_to_partition(
@@ -7228,7 +7274,7 @@ SELECT trend_directory.attributes_to_partition(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."transfer"("source" trend_directory.trend_store, "target" trend_directory.trend_store, "timestamp" timestamptz, "trend_names" _text)
+CREATE FUNCTION "trend_directory"."transfer"("source" trend_directory.trend_store, "target" trend_directory.trend_store, "timestamp" timestamp with time zone, "trend_names" text[])
     RETURNS trend_directory.transfer_result
 AS $$
 DECLARE
@@ -7267,8 +7313,8 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_directory.table_trend_store_part, "timestamp" timestamptz)
-    RETURNS int4
+CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_directory.table_trend_store_part, "timestamp" timestamp with time zone)
+    RETURNS integer
 AS $$
 DECLARE
     row_count integer;
@@ -7291,42 +7337,8 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_directory.table_trend_store_part)
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-SELECT
-        trend_directory.transfer_staged(trend_store_part, timestamp)
-    FROM trend_directory.staged_timestamps(trend_store_part) timestamp;
-
-    SELECT public.action(
-        $1,
-        format(
-            'TRUNCATE %I.%I',
-            trend_directory.staging_table_schema(),
-            trend_directory.staging_table_name(trend_store_part)
-        )
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."partition_exists"(trend_directory.partition)
-    RETURNS bool
-AS $$
-SELECT public.table_exists(
-        trend_directory.partition_table_schema(),
-        trend_directory.table_name($1)
-    );
-$$ LANGUAGE sql STABLE;
-
-
-CREATE TRIGGER drop_table_on_delete
-AFTER DELETE ON "trend_directory"."partition"
-FOR EACH ROW
-EXECUTE PROCEDURE "trend_directory"."drop_partition_table_on_delete"();
-
-
 CREATE FUNCTION "entity_tag"."add_new_tags"()
-    RETURNS int8
+    RETURNS bigint
 AS $$
 WITH t AS (
         INSERT INTO directory.tag(name, tag_group_id, description)
@@ -7338,7 +7350,7 @@ WITH t AS (
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "entity_tag"."process_staged_links"("process_limit" int4)
+CREATE FUNCTION "entity_tag"."process_staged_links"("process_limit" integer)
     RETURNS entity_tag.process_staged_links_result
 AS $$
 DECLARE
@@ -7355,7 +7367,7 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "entity_tag"."update"("type_name" name, "update_limit" int4 DEFAULT 50000)
+CREATE FUNCTION "entity_tag"."update"("type_name" name, "update_limit" integer DEFAULT 50000)
     RETURNS entity_tag.update_result
 AS $$
 DECLARE
@@ -7373,19 +7385,6 @@ BEGIN
     RETURN result;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-
-
-DO $$ BEGIN
-EXECUTE 'ALTER DATABASE ' || current_database() || ' SET minerva.trigger_mark_modified TO off';
-END; $$;
-
-SET minerva.trigger_mark_modified TO off;
-
-
-INSERT INTO "directory"."tag_group" (name, complementary) VALUES ('default', false);
-
-
-INSERT INTO "directory"."tag_group" (name, complementary) VALUES ('entity_type', true);
 ALTER TABLE "alias"."dn" ADD CONSTRAINT "dn_entity_id_fkey" FOREIGN KEY (entity_id) REFERENCES "directory"."entity" (id);
 ALTER TABLE "attribute_directory"."attribute_store" ADD CONSTRAINT "attribute_attribute_store_entity_type_id_fkey" FOREIGN KEY (entity_type_id) REFERENCES "directory"."entity_type" (id) ON DELETE CASCADE;
 ALTER TABLE "attribute_directory"."attribute_store" ADD CONSTRAINT "attribute_attribute_store_data_source_id_fkey" FOREIGN KEY (data_source_id) REFERENCES "directory"."data_source" (id);
