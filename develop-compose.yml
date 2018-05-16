@@ -5,4 +5,4 @@ minerva46db:
   - "16046:5432"
   volumes:
     - ./tests:/tests
-    - ./src:/minerva
+    - ./:/minerva
