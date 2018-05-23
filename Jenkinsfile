@@ -11,7 +11,7 @@ pipeline {
             steps {
                 gitlabCommitStatus(name: 'build') {
                     script {
-                        def image = docker.build('minerva50', 'dockerfile.develop')
+                        def image = docker.build('minerva50', 'develop.dockerfile')
                     }
                 }
             }
