@@ -1,13 +1,18 @@
-node ('git') {
-    stage ('checkout') {
-        checkout scm
-    }
+pipeline {
+    agent any
+    stages {
+        stage ('checkout') {
+            steps {
+                checkout scm
+            }
+        }
 
-    stage ('build') {
-        gitlabCommitStatus(name: 'build') {
-            sh "docker-compose -f develop-compose.yml up -d"
-            sh "./wait-for-db"
-            sh "bin/db stop"
+        stage ('build') {
+            steps {
+                gitlabCommitStatus(name: 'build') {
+                    def image = docker.build('minerva50', 'dockerfile.develop')
+                }
+            }
         }
     }
 }
