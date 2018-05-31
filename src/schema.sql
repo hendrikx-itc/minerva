@@ -1,7 +1,6 @@
 
 
 CREATE SCHEMA IF NOT EXISTS "public";
-COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 CREATE SCHEMA IF NOT EXISTS "olap";
@@ -24,7 +23,6 @@ CREATE SCHEMA IF NOT EXISTS "alias";
 
 
 CREATE SCHEMA IF NOT EXISTS "relation_directory";
-COMMENT ON SCHEMA "relation_directory" IS 'Stores directional relations between entities.';
 
 
 CREATE SCHEMA IF NOT EXISTS "entity_tag";
@@ -48,7 +46,6 @@ COMMENT ON SCHEMA "trend_partition" IS 'Stores information with fixed interval a
 
 
 CREATE SCHEMA IF NOT EXISTS "trend_directory";
-COMMENT ON SCHEMA "trend_directory" IS 'Stores information with fixed interval and format, like periodic measurements.';
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute_directory";
@@ -104,10 +101,10 @@ CREATE SCHEMA IF NOT EXISTS "trend_directory";
 DO
 $$
 BEGIN
-IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva') THEN
-CREATE ROLE minerva
-NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
-END IF;
+  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva') THEN
+    CREATE ROLE minerva
+      NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+  END IF;
 END
 $$;
 
@@ -115,10 +112,10 @@ $$;
 DO
 $$
 BEGIN
-IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva_writer') THEN
-CREATE ROLE minerva_writer
-NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
-END IF;
+  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva_writer') THEN
+    CREATE ROLE minerva_writer
+      NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+  END IF;
 END
 $$;
 
@@ -128,10 +125,10 @@ GRANT minerva TO minerva_writer;
 DO
 $$
 BEGIN
-IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva_admin') THEN
-CREATE ROLE minerva_admin
-LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
-END IF;
+  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva_admin') THEN
+    CREATE ROLE minerva_admin
+      LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+  END IF;
 END
 $$;
 
@@ -141,195 +138,195 @@ GRANT minerva_writer TO minerva_admin;
 
 
 CREATE SEQUENCE system.job_source_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE system.job_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE system.setting_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE directory.data_source_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE directory.entity_type_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE directory.entity_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE directory.tag_group_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE directory.tag_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE alias_directory.alias_type_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE relation_directory.type_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE alias.dn_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE trend_directory.trend_store_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE trend_directory.trend_store_part_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE trend_directory.trend_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE trend_directory.materialization_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE attribute_directory.attribute_store_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE attribute_directory.attribute_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE notification_directory.notification_store_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE notification_directory.attribute_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE notification_directory.notification_set_store_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE notification_directory.set_attribute_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE entity_tag.type_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE trigger.rule_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE SEQUENCE trigger.exception_base_id_seq
-START WITH 1
-INCREMENT BY 1
-NO MINVALUE
-NO MAXVALUE
-CACHE 1;
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
 
 
 CREATE TYPE "system"."job_state_enum" AS ENUM (
@@ -490,13 +487,9 @@ COMMENT ON TABLE "directory"."data_source" IS 'Describes data_sources. A data_so
 
 CREATE UNIQUE INDEX ix_directory_data_source_name ON directory.data_source USING btree (name);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."data_source" TO minerva_writer;
+
 GRANT SELECT ON TABLE "directory"."data_source" TO minerva;
-
-GRANT INSERT ON TABLE "directory"."data_source" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "directory"."data_source" TO minerva_writer;
-
-GRANT DELETE ON TABLE "directory"."data_source" TO minerva_writer;
 
 
 
@@ -512,13 +505,9 @@ COMMENT ON TABLE "directory"."entity_type" IS 'Stores the entity types that exis
 
 CREATE UNIQUE INDEX ix_directory_entity_type_name ON directory.entity_type USING btree (lower((name)::text));
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_type" TO minerva_writer;
+
 GRANT SELECT ON TABLE "directory"."entity_type" TO minerva;
-
-GRANT INSERT ON TABLE "directory"."entity_type" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "directory"."entity_type" TO minerva_writer;
-
-GRANT DELETE ON TABLE "directory"."entity_type" TO minerva_writer;
 
 
 
@@ -537,13 +526,9 @@ CREATE INDEX ix_directory_entity_name ON directory.entity USING btree (name);
 
 CREATE INDEX ix_directory_entity_entity_type_id ON directory.entity USING btree (entity_type_id);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity" TO minerva_writer;
+
 GRANT SELECT ON TABLE "directory"."entity" TO minerva;
-
-GRANT INSERT ON TABLE "directory"."entity" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "directory"."entity" TO minerva_writer;
-
-GRANT DELETE ON TABLE "directory"."entity" TO minerva_writer;
 
 
 
@@ -559,13 +544,9 @@ COMMENT ON TABLE "directory"."tag_group" IS 'Stores groups that can be related t
 
 CREATE UNIQUE INDEX ix_directory_tag_group_name ON directory.tag_group USING btree (lower((name)::text));
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag_group" TO minerva_writer;
+
 GRANT SELECT ON TABLE "directory"."tag_group" TO minerva;
-
-GRANT INSERT ON TABLE "directory"."tag_group" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "directory"."tag_group" TO minerva_writer;
-
-GRANT DELETE ON TABLE "directory"."tag_group" TO minerva_writer;
 
 
 
@@ -584,13 +565,9 @@ CREATE UNIQUE INDEX ix_directory_tag_name ON directory.tag USING btree (lower((n
 
 CREATE INDEX tag_lower_id_idx ON directory.tag USING btree (lower((name)::text), id);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag" TO minerva_writer;
+
 GRANT SELECT ON TABLE "directory"."tag" TO minerva;
-
-GRANT INSERT ON TABLE "directory"."tag" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "directory"."tag" TO minerva_writer;
-
-GRANT DELETE ON TABLE "directory"."tag" TO minerva_writer;
 
 
 
@@ -618,13 +595,9 @@ COMMENT ON TABLE "notification_directory"."notification_store" IS 'Describes not
 
 CREATE UNIQUE INDEX uniqueness ON notification_directory.notification_store USING btree (data_source_id);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."notification_store" TO minerva_writer;
+
 GRANT SELECT ON TABLE "notification_directory"."notification_store" TO minerva;
-
-GRANT INSERT ON TABLE "notification_directory"."notification_store" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "notification_directory"."notification_store" TO minerva_writer;
-
-GRANT DELETE ON TABLE "notification_directory"."notification_store" TO minerva_writer;
 
 
 
@@ -640,13 +613,9 @@ CREATE TABLE "notification_directory"."attribute"
 
 COMMENT ON TABLE "notification_directory"."attribute" IS 'Describes attributes of notification stores. An attribute of a notification store is an attribute that each notification stored in that notification store has. An attribute corresponds directly to a column in the main notification store table';
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."attribute" TO minerva_writer;
+
 GRANT SELECT ON TABLE "notification_directory"."attribute" TO minerva;
-
-GRANT INSERT ON TABLE "notification_directory"."attribute" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "notification_directory"."attribute" TO minerva_writer;
-
-GRANT DELETE ON TABLE "notification_directory"."attribute" TO minerva_writer;
 
 
 
@@ -660,13 +629,9 @@ CREATE TABLE "notification_directory"."notification_set_store"
 
 COMMENT ON TABLE "notification_directory"."notification_set_store" IS 'Describes notification_set_stores. A notification_set_store can hold information over sets of notifications that are related to each other.';
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."notification_set_store" TO minerva_writer;
+
 GRANT SELECT ON TABLE "notification_directory"."notification_set_store" TO minerva;
-
-GRANT INSERT ON TABLE "notification_directory"."notification_set_store" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "notification_directory"."notification_set_store" TO minerva_writer;
-
-GRANT DELETE ON TABLE "notification_directory"."notification_set_store" TO minerva_writer;
 
 
 
@@ -682,13 +647,9 @@ CREATE TABLE "notification_directory"."set_attribute"
 
 COMMENT ON TABLE "notification_directory"."set_attribute" IS 'Describes attributes of notification_set_stores. A set_attribute of a notification_set_store is an attribute that each notification set has. A set_attribute corresponds directly to a column in the main notification_set_store table.';
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."set_attribute" TO minerva_writer;
+
 GRANT SELECT ON TABLE "notification_directory"."set_attribute" TO minerva;
-
-GRANT INSERT ON TABLE "notification_directory"."set_attribute" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "notification_directory"."set_attribute" TO minerva_writer;
-
-GRANT DELETE ON TABLE "notification_directory"."set_attribute" TO minerva_writer;
 
 
 
@@ -700,13 +661,9 @@ CREATE TABLE "system"."setting"
   PRIMARY KEY (id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."setting" TO minerva_writer;
+
 GRANT SELECT ON TABLE "system"."setting" TO minerva;
-
-GRANT INSERT ON TABLE "system"."setting" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "system"."setting" TO minerva_writer;
-
-GRANT DELETE ON TABLE "system"."setting" TO minerva_writer;
 
 
 
@@ -718,13 +675,9 @@ CREATE TABLE "dimension"."5m"
   PRIMARY KEY (timestamp)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."5m" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."5m" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."5m" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."5m" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."5m" TO minerva_writer;
 
 
 
@@ -737,13 +690,9 @@ CREATE TABLE "directory"."entity_tag_link"
 
 CREATE INDEX ix_directory_entity_tag_link_entity_id ON directory.entity_tag_link USING btree (entity_id);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_tag_link" TO minerva_writer;
+
 GRANT SELECT ON TABLE "directory"."entity_tag_link" TO minerva;
-
-GRANT INSERT ON TABLE "directory"."entity_tag_link" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "directory"."entity_tag_link" TO minerva_writer;
-
-GRANT DELETE ON TABLE "directory"."entity_tag_link" TO minerva_writer;
 
 
 
@@ -760,9 +709,9 @@ CREATE TABLE "trigger"."rule"
 
 CREATE UNIQUE INDEX rule_name_key ON trigger.rule USING btree (name);
 
-GRANT SELECT ON TABLE "trigger"."rule" TO minerva;
-
 GRANT UPDATE ON TABLE "trigger"."rule" TO minerva_writer;
+
+GRANT SELECT ON TABLE "trigger"."rule" TO minerva;
 
 
 
@@ -773,9 +722,9 @@ CREATE TABLE "trigger"."rule_tag_link"
   PRIMARY KEY (rule_id, tag_id)
 );
 
-GRANT SELECT ON TABLE "trigger"."rule_tag_link" TO minerva;
-
 GRANT UPDATE ON TABLE "trigger"."rule_tag_link" TO minerva_writer;
+
+GRANT SELECT ON TABLE "trigger"."rule_tag_link" TO minerva;
 
 
 
@@ -821,13 +770,9 @@ COMMENT ON TABLE "trend_directory"."materialization" IS 'Indicates if jobs shoul
 
 CREATE UNIQUE INDEX ix_trend_materialization_uniqueness ON trend_directory.materialization USING btree (dst_trend_store_id);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization" TO minerva_writer;
+
 GRANT SELECT ON TABLE "trend_directory"."materialization" TO minerva;
-
-GRANT INSERT ON TABLE "trend_directory"."materialization" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "trend_directory"."materialization" TO minerva_writer;
-
-GRANT DELETE ON TABLE "trend_directory"."materialization" TO minerva_writer;
 
 
 
@@ -861,13 +806,9 @@ CREATE TABLE "trend_directory"."state"
 
 COMMENT ON TABLE "trend_directory"."state" IS 'ID of the most recent job for this materialization';
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."state" TO minerva_writer;
+
 GRANT SELECT ON TABLE "trend_directory"."state" TO minerva;
-
-GRANT INSERT ON TABLE "trend_directory"."state" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "trend_directory"."state" TO minerva_writer;
-
-GRANT DELETE ON TABLE "trend_directory"."state" TO minerva_writer;
 
 
 
@@ -881,13 +822,9 @@ CREATE TABLE "trend_directory"."materialization_tag_link"
 COMMENT ON TABLE "trend_directory"."materialization_tag_link" IS 'Links tags to materializations. Examples of tags to link to a materialization
 might be: online, offline, aggregation, kpi, etc.';
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization_tag_link" TO minerva_writer;
+
 GRANT SELECT ON TABLE "trend_directory"."materialization_tag_link" TO minerva;
-
-GRANT INSERT ON TABLE "trend_directory"."materialization_tag_link" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "trend_directory"."materialization_tag_link" TO minerva_writer;
-
-GRANT DELETE ON TABLE "trend_directory"."materialization_tag_link" TO minerva_writer;
 
 
 
@@ -913,13 +850,9 @@ CREATE TABLE "dimension"."quarter"
   PRIMARY KEY (timestamp)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."quarter" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."quarter" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."quarter" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."quarter" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."quarter" TO minerva_writer;
 
 
 
@@ -931,13 +864,9 @@ CREATE TABLE "dimension"."four_consec_qtr"
   PRIMARY KEY (timestamp)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."four_consec_qtr" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."four_consec_qtr" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."four_consec_qtr" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."four_consec_qtr" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."four_consec_qtr" TO minerva_writer;
 
 
 
@@ -951,13 +880,9 @@ CREATE TABLE "dimension"."week"
   PRIMARY KEY (timestamp)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."week" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."week" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."week" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."week" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."week" TO minerva_writer;
 
 
 
@@ -970,13 +895,9 @@ CREATE TABLE "dimension"."week_15m"
 
 CREATE INDEX week_15m_timestamp_idx ON dimension.week_15m USING btree ("timestamp");
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."week_15m" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."week_15m" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."week_15m" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."week_15m" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."week_15m" TO minerva_writer;
 
 
 
@@ -1010,13 +931,9 @@ CREATE TABLE "relation"."parent"
 
 CREATE INDEX ix_parent_target_id ON relation.parent USING btree (target_id);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "relation"."parent" TO minerva_writer;
+
 GRANT SELECT ON TABLE "relation"."parent" TO minerva;
-
-GRANT INSERT ON TABLE "relation"."parent" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "relation"."parent" TO minerva_writer;
-
-GRANT DELETE ON TABLE "relation"."parent" TO minerva_writer;
 
 
 
@@ -1027,13 +944,9 @@ CREATE TABLE "dimension"."day_15m"
   PRIMARY KEY (timestamp_15m)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."day_15m" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."day_15m" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."day_15m" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."day_15m" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."day_15m" TO minerva_writer;
 
 
 
@@ -1047,13 +960,9 @@ CREATE TABLE "relation_directory"."type"
 
 CREATE UNIQUE INDEX type_name_key ON relation_directory.type USING btree (name);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "relation_directory"."type" TO minerva_writer;
+
 GRANT SELECT ON TABLE "relation_directory"."type" TO minerva;
-
-GRANT INSERT ON TABLE "relation_directory"."type" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "relation_directory"."type" TO minerva_writer;
-
-GRANT DELETE ON TABLE "relation_directory"."type" TO minerva_writer;
 
 
 
@@ -1069,13 +978,9 @@ CREATE INDEX entity_tag_link_denorm_tags_idx ON directory.entity_tag_link_denorm
 
 CREATE INDEX entity_tag_link_denorm_name_idx ON directory.entity_tag_link_denorm USING btree (name);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_tag_link_denorm" TO minerva_writer;
+
 GRANT SELECT ON TABLE "directory"."entity_tag_link_denorm" TO minerva;
-
-GRANT INSERT ON TABLE "directory"."entity_tag_link_denorm" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "directory"."entity_tag_link_denorm" TO minerva_writer;
-
-GRANT DELETE ON TABLE "directory"."entity_tag_link_denorm" TO minerva_writer;
 
 
 
@@ -1089,13 +994,9 @@ CREATE TABLE "attribute_directory"."attribute_store"
 
 CREATE UNIQUE INDEX attribute_store_uniqueness ON attribute_directory.attribute_store USING btree (data_source_id, entity_type_id);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store" TO minerva_writer;
+
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store" TO minerva;
-
-GRANT INSERT ON TABLE "attribute_directory"."attribute_store" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "attribute_directory"."attribute_store" TO minerva_writer;
-
-GRANT DELETE ON TABLE "attribute_directory"."attribute_store" TO minerva_writer;
 
 
 
@@ -1106,13 +1007,9 @@ CREATE TABLE "attribute_directory"."attribute_store_curr_materialized"
   PRIMARY KEY (attribute_store_id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_curr_materialized" TO minerva_writer;
+
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store_curr_materialized" TO minerva;
-
-GRANT INSERT ON TABLE "attribute_directory"."attribute_store_curr_materialized" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "attribute_directory"."attribute_store_curr_materialized" TO minerva_writer;
-
-GRANT DELETE ON TABLE "attribute_directory"."attribute_store_curr_materialized" TO minerva_writer;
 
 
 
@@ -1123,13 +1020,9 @@ CREATE TABLE "attribute_directory"."attribute_store_compacted"
   PRIMARY KEY (attribute_store_id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva_writer;
+
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva;
-
-GRANT INSERT ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva_writer;
-
-GRANT DELETE ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva_writer;
 
 
 
@@ -1140,13 +1033,9 @@ CREATE TABLE "attribute_directory"."attribute_store_modified"
   PRIMARY KEY (attribute_store_id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_modified" TO minerva_writer;
+
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store_modified" TO minerva;
-
-GRANT INSERT ON TABLE "attribute_directory"."attribute_store_modified" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "attribute_directory"."attribute_store_modified" TO minerva_writer;
-
-GRANT DELETE ON TABLE "attribute_directory"."attribute_store_modified" TO minerva_writer;
 
 
 
@@ -1157,13 +1046,9 @@ CREATE TABLE "entity_tag"."entity_tag_link_staging"
   "tag_group_id" integer NOT NULL
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "entity_tag"."entity_tag_link_staging" TO minerva_writer;
+
 GRANT SELECT ON TABLE "entity_tag"."entity_tag_link_staging" TO minerva;
-
-GRANT INSERT ON TABLE "entity_tag"."entity_tag_link_staging" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "entity_tag"."entity_tag_link_staging" TO minerva_writer;
-
-GRANT DELETE ON TABLE "entity_tag"."entity_tag_link_staging" TO minerva_writer;
 
 
 
@@ -1174,13 +1059,9 @@ CREATE TABLE "trend_directory"."group_priority"
   PRIMARY KEY (tag_id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."group_priority" TO minerva_writer;
+
 GRANT SELECT ON TABLE "trend_directory"."group_priority" TO minerva;
-
-GRANT INSERT ON TABLE "trend_directory"."group_priority" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "trend_directory"."group_priority" TO minerva_writer;
-
-GRANT DELETE ON TABLE "trend_directory"."group_priority" TO minerva_writer;
 
 
 
@@ -1234,13 +1115,9 @@ CREATE TABLE "trend_directory"."modified"
   PRIMARY KEY (table_trend_store_part_id, timestamp)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."modified" TO minerva_writer;
+
 GRANT SELECT ON TABLE "trend_directory"."modified" TO minerva;
-
-GRANT INSERT ON TABLE "trend_directory"."modified" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "trend_directory"."modified" TO minerva_writer;
-
-GRANT DELETE ON TABLE "trend_directory"."modified" TO minerva_writer;
 
 
 
@@ -1252,13 +1129,9 @@ CREATE TABLE "dimension"."day"
   PRIMARY KEY (timestamp)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."day" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."day" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."day" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."day" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."day" TO minerva_writer;
 
 
 
@@ -1269,13 +1142,9 @@ CREATE TABLE "system"."job_error_log"
   PRIMARY KEY (job_id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_error_log" TO minerva_writer;
+
 GRANT SELECT ON TABLE "system"."job_error_log" TO minerva;
-
-GRANT INSERT ON TABLE "system"."job_error_log" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "system"."job_error_log" TO minerva_writer;
-
-GRANT DELETE ON TABLE "system"."job_error_log" TO minerva_writer;
 
 
 
@@ -1313,13 +1182,9 @@ CREATE TABLE "attribute_directory"."attribute"
 
 CREATE UNIQUE INDEX attribute_uniqueness ON attribute_directory.attribute USING btree (attribute_store_id, name);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute" TO minerva_writer;
+
 GRANT SELECT ON TABLE "attribute_directory"."attribute" TO minerva;
-
-GRANT INSERT ON TABLE "attribute_directory"."attribute" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "attribute_directory"."attribute" TO minerva_writer;
-
-GRANT DELETE ON TABLE "attribute_directory"."attribute" TO minerva_writer;
 
 
 
@@ -1330,13 +1195,9 @@ CREATE TABLE "attribute_directory"."attribute_tag_link"
   PRIMARY KEY (attribute_id, tag_id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_tag_link" TO minerva_writer;
+
 GRANT SELECT ON TABLE "attribute_directory"."attribute_tag_link" TO minerva;
-
-GRANT INSERT ON TABLE "attribute_directory"."attribute_tag_link" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "attribute_directory"."attribute_tag_link" TO minerva_writer;
-
-GRANT DELETE ON TABLE "attribute_directory"."attribute_tag_link" TO minerva_writer;
 
 
 
@@ -1372,9 +1233,9 @@ CREATE TABLE "trigger"."exception_base"
   "created" timestamp with time zone DEFAULT now()
 );
 
-GRANT SELECT ON TABLE "trigger"."exception_base" TO minerva;
-
 GRANT UPDATE ON TABLE "trigger"."exception_base" TO minerva_writer;
+
+GRANT SELECT ON TABLE "trigger"."exception_base" TO minerva;
 
 
 
@@ -1386,13 +1247,9 @@ CREATE TABLE "dimension"."month"
   PRIMARY KEY (timestamp)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."month" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."month" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."month" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."month" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."month" TO minerva_writer;
 
 
 
@@ -1441,13 +1298,9 @@ CREATE TABLE "dimension"."month_15m"
 
 CREATE INDEX month_15m_timestamp_idx ON dimension.month_15m USING btree ("timestamp");
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."month_15m" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."month_15m" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."month_15m" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."month_15m" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."month_15m" TO minerva_writer;
 
 
 
@@ -1459,13 +1312,9 @@ CREATE TABLE "dimension"."hour"
   PRIMARY KEY (timestamp)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."hour" TO minerva_writer;
+
 GRANT SELECT ON TABLE "dimension"."hour" TO minerva;
-
-GRANT INSERT ON TABLE "dimension"."hour" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "dimension"."hour" TO minerva_writer;
-
-GRANT DELETE ON TABLE "dimension"."hour" TO minerva_writer;
 
 
 
@@ -1480,13 +1329,9 @@ CREATE TABLE "system"."job_source"
 
 CREATE UNIQUE INDEX ix_system_job_source_name ON system.job_source USING btree (name);
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_source" TO minerva_writer;
+
 GRANT SELECT ON TABLE "system"."job_source" TO minerva;
-
-GRANT INSERT ON TABLE "system"."job_source" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "system"."job_source" TO minerva_writer;
-
-GRANT DELETE ON TABLE "system"."job_source" TO minerva_writer;
 
 
 
@@ -1504,13 +1349,9 @@ CREATE TABLE "system"."job"
   PRIMARY KEY (id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job" TO minerva_writer;
+
 GRANT SELECT ON TABLE "system"."job" TO minerva;
-
-GRANT INSERT ON TABLE "system"."job" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "system"."job" TO minerva_writer;
-
-GRANT DELETE ON TABLE "system"."job" TO minerva_writer;
 
 
 
@@ -1520,13 +1361,9 @@ CREATE TABLE "system"."job_queue"
   PRIMARY KEY (job_id)
 );
 
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_queue" TO minerva_writer;
+
 GRANT SELECT ON TABLE "system"."job_queue" TO minerva;
-
-GRANT INSERT ON TABLE "system"."job_queue" TO minerva_writer;
-
-GRANT UPDATE ON TABLE "system"."job_queue" TO minerva_writer;
-
-GRANT DELETE ON TABLE "system"."job_queue" TO minerva_writer;
 
 
 
@@ -2297,7 +2134,7 @@ CREATE FUNCTION "trend_directory"."initialize_view_trend_store"(trend_directory.
     RETURNS trend_directory.view_trend_store
 AS $$
 SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "trigger"."get_with_threshold_view_sql"(trigger.rule)
@@ -4417,7 +4254,7 @@ SELECT trigger.action($1, format(
     ));
 
     SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "trigger"."create_dummy_notification_fn"(trigger.rule)
@@ -4445,7 +4282,7 @@ CREATE FUNCTION "trigger"."create_rule_view"(trigger.rule, "rule_view_sql" text)
     RETURNS trigger.rule
 AS $$
 SELECT trigger.action($1, trigger.create_rule_view_sql($1, $2));
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "trend_directory"."data_type_order"("data_type" text)
@@ -5785,14 +5622,14 @@ SELECT public.action(
         $1,
         relation_directory.drop_relation_view_sql($1)
     );
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "trend_directory"."create_staging_table"(trend_directory.table_trend_store_part)
     RETURNS trend_directory.table_trend_store_part
 AS $$
 SELECT public.action($1, trend_directory.create_staging_table_sql($1));
-$$ LANGUAGE sql VOLATILE STRICT;
+$$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
 
 
 CREATE FUNCTION "attribute_directory"."drop_curr_ptr_view"(attribute_directory.attribute_store)
@@ -5819,7 +5656,7 @@ CREATE FUNCTION "trend_directory"."create_base_table"("name" name, trend_directo
     RETURNS name
 AS $$
 SELECT public.action($1, trend_directory.create_base_table_sql($1, $2))
-$$ LANGUAGE sql VOLATILE STRICT;
+$$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
 
 
 CREATE FUNCTION "relation_directory"."update"(relation_directory.type, text)
@@ -5829,7 +5666,7 @@ SELECT public.action(
         $1,
         relation_directory.create_or_replace_relation_view_sql($1, $2)
     );
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "trend_directory"."drop_view"(trend_directory.view_trend_store_part)
@@ -5892,7 +5729,7 @@ SELECT public.action($1, trend_directory.create_view_sql($1, $2));
     SELECT trend_directory.create_view_trends($1);
 
     SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.table_trend_store_part, trend_directory.table_trend)
@@ -5955,7 +5792,7 @@ CREATE FUNCTION "entity_tag"."create_view"("type_name" name, "sql" text)
     RETURNS name
 AS $$
 SELECT public.action($1, entity_tag.create_view_sql($1, $2));
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "attribute_directory"."drop_compacted_view"(attribute_directory.attribute_store)
@@ -6010,7 +5847,7 @@ CREATE FUNCTION "trend_directory"."create_base_table"(trend_directory.table_tren
 AS $$
 SELECT trend_directory.create_base_table(trend_directory.base_table_name($1), $2);
     SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "trend_directory"."create_base_table"(trend_directory.table_trend_store_part)
@@ -6197,7 +6034,7 @@ CREATE FUNCTION "relation_directory"."create_relation_table"(relation_directory.
     RETURNS relation_directory.type
 AS $$
 SELECT public.action($1, relation_directory.create_relation_table_sql($1));
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "relation_directory"."create_relation_table_on_insert"()
@@ -6254,14 +6091,14 @@ SELECT public.action(
         $1,
         relation_directory.create_relation_view_sql($1, $2)
     );
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "relation_directory"."drop_relation_table"(relation_directory.type)
     RETURNS relation_directory.type
 AS $$
 SELECT public.action($1, relation_directory.drop_relation_table_sql($1));
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
 CREATE FUNCTION "relation_directory"."remove"(name)
@@ -6793,8 +6630,8 @@ $$ LANGUAGE sql STABLE STRICT;
 
 
 CREATE AGGREGATE first (anyelement) (
-    SFUNC = fst,
-    STYPE = anyelement
+    sfunc = fst,
+    stype = anyelement
 );
 
 
@@ -6852,15 +6689,15 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE AGGREGATE sum_array (anyarray) (
-    SFUNC = add_array,
-    STYPE = anyarray
+    sfunc = add_array,
+    stype = anyarray
 );
 
 
 
 CREATE AGGREGATE last (anyelement) (
-    SFUNC = snd,
-    STYPE = anyelement
+    sfunc = snd,
+    stype = anyelement
 );
 
 
@@ -7104,8 +6941,8 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE AGGREGATE trend_directory.max_data_type (text) (
-    SFUNC = trend_directory.greatest_data_type,
-    STYPE = text
+    sfunc = trend_directory.greatest_data_type,
+    stype = text
 );
 
 
@@ -7180,153 +7017,167 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE TRIGGER create_entity_tag_link_for_new_entity
-AFTER INSERT ON "directory"."entity"
-FOR EACH ROW
-EXECUTE PROCEDURE "directory"."create_entity_tag_link"();
+  AFTER INSERT ON "directory"."entity"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "directory"."create_entity_tag_link"();
 
 
 CREATE TRIGGER create_tag_for_new_entity_types
-AFTER INSERT ON "directory"."entity_type"
-FOR EACH ROW
-EXECUTE PROCEDURE "directory"."create_entity_type_tag"();
+  AFTER INSERT ON "directory"."entity_type"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "directory"."create_entity_type_tag"();
 
 
 CREATE TRIGGER update_denormalized_tags_on_link_insert
-AFTER INSERT ON "directory"."entity_tag_link"
-FOR EACH ROW
-EXECUTE PROCEDURE "directory"."update_entity_tag_link_denorm_for_insert"();
+  AFTER INSERT ON "directory"."entity_tag_link"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "directory"."update_entity_tag_link_denorm_for_insert"();
 
 
 CREATE TRIGGER update_denormalized_tags_on_link_delete
-AFTER DELETE ON "directory"."entity_tag_link"
-FOR EACH ROW
-EXECUTE PROCEDURE "directory"."update_entity_tag_link_denorm_for_delete"();
+  AFTER DELETE ON "directory"."entity_tag_link"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "directory"."update_entity_tag_link_denorm_for_delete"();
 
 
 CREATE TRIGGER propagate_changes_on_update_to_trend
-AFTER UPDATE ON "directory"."data_source"
-FOR EACH ROW
-EXECUTE PROCEDURE "trend_directory"."changes_on_data_source_update"();
+  AFTER UPDATE ON "directory"."data_source"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."changes_on_data_source_update"();
 
 
 CREATE TRIGGER propagate_changes_on_trend_update
-AFTER UPDATE ON "trend_directory"."trend"
-FOR EACH ROW
-EXECUTE PROCEDURE "trend_directory"."changes_on_trend_update"();
+  AFTER UPDATE ON "trend_directory"."trend"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."changes_on_trend_update"();
 
 
 CREATE TRIGGER delete_trend_stores_on_data_source_delete
-BEFORE DELETE ON "directory"."data_source"
-FOR EACH ROW
-EXECUTE PROCEDURE "trend_directory"."cleanup_on_data_source_delete"();
+  BEFORE DELETE ON "directory"."data_source"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."cleanup_on_data_source_delete"();
 
 
 CREATE TRIGGER cleanup_table_trend_store_part_on_delete
-BEFORE DELETE ON "trend_directory"."table_trend_store_part"
-FOR EACH ROW
-EXECUTE PROCEDURE "trend_directory"."cleanup_table_trend_store_part_on_delete"();
+  BEFORE DELETE ON "trend_directory"."table_trend_store_part"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."cleanup_table_trend_store_part_on_delete"();
 
 
 CREATE TRIGGER drop_view_on_delete
-BEFORE DELETE ON "trend_directory"."view_trend_store"
-FOR EACH ROW
-EXECUTE PROCEDURE "trend_directory"."drop_view_on_delete"();
+  BEFORE DELETE ON "trend_directory"."view_trend_store"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."drop_view_on_delete"();
 
 
 CREATE TRIGGER delete_attribute_stores_on_data_source_delete
-BEFORE DELETE ON "directory"."data_source"
-FOR EACH ROW
-EXECUTE PROCEDURE "attribute_directory"."cleanup_on_data_source_delete"();
+  BEFORE DELETE ON "directory"."data_source"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."cleanup_on_data_source_delete"();
 
 
 CREATE TRIGGER delete_attribute_stores_on_entity_type_delete
-BEFORE DELETE ON "directory"."entity_type"
-FOR EACH ROW
-EXECUTE PROCEDURE "attribute_directory"."cleanup_on_entity_type_delete"();
+  BEFORE DELETE ON "directory"."entity_type"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."cleanup_on_entity_type_delete"();
 
 
 CREATE TRIGGER cleanup_attribute_store_on_delete
-BEFORE DELETE ON "attribute_directory"."attribute_store"
-FOR EACH ROW
-EXECUTE PROCEDURE "attribute_directory"."cleanup_attribute_store_on_delete"();
+  BEFORE DELETE ON "attribute_directory"."attribute_store"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."cleanup_attribute_store_on_delete"();
 
 
 CREATE TRIGGER update_attribute_type
-AFTER UPDATE ON "attribute_directory"."attribute"
-FOR EACH ROW
-EXECUTE PROCEDURE "attribute_directory"."update_data_type_on_change"();
+  AFTER UPDATE ON "attribute_directory"."attribute"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."update_data_type_on_change"();
 
 
 CREATE TRIGGER after_delete_attribute
-AFTER DELETE ON "attribute_directory"."attribute"
-FOR EACH ROW
-EXECUTE PROCEDURE "attribute_directory"."cleanup_attribute_after_delete"();
+  AFTER DELETE ON "attribute_directory"."attribute"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."cleanup_attribute_after_delete"();
 
 
 CREATE TRIGGER drop_table_on_delete
-BEFORE DELETE ON "notification_directory"."notification_store"
-FOR EACH ROW
-EXECUTE PROCEDURE "notification_directory"."drop_table_on_delete"();
+  BEFORE DELETE ON "notification_directory"."notification_store"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "notification_directory"."drop_table_on_delete"();
 
 
 CREATE TRIGGER drop_notification_set_store_table_on_delete
-BEFORE DELETE ON "notification_directory"."notification_set_store"
-FOR EACH ROW
-EXECUTE PROCEDURE "notification_directory"."drop_notification_set_store_table_on_delete"();
+  BEFORE DELETE ON "notification_directory"."notification_set_store"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "notification_directory"."drop_notification_set_store_table_on_delete"();
 
 
 CREATE TRIGGER delete_notification_stores_on_data_source_delete
-BEFORE DELETE ON "directory"."data_source"
-FOR EACH ROW
-EXECUTE PROCEDURE "notification_directory"."cleanup_on_data_source_delete"();
+  BEFORE DELETE ON "directory"."data_source"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "notification_directory"."cleanup_on_data_source_delete"();
 
 
 CREATE TRIGGER cleanup_on_rule_delete
-BEFORE DELETE ON "trigger"."rule"
-FOR EACH ROW
-EXECUTE PROCEDURE "trigger"."cleanup_on_rule_delete"();
+  BEFORE DELETE ON "trigger"."rule"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trigger"."cleanup_on_rule_delete"();
 
 
-CREATE CAST (integer AS integer[]) WITH FUNCTION "public"."integer_to_array"(integer);
+CREATE CAST (integer AS integer[])
+  WITH FUNCTION "public"."integer_to_array"(integer);
 
 
-CREATE CAST (smallint AS smallint[]) WITH FUNCTION "public"."smallint_to_array"(smallint);
+CREATE CAST (smallint AS smallint[])
+  WITH FUNCTION "public"."smallint_to_array"(smallint);
 
 
-CREATE CAST (smallint AS timestamp without time zone) WITH FUNCTION "public"."smallint_to_timestamp_without_time_zone"(smallint);
+CREATE CAST (smallint AS timestamp without time zone)
+  WITH FUNCTION "public"."smallint_to_timestamp_without_time_zone"(smallint);
 
 
-CREATE CAST (smallint AS timestamp with time zone) WITH FUNCTION "public"."smallint_to_timestamp_with_time_zone"(smallint);
+CREATE CAST (smallint AS timestamp with time zone)
+  WITH FUNCTION "public"."smallint_to_timestamp_with_time_zone"(smallint);
 
 
-CREATE CAST (directory.dn_part AS text) WITH FUNCTION "directory"."dn_part_to_string"(directory.dn_part);
+CREATE CAST (directory.dn_part AS text)
+  WITH FUNCTION "directory"."dn_part_to_string"(directory.dn_part);
 
 
-CREATE CAST (text[] AS directory.dn_part) WITH FUNCTION "directory"."array_to_dn_part"(text[]);
+CREATE CAST (text[] AS directory.dn_part)
+  WITH FUNCTION "directory"."array_to_dn_part"(text[]);
 
 
-CREATE CAST ("trend_directory"."trend_store_part" AS text) WITH FUNCTION "trend_directory"."to_char"("trend_directory"."trend_store_part") AS IMPLICIT;
+CREATE CAST ("trend_directory"."trend_store_part" AS text)
+  WITH FUNCTION "trend_directory"."to_char"("trend_directory"."trend_store_part") AS IMPLICIT;
 
 
-CREATE CAST ("trend_directory"."table_trend_store_part" AS text) WITH FUNCTION "trend_directory"."to_char"("trend_directory"."table_trend_store_part") AS IMPLICIT;
+CREATE CAST ("trend_directory"."table_trend_store_part" AS text)
+  WITH FUNCTION "trend_directory"."to_char"("trend_directory"."table_trend_store_part") AS IMPLICIT;
 
 
-CREATE CAST ("trend_directory"."table_trend_store_part" AS name) WITH FUNCTION "trend_directory"."base_table_name"("trend_directory"."table_trend_store_part") AS IMPLICIT;
+CREATE CAST ("trend_directory"."table_trend_store_part" AS name)
+  WITH FUNCTION "trend_directory"."base_table_name"("trend_directory"."table_trend_store_part") AS IMPLICIT;
 
 
-CREATE CAST ("trend_directory"."view_trend_store_part" AS text) WITH FUNCTION "trend_directory"."to_char"("trend_directory"."view_trend_store_part") AS IMPLICIT;
+CREATE CAST ("trend_directory"."view_trend_store_part" AS text)
+  WITH FUNCTION "trend_directory"."to_char"("trend_directory"."view_trend_store_part") AS IMPLICIT;
 
 
-CREATE CAST ("trend_directory"."view_trend_store_part" AS name) WITH FUNCTION "trend_directory"."view_name"("trend_directory"."view_trend_store_part") AS IMPLICIT;
+CREATE CAST ("trend_directory"."view_trend_store_part" AS name)
+  WITH FUNCTION "trend_directory"."view_name"("trend_directory"."view_trend_store_part") AS IMPLICIT;
 
 
-CREATE CAST ("trend_directory"."materialization" AS text) WITH FUNCTION "trend_directory"."to_char"("trend_directory"."materialization");
+CREATE CAST ("trend_directory"."materialization" AS text)
+  WITH FUNCTION "trend_directory"."to_char"("trend_directory"."materialization");
 
 
-CREATE CAST ("attribute_directory"."attribute_store" AS text) WITH FUNCTION "attribute_directory"."to_char"("attribute_directory"."attribute_store");
+CREATE CAST ("attribute_directory"."attribute_store" AS text)
+  WITH FUNCTION "attribute_directory"."to_char"("attribute_directory"."attribute_store");
 
 
-CREATE CAST ("notification_directory"."notification_store" AS text) WITH FUNCTION "notification_directory"."to_char"("notification_directory"."notification_store");
+CREATE CAST ("notification_directory"."notification_store" AS text)
+  WITH FUNCTION "notification_directory"."to_char"("notification_directory"."notification_store");
 
 
 CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, interval)
@@ -7528,7 +7379,7 @@ CREATE FUNCTION "trend_directory"."create_partition_table"(trend_directory.parti
     RETURNS trend_directory.partition
 AS $$
 SELECT public.action($1, trend_directory.create_partition_table_sql($1));
-$$ LANGUAGE sql VOLATILE STRICT;
+$$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
 
 
 CREATE FUNCTION "trend_directory"."drop_partition_table_on_delete"()
@@ -7680,9 +7531,9 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE TRIGGER drop_table_on_delete
-AFTER DELETE ON "trend_directory"."partition"
-FOR EACH ROW
-EXECUTE PROCEDURE "trend_directory"."drop_partition_table_on_delete"();
+  AFTER DELETE ON "trend_directory"."partition"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."drop_partition_table_on_delete"();
 
 
 CREATE FUNCTION "entity_tag"."add_new_tags"()
@@ -7733,44 +7584,209 @@ BEGIN
     RETURN result;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-ALTER TABLE "alias"."dn" ADD CONSTRAINT "dn_entity_id_fkey" FOREIGN KEY (entity_id) REFERENCES "directory"."entity" (id);
-ALTER TABLE "attribute_directory"."attribute_store" ADD CONSTRAINT "attribute_attribute_store_entity_type_id_fkey" FOREIGN KEY (entity_type_id) REFERENCES "directory"."entity_type" (id) ON DELETE CASCADE;
-ALTER TABLE "attribute_directory"."attribute_store" ADD CONSTRAINT "attribute_attribute_store_data_source_id_fkey" FOREIGN KEY (data_source_id) REFERENCES "directory"."data_source" (id);
-ALTER TABLE "attribute_directory"."attribute_store_curr_materialized" ADD CONSTRAINT "attribute_store_curr_materialized_attribute_store_id_fkey" FOREIGN KEY (attribute_store_id) REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
-ALTER TABLE "attribute_directory"."attribute_store_compacted" ADD CONSTRAINT "attribute_store_compacted_attribute_store_id_fkey" FOREIGN KEY (attribute_store_id) REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
-ALTER TABLE "attribute_directory"."attribute_store_modified" ADD CONSTRAINT "attribute_store_modified_attribute_store_id_fkey" FOREIGN KEY (attribute_store_id) REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
-ALTER TABLE "attribute_directory"."attribute" ADD CONSTRAINT "attribute_attribute_attribute_store_id_fkey" FOREIGN KEY (attribute_store_id) REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
-ALTER TABLE "attribute_directory"."attribute_tag_link" ADD CONSTRAINT "attribute_tag_link_tag_id_fkey" FOREIGN KEY (tag_id) REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
-ALTER TABLE "attribute_directory"."attribute_tag_link" ADD CONSTRAINT "attribute_tag_link_attribute_id_fkey" FOREIGN KEY (attribute_id) REFERENCES "attribute_directory"."attribute" (id) ON DELETE CASCADE;
-ALTER TABLE "directory"."entity" ADD CONSTRAINT "entity_entity_type_id_fkey" FOREIGN KEY (entity_type_id) REFERENCES "directory"."entity_type" (id) ON DELETE CASCADE;
-ALTER TABLE "directory"."tag" ADD CONSTRAINT "tag_tag_group_id_fkey" FOREIGN KEY (tag_group_id) REFERENCES "directory"."tag_group" (id) ON DELETE CASCADE;
-ALTER TABLE "directory"."entity_tag_link" ADD CONSTRAINT "entity_tag_link_entity_id_fkey" FOREIGN KEY (entity_id) REFERENCES "directory"."entity" (id) ON DELETE CASCADE;
-ALTER TABLE "directory"."entity_tag_link" ADD CONSTRAINT "entity_tag_link_tag_id_fkey" FOREIGN KEY (tag_id) REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
-ALTER TABLE "entity_tag"."type" ADD CONSTRAINT "type_tag_group_id_fkey" FOREIGN KEY (tag_group_id) REFERENCES "directory"."tag_group" (id) ON DELETE CASCADE;
-ALTER TABLE "notification_directory"."notification_store" ADD CONSTRAINT "notification_store_data_source_id_fkey" FOREIGN KEY (data_source_id) REFERENCES "directory"."data_source" (id) ON DELETE CASCADE;
-ALTER TABLE "notification_directory"."attribute" ADD CONSTRAINT "attribute_notification_store_id_fkey" FOREIGN KEY (notification_store_id) REFERENCES "notification_directory"."notification_store" (id) ON DELETE CASCADE;
-ALTER TABLE "notification_directory"."notification_set_store" ADD CONSTRAINT "notification_set_store_notification_store_id_fkey" FOREIGN KEY (notification_store_id) REFERENCES "notification_directory"."notification_store" (id) ON DELETE CASCADE;
-ALTER TABLE "notification_directory"."set_attribute" ADD CONSTRAINT "set_attribute_notification_set_store_id_fkey" FOREIGN KEY (notification_set_store_id) REFERENCES "notification_directory"."notification_set_store" (id) ON DELETE CASCADE;
-ALTER TABLE "system"."job" ADD CONSTRAINT "job_job_source_id_fkey" FOREIGN KEY (job_source_id) REFERENCES "system"."job_source" (id) ON DELETE CASCADE;
-ALTER TABLE "system"."job_queue" ADD CONSTRAINT "job_queue_job_id_fkey" FOREIGN KEY (job_id) REFERENCES "system"."job" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."trend_store" ADD CONSTRAINT "trend_store_entity_type_id_fkey" FOREIGN KEY (entity_type_id) REFERENCES "directory"."entity_type" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."trend_store" ADD CONSTRAINT "trend_store_data_source_id_fkey" FOREIGN KEY (data_source_id) REFERENCES "directory"."data_source" (id);
-ALTER TABLE "trend_directory"."materialization" ADD CONSTRAINT "materialization_dst_trend_store_id_fkey" FOREIGN KEY (dst_trend_store_id) REFERENCES "trend_directory"."table_trend_store" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."state" ADD CONSTRAINT "materialization_state_materialization_id_fkey" FOREIGN KEY (materialization_id) REFERENCES "trend_directory"."materialization" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."materialization_tag_link" ADD CONSTRAINT "materialization_tag_link_tag_id_fkey" FOREIGN KEY (tag_id) REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."materialization_tag_link" ADD CONSTRAINT "materialization_tag_link_materialization_id_fkey" FOREIGN KEY (materialization_id) REFERENCES "trend_directory"."materialization" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."materialization_trend_store_link" ADD CONSTRAINT "materialization_trend_store_link_materialization_id_fkey" FOREIGN KEY (materialization_id) REFERENCES "trend_directory"."materialization" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."materialization_trend_store_link" ADD CONSTRAINT "materialization_trend_store_link_trend_store_id_fkey" FOREIGN KEY (trend_store_id) REFERENCES "trend_directory"."table_trend_store" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."trend_tag_link" ADD CONSTRAINT "trend_tag_link_trend_id_fkey" FOREIGN KEY (trend_id) REFERENCES "trend_directory"."trend" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."trend_tag_link" ADD CONSTRAINT "trend_tag_link_tag_id_fkey" FOREIGN KEY (tag_id) REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."group_priority" ADD CONSTRAINT "group_priority_tag_id_fkey" FOREIGN KEY (tag_id) REFERENCES "directory"."tag" (id);
-ALTER TABLE "trend_directory"."table_trend_store_part" ADD CONSTRAINT "table_trend_store_part_trend_store_id_fkey" FOREIGN KEY (trend_store_id) REFERENCES "trend_directory"."table_trend_store" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."table_trend" ADD CONSTRAINT "table_trend_trend_store_part_id_fkey" FOREIGN KEY (trend_store_part_id) REFERENCES "trend_directory"."table_trend_store_part" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."partition" ADD CONSTRAINT "partition_table_trend_store_part_id_fkey" FOREIGN KEY (table_trend_store_part_id) REFERENCES "trend_directory"."table_trend_store_part" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."modified" ADD CONSTRAINT "modified_table_trend_store_part_id_fkey" FOREIGN KEY (table_trend_store_part_id) REFERENCES "trend_directory"."table_trend_store_part" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."view_trend_store_part" ADD CONSTRAINT "view_trend_store_part_trend_store_id_fkey" FOREIGN KEY (trend_store_id) REFERENCES "trend_directory"."view_trend_store" (id) ON DELETE CASCADE;
-ALTER TABLE "trend_directory"."view_trend" ADD CONSTRAINT "view_trend_trend_store_part_id_fkey" FOREIGN KEY (trend_store_part_id) REFERENCES "trend_directory"."view_trend_store_part" (id) ON DELETE CASCADE;
-ALTER TABLE "trigger"."rule" ADD CONSTRAINT "rule_notification_store_id_fkey" FOREIGN KEY (notification_store_id) REFERENCES "notification_directory"."notification_store" (id);
-ALTER TABLE "trigger"."rule_tag_link" ADD CONSTRAINT "rule_tag_link_rule_id_fkey" FOREIGN KEY (rule_id) REFERENCES "trigger"."rule" (id) ON DELETE CASCADE;
-ALTER TABLE "trigger"."rule_tag_link" ADD CONSTRAINT "rule_tag_link_tag_id_fkey" FOREIGN KEY (tag_id) REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
-ALTER TABLE "trigger"."exception_base" ADD CONSTRAINT "exception_base_entity_id_fkey" FOREIGN KEY (entity_id) REFERENCES "directory"."entity" (id);
+
+
+ALTER TABLE "alias"."dn"
+  ADD CONSTRAINT "dn_entity_id_fkey"
+  FOREIGN KEY (entity_id)
+  REFERENCES "directory"."entity" (id);
+
+ALTER TABLE "attribute_directory"."attribute_store"
+  ADD CONSTRAINT "attribute_attribute_store_entity_type_id_fkey"
+  FOREIGN KEY (entity_type_id)
+  REFERENCES "directory"."entity_type" (id) ON DELETE CASCADE;
+
+ALTER TABLE "attribute_directory"."attribute_store"
+  ADD CONSTRAINT "attribute_attribute_store_data_source_id_fkey"
+  FOREIGN KEY (data_source_id)
+  REFERENCES "directory"."data_source" (id);
+
+ALTER TABLE "attribute_directory"."attribute_store_curr_materialized"
+  ADD CONSTRAINT "attribute_store_curr_materialized_attribute_store_id_fkey"
+  FOREIGN KEY (attribute_store_id)
+  REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "attribute_directory"."attribute_store_compacted"
+  ADD CONSTRAINT "attribute_store_compacted_attribute_store_id_fkey"
+  FOREIGN KEY (attribute_store_id)
+  REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "attribute_directory"."attribute_store_modified"
+  ADD CONSTRAINT "attribute_store_modified_attribute_store_id_fkey"
+  FOREIGN KEY (attribute_store_id)
+  REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "attribute_directory"."attribute"
+  ADD CONSTRAINT "attribute_attribute_attribute_store_id_fkey"
+  FOREIGN KEY (attribute_store_id)
+  REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "attribute_directory"."attribute_tag_link"
+  ADD CONSTRAINT "attribute_tag_link_tag_id_fkey"
+  FOREIGN KEY (tag_id)
+  REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
+
+ALTER TABLE "attribute_directory"."attribute_tag_link"
+  ADD CONSTRAINT "attribute_tag_link_attribute_id_fkey"
+  FOREIGN KEY (attribute_id)
+  REFERENCES "attribute_directory"."attribute" (id) ON DELETE CASCADE;
+
+ALTER TABLE "directory"."entity"
+  ADD CONSTRAINT "entity_entity_type_id_fkey"
+  FOREIGN KEY (entity_type_id)
+  REFERENCES "directory"."entity_type" (id) ON DELETE CASCADE;
+
+ALTER TABLE "directory"."tag"
+  ADD CONSTRAINT "tag_tag_group_id_fkey"
+  FOREIGN KEY (tag_group_id)
+  REFERENCES "directory"."tag_group" (id) ON DELETE CASCADE;
+
+ALTER TABLE "directory"."entity_tag_link"
+  ADD CONSTRAINT "entity_tag_link_entity_id_fkey"
+  FOREIGN KEY (entity_id)
+  REFERENCES "directory"."entity" (id) ON DELETE CASCADE;
+
+ALTER TABLE "directory"."entity_tag_link"
+  ADD CONSTRAINT "entity_tag_link_tag_id_fkey"
+  FOREIGN KEY (tag_id)
+  REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
+
+ALTER TABLE "entity_tag"."type"
+  ADD CONSTRAINT "type_tag_group_id_fkey"
+  FOREIGN KEY (tag_group_id)
+  REFERENCES "directory"."tag_group" (id) ON DELETE CASCADE;
+
+ALTER TABLE "notification_directory"."notification_store"
+  ADD CONSTRAINT "notification_store_data_source_id_fkey"
+  FOREIGN KEY (data_source_id)
+  REFERENCES "directory"."data_source" (id) ON DELETE CASCADE;
+
+ALTER TABLE "notification_directory"."attribute"
+  ADD CONSTRAINT "attribute_notification_store_id_fkey"
+  FOREIGN KEY (notification_store_id)
+  REFERENCES "notification_directory"."notification_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "notification_directory"."notification_set_store"
+  ADD CONSTRAINT "notification_set_store_notification_store_id_fkey"
+  FOREIGN KEY (notification_store_id)
+  REFERENCES "notification_directory"."notification_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "notification_directory"."set_attribute"
+  ADD CONSTRAINT "set_attribute_notification_set_store_id_fkey"
+  FOREIGN KEY (notification_set_store_id)
+  REFERENCES "notification_directory"."notification_set_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "system"."job"
+  ADD CONSTRAINT "job_job_source_id_fkey"
+  FOREIGN KEY (job_source_id)
+  REFERENCES "system"."job_source" (id) ON DELETE CASCADE;
+
+ALTER TABLE "system"."job_queue"
+  ADD CONSTRAINT "job_queue_job_id_fkey"
+  FOREIGN KEY (job_id)
+  REFERENCES "system"."job" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."trend_store"
+  ADD CONSTRAINT "trend_store_entity_type_id_fkey"
+  FOREIGN KEY (entity_type_id)
+  REFERENCES "directory"."entity_type" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."trend_store"
+  ADD CONSTRAINT "trend_store_data_source_id_fkey"
+  FOREIGN KEY (data_source_id)
+  REFERENCES "directory"."data_source" (id);
+
+ALTER TABLE "trend_directory"."materialization"
+  ADD CONSTRAINT "materialization_dst_trend_store_id_fkey"
+  FOREIGN KEY (dst_trend_store_id)
+  REFERENCES "trend_directory"."table_trend_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."state"
+  ADD CONSTRAINT "materialization_state_materialization_id_fkey"
+  FOREIGN KEY (materialization_id)
+  REFERENCES "trend_directory"."materialization" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."materialization_tag_link"
+  ADD CONSTRAINT "materialization_tag_link_tag_id_fkey"
+  FOREIGN KEY (tag_id)
+  REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."materialization_tag_link"
+  ADD CONSTRAINT "materialization_tag_link_materialization_id_fkey"
+  FOREIGN KEY (materialization_id)
+  REFERENCES "trend_directory"."materialization" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."materialization_trend_store_link"
+  ADD CONSTRAINT "materialization_trend_store_link_materialization_id_fkey"
+  FOREIGN KEY (materialization_id)
+  REFERENCES "trend_directory"."materialization" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."materialization_trend_store_link"
+  ADD CONSTRAINT "materialization_trend_store_link_trend_store_id_fkey"
+  FOREIGN KEY (trend_store_id)
+  REFERENCES "trend_directory"."table_trend_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."trend_tag_link"
+  ADD CONSTRAINT "trend_tag_link_trend_id_fkey"
+  FOREIGN KEY (trend_id)
+  REFERENCES "trend_directory"."trend" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."trend_tag_link"
+  ADD CONSTRAINT "trend_tag_link_tag_id_fkey"
+  FOREIGN KEY (tag_id)
+  REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."group_priority"
+  ADD CONSTRAINT "group_priority_tag_id_fkey"
+  FOREIGN KEY (tag_id)
+  REFERENCES "directory"."tag" (id);
+
+ALTER TABLE "trend_directory"."table_trend_store_part"
+  ADD CONSTRAINT "table_trend_store_part_trend_store_id_fkey"
+  FOREIGN KEY (trend_store_id)
+  REFERENCES "trend_directory"."table_trend_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."table_trend"
+  ADD CONSTRAINT "table_trend_trend_store_part_id_fkey"
+  FOREIGN KEY (trend_store_part_id)
+  REFERENCES "trend_directory"."table_trend_store_part" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."partition"
+  ADD CONSTRAINT "partition_table_trend_store_part_id_fkey"
+  FOREIGN KEY (table_trend_store_part_id)
+  REFERENCES "trend_directory"."table_trend_store_part" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."modified"
+  ADD CONSTRAINT "modified_table_trend_store_part_id_fkey"
+  FOREIGN KEY (table_trend_store_part_id)
+  REFERENCES "trend_directory"."table_trend_store_part" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."view_trend_store_part"
+  ADD CONSTRAINT "view_trend_store_part_trend_store_id_fkey"
+  FOREIGN KEY (trend_store_id)
+  REFERENCES "trend_directory"."view_trend_store" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."view_trend"
+  ADD CONSTRAINT "view_trend_trend_store_part_id_fkey"
+  FOREIGN KEY (trend_store_part_id)
+  REFERENCES "trend_directory"."view_trend_store_part" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trigger"."rule"
+  ADD CONSTRAINT "rule_notification_store_id_fkey"
+  FOREIGN KEY (notification_store_id)
+  REFERENCES "notification_directory"."notification_store" (id);
+
+ALTER TABLE "trigger"."rule_tag_link"
+  ADD CONSTRAINT "rule_tag_link_rule_id_fkey"
+  FOREIGN KEY (rule_id)
+  REFERENCES "trigger"."rule" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trigger"."rule_tag_link"
+  ADD CONSTRAINT "rule_tag_link_tag_id_fkey"
+  FOREIGN KEY (tag_id)
+  REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trigger"."exception_base"
+  ADD CONSTRAINT "exception_base_entity_id_fkey"
+  FOREIGN KEY (entity_id)
+  REFERENCES "directory"."entity" (id);

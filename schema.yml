@@ -1,7 +1,6 @@
 objects:
 - schema:
     name: public
-    comment: standard public schema
 - schema:
     name: olap
 - schema:
@@ -18,7 +17,6 @@ objects:
     name: alias
 - schema:
     name: relation_directory
-    comment: Stores directional relations between entities.
 - schema:
     name: entity_tag
 - schema:
@@ -38,7 +36,6 @@ objects:
     comment: Stores information with fixed interval and format, like periodic measurements.
 - schema:
     name: trend_directory
-    comment: Stores information with fixed interval and format, like periodic measurements.
 - schema:
     name: attribute_directory
 - schema:
@@ -462,11 +459,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: entity_type
     schema: directory
@@ -495,11 +488,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: entity
     schema: directory
@@ -545,11 +534,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: tag_group
     schema: directory
@@ -578,11 +563,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: tag
     schema: directory
@@ -628,11 +609,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: base
     schema: relation
@@ -685,11 +662,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: attribute
     schema: notification_directory
@@ -731,11 +704,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: notification_set_store
     schema: notification_directory
@@ -771,11 +740,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: set_attribute
     schema: notification_directory
@@ -817,11 +782,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: setting
     schema: system
@@ -844,11 +805,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: 5m
     schema: dimension
@@ -870,11 +827,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: entity_tag_link
     schema: directory
@@ -919,11 +872,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: rule
     schema: trigger
@@ -1141,11 +1090,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: view_materialization
     schema: trend_directory
@@ -1227,11 +1172,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: materialization_tag_link
     schema: trend_directory
@@ -1275,11 +1216,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: materialization_trend_store_link
     schema: trend_directory
@@ -1338,11 +1275,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: four_consec_qtr
     schema: dimension
@@ -1364,11 +1297,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: week
     schema: dimension
@@ -1396,11 +1325,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: week_15m
     schema: dimension
@@ -1423,11 +1348,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: trend
     schema: trend_directory
@@ -1514,11 +1435,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: day_15m
     schema: dimension
@@ -1537,11 +1454,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: type
     schema: relation_directory
@@ -1568,11 +1481,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: entity_tag_link_denorm
     schema: directory
@@ -1601,11 +1510,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: attribute_store
     schema: attribute_directory
@@ -1652,11 +1557,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: attribute_store_curr_materialized
     schema: attribute_directory
@@ -1686,11 +1587,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: attribute_store_compacted
     schema: attribute_directory
@@ -1720,11 +1617,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: attribute_store_modified
     schema: attribute_directory
@@ -1754,11 +1647,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: entity_tag_link_staging
     schema: entity_tag
@@ -1776,11 +1665,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: group_priority
     schema: trend_directory
@@ -1810,11 +1695,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: trend_store_part
     schema: trend_directory
@@ -1965,11 +1846,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: day
     schema: dimension
@@ -1991,11 +1868,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: job_error_log
     schema: system
@@ -2014,11 +1887,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: type
     schema: entity_tag
@@ -2115,11 +1984,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: attribute_tag_link
     schema: attribute_directory
@@ -2160,11 +2025,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: dn
     schema: alias
@@ -2272,11 +2133,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: function_materialization
     schema: trend_directory
@@ -2403,11 +2260,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: hour
     schema: dimension
@@ -2429,11 +2282,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: job_source
     schema: system
@@ -2463,11 +2312,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: job
     schema: system
@@ -2521,11 +2366,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - table:
     name: job_queue
     schema: system
@@ -2552,11 +2393,7 @@ objects:
     - role: minerva
       privilege: SELECT
     - role: minerva_writer
-      privilege: INSERT
-    - role: minerva_writer
-      privilege: UPDATE
-    - role: minerva_writer
-      privilege: DELETE
+      privilege: INSERT,UPDATE,DELETE
 - function:
     name: get_default_partition_size
     schema: trend_directory
@@ -2564,11 +2401,11 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - name: granularity
       data_type: interval
-    description: |-
-      Return the default partition size in seconds for a particular granularity
+    description: Return the default partition size in seconds for a particular granularity
     source: |-
       SELECT CASE $1
               WHEN '300'::interval THEN
@@ -2595,14 +2432,15 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: tag_name
       data_type: varchar
     - name: rule_id
       data_type: integer
-    description: |-
-      Add tag with name tag_name to rule with id rule_id.
-      The tag must already exist.
+    description: 'Add tag with name tag_name to rule with id rule_id.
+
+      The tag must already exist.'
     source: |-
       INSERT INTO trigger.rule_tag_link (rule_id, tag_id)
               SELECT $2, tag.id FROM directory.tag WHERE name = $1
@@ -2614,6 +2452,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: table_name
       data_type: name
@@ -2634,6 +2473,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: entity_id
       data_type: integer
@@ -2657,6 +2497,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       TRUNCATE dimension.quarter;
@@ -2677,6 +2518,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: dn
       data_type: text
@@ -2705,6 +2547,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -2721,6 +2564,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     - data_type: name
@@ -2735,6 +2579,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -2747,6 +2592,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: view_name
       data_type: name
@@ -2762,6 +2608,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT (5,0,0)::system.version_tuple;
@@ -2772,6 +2619,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: system.version_tuple
     source: |-
@@ -2793,6 +2641,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -2804,6 +2653,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: integer
@@ -2818,6 +2668,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: table_trend_store_part_id
       data_type: integer
@@ -2838,6 +2689,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: integer
     source: |-
@@ -2850,6 +2702,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: oid
     source: |-
@@ -2871,6 +2724,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -2882,6 +2736,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -2893,6 +2748,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.partition
     source: |-
@@ -2905,6 +2761,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -2916,6 +2773,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: trend_directory.trend_descr[]
@@ -2932,6 +2790,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -2943,6 +2802,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: anyarray
     - data_type: anyarray
@@ -2960,6 +2820,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     source: |-
@@ -2971,6 +2832,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -2988,6 +2850,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: "SELECT\n\tpg_get_viewdef(oid, true)\nFROM pg_class\nWHERE relname = trigger.kpi_view_name($1);"
@@ -2998,6 +2861,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -3010,6 +2874,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -3033,6 +2898,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -3059,6 +2925,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: "SELECT\n\tpg_get_viewdef(oid, true)\nFROM pg_class\nWHERE relname = trigger.rule_view_name($1);"
@@ -3069,6 +2936,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       DECLARE
@@ -3091,6 +2959,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       TRUNCATE dimension.hour;
@@ -3111,6 +2980,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: anyelement
     - data_type: anyelement
@@ -3123,6 +2993,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -3143,6 +3014,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: interval
     source: |-
@@ -3172,6 +3044,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - name: required
@@ -3188,6 +3061,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -3205,6 +3079,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - name: partition_size
       data_type: integer
@@ -3219,6 +3094,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - name: type
       data_type: relation_directory.type
@@ -3240,6 +3116,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: where_clause
@@ -3256,6 +3133,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part_id
       data_type: integer
@@ -3276,6 +3154,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: anyelement
     - data_type: anyelement
@@ -3288,6 +3167,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: type
       data_type: varchar
@@ -3310,6 +3190,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: job_id
       data_type: integer
@@ -3322,6 +3203,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: entity_id
       data_type: integer
@@ -3342,6 +3224,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: directory.dn_part[]
     source: |-
@@ -3353,6 +3236,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: anyarray
     source: |-
@@ -3364,6 +3248,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -3378,6 +3263,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -3389,6 +3275,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: message
       data_type: anyelement
@@ -3403,6 +3290,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_id
       data_type: integer
@@ -3419,6 +3307,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'trend'::name;
@@ -3429,6 +3318,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: id
       data_type: integer
@@ -3441,6 +3331,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: trend_store
       data_type: trend_directory.trend_store_part
@@ -3459,6 +3350,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -3471,6 +3363,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -3482,6 +3375,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -3493,6 +3387,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: message
       data_type: anyelement
@@ -3507,6 +3402,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     source: |-
@@ -3519,6 +3415,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.partition
     source: |-
@@ -3532,6 +3429,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: "TRUNCATE dimension.week_15m;\n    INSERT INTO dimension.week_15m SELECT\n\
       \        date_trunc('week', timestamp_15m) as timestamp,\n        timestamp_15m\n\
@@ -3545,6 +3443,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: system.version_tuple
     - data_type: system.version_tuple
@@ -3560,6 +3459,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -3571,6 +3471,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: "SELECT\n\tpg_get_functiondef(oid)\nFROM pg_proc\nWHERE proname = trigger.weight_fn_name($1);"
@@ -3581,6 +3482,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: entity_id
       data_type: integer
@@ -3604,6 +3506,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: text
     - data_type: text
@@ -3619,6 +3522,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'trend'::name;
@@ -3629,6 +3533,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -3678,6 +3583,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: trend_directory.view_trend_store
     - data_type: trend_directory.view_trend_store_part_descr[]
@@ -3690,6 +3596,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: "SELECT\n\tpg_get_viewdef(oid, true)\nFROM pg_class\nWHERE relname = trigger.with_threshold_view_name($1);"
@@ -3700,6 +3607,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -3714,6 +3622,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       TRUNCATE dimension.month;
@@ -3734,6 +3643,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -3748,6 +3658,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'relation'::name;
@@ -3758,6 +3669,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: relation_directory.type
     source: |-
@@ -3769,6 +3681,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -3783,6 +3696,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -3797,6 +3711,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: smallint
     source: |-
@@ -3810,6 +3725,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: schema_name
       data_type: name
@@ -3829,6 +3745,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: sql
@@ -3845,6 +3762,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: sql
@@ -3862,6 +3780,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: schema_name
       data_type: name
@@ -3882,6 +3801,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: namespace
       data_type: name
@@ -3909,6 +3829,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -3921,6 +3842,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part_id
       data_type: integer
@@ -3941,6 +3863,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: job_id
       data_type: integer
@@ -3953,6 +3876,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       TRUNCATE dimension.day_15m;
@@ -3973,6 +3897,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -3989,6 +3914,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: directory.entity
     source: |-
@@ -4000,6 +3926,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: table_trend_store_part_id
       data_type: integer
@@ -4019,6 +3946,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -4032,6 +3960,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: type_name
       data_type: name
@@ -4049,6 +3978,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -4063,6 +3993,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -4082,6 +4013,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       DECLARE
@@ -4116,6 +4048,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: table_name
       data_type: name
@@ -4134,6 +4067,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4145,6 +4079,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4156,6 +4091,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: rule_view_sql
@@ -4173,6 +4109,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: expression
@@ -4195,6 +4132,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: anyelement
     - name: sql
@@ -4216,6 +4154,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'trend_partition'::name;
@@ -4226,6 +4165,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: job_id
       data_type: integer
@@ -4242,6 +4182,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: sql
       data_type: text
@@ -4256,6 +4197,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -4272,6 +4214,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -4286,6 +4229,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -4300,6 +4244,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: integer
     - data_type: integer
@@ -4313,6 +4258,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4324,6 +4270,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -4341,6 +4288,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: namespace
       data_type: name
@@ -4363,6 +4311,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'notification'::name;
@@ -4373,6 +4322,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     - data_type: notification_directory.attribute
@@ -4389,6 +4339,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     source: |-
@@ -4401,6 +4352,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.partition
     source: |-
@@ -4414,6 +4366,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: table_trend_store_id
       data_type: integer
@@ -4430,6 +4383,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: table_trend_store_id
       data_type: integer
@@ -4449,6 +4403,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store
     - data_type: trend_directory.table_trend_store_part_descr[]
@@ -4463,6 +4418,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -4477,6 +4433,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -4494,6 +4451,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -4508,6 +4466,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -4522,6 +4481,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.materialization
     source: |-
@@ -4535,6 +4495,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part
       data_type: trend_directory.table_trend_store_part
@@ -4557,6 +4518,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: varchar
     source: |-
@@ -4568,6 +4530,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4579,6 +4542,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4590,6 +4554,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4601,6 +4566,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -4614,6 +4580,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -4625,6 +4592,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.view_trend_store_part
     source: |-
@@ -4636,6 +4604,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       DECLARE
@@ -4656,6 +4625,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -4670,6 +4640,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: timestamp with time zone
     - data_type: interval
@@ -4691,6 +4662,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: table_trend_store_part_id
       data_type: integer
@@ -4711,14 +4683,18 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: partition
       data_type: trend_directory.partition
-    description: |-
-      Populate trend_directory.modified table with modified records from one
+    description: 'Populate trend_directory.modified table with modified records from
+      one
+
       partition. This function should only be used in recovery scenarios where the
+
       trend_directory.modified table has become corrupt or records are missing for
-      some reason.
+
+      some reason.'
     source: |-
       BEGIN
           RETURN QUERY EXECUTE format(
@@ -4735,13 +4711,17 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
-    description: |-
-      Populate trend_directory.modified table with modified records from a whole
+    description: 'Populate trend_directory.modified table with modified records from
+      a whole
+
       trend store. This function should only be used in recovery scenarios where the
+
       trend_directory.modified table has become corrupt or records are missing for
-      some reason.
+
+      some reason.'
     source: |-
       SELECT
               trend_directory.populate_modified(partition)
@@ -4754,6 +4734,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -4767,6 +4748,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -4786,6 +4768,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.trend_store_part
     source: |-
@@ -4808,6 +4791,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -4822,6 +4806,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -4836,6 +4821,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -4850,6 +4836,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4861,6 +4848,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: "SELECT\n\tpg_get_functiondef(oid)\nFROM pg_proc\nWHERE proname = trigger.notification_fn_name($1);"
@@ -4871,6 +4859,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4894,6 +4883,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -4905,6 +4895,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: smallint
     source: |-
@@ -4918,6 +4909,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.trend_store_part
     source: |-
@@ -4929,6 +4921,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'relation_def'::name;
@@ -4939,6 +4932,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: relation_directory.type
     - data_type: text
@@ -4956,6 +4950,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     - data_type: name
@@ -4982,6 +4977,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -4999,6 +4995,7 @@ objects:
     language: plpgsql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: dest_granularity
       data_type: interval
@@ -5031,6 +5028,7 @@ objects:
     language: plpgsql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: dest_granularity
       data_type: varchar
@@ -5061,6 +5059,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: expression
@@ -5075,6 +5074,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -5089,6 +5089,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5100,6 +5101,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5120,6 +5122,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: name
@@ -5134,6 +5137,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part
       data_type: trend_directory.table_trend_store_part
@@ -5150,6 +5154,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: relation_directory.type
     source: |-
@@ -5166,6 +5171,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part_id
       data_type: integer
@@ -5178,6 +5184,7 @@ objects:
     language: plpgsql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: granularity
       data_type: varchar
@@ -5210,6 +5217,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5221,6 +5229,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: entity_id
       data_type: integer
@@ -5244,6 +5253,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: name
     source: |-
@@ -5255,6 +5265,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: anyarray
     - data_type: anyelement
@@ -5270,6 +5281,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: text[]
     source: |-
@@ -5281,6 +5293,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: directory.entity
     - name: dn
@@ -5296,6 +5309,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -5320,6 +5334,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - name: value
       data_type: integer
@@ -5334,6 +5349,7 @@ objects:
     language: plpgsql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - name: partition_size
       data_type: integer
@@ -5362,6 +5378,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: integer
     source: |-
@@ -5373,6 +5390,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT ARRAY[
@@ -5386,6 +5404,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -5399,6 +5418,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: namespace_name
       data_type: name
@@ -5420,6 +5440,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5432,6 +5453,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5452,6 +5474,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: "SELECT format(\n        $def$CREATE OR REPLACE FUNCTION trigger_rule.%I(%s)\
@@ -5470,6 +5493,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5486,6 +5510,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5497,6 +5522,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: anyelement
     - name: sql
@@ -5514,6 +5540,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'trend'::name;
@@ -5525,6 +5552,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5540,6 +5568,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'alias'::name;
@@ -5551,6 +5580,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part_id
       data_type: integer
@@ -5564,6 +5594,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_set_store
     source: |-
@@ -5575,6 +5606,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -5589,6 +5621,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: name
@@ -5604,6 +5637,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_id
       data_type: integer
@@ -5618,6 +5652,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -5631,6 +5666,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -5642,6 +5678,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -5667,6 +5704,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -5696,6 +5734,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -5712,6 +5751,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: alias_directory.alias_type
     source: |-
@@ -5733,6 +5773,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -5752,6 +5793,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5763,6 +5805,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -5790,6 +5833,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     - name: name
@@ -5809,6 +5853,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.view_trend_store_part
     source: |-
@@ -5820,6 +5865,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.view_trend_store_part
     source: |-
@@ -5835,6 +5881,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.view_trend_store_part
     - name: sql
@@ -5852,6 +5899,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: view
       data_type: trend_directory.view_trend_store_part
@@ -5872,6 +5920,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - name: value
       data_type: smallint
@@ -5886,6 +5935,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -5901,6 +5951,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -5912,6 +5963,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     source: |-
@@ -5923,6 +5975,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: timestamp with time zone
@@ -5947,6 +6000,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     source: |-
@@ -5958,6 +6012,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       DECLARE
@@ -5978,6 +6033,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       DECLARE
@@ -6004,6 +6060,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part
       data_type: trend_directory.table_trend_store_part
@@ -6022,6 +6079,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.trend_store
     - data_type: timestamp with time zone
@@ -6043,6 +6101,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -6057,6 +6116,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: directory.dn_part
     source: |-
@@ -6068,6 +6128,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: directory.dn_part[]
     source: |-
@@ -6086,6 +6147,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       DECLARE
@@ -6111,6 +6173,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       SELECT 'added: ' || trend_directory.add_new_state() || ', updated: ' || trend_directory.update_modified_state() || ', deleted: ' || trend_directory.delete_obsolete_state();
@@ -6121,6 +6184,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: table_trend_store_id
       data_type: integer
@@ -6138,6 +6202,7 @@ objects:
     language: plpgsql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: granularity
       data_type: interval
@@ -6166,6 +6231,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: numerator
       data_type: anyelement
@@ -6185,6 +6251,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.view_materialization
     source: |-
@@ -6201,6 +6268,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: before
       data_type: timestamp with time zone
@@ -6219,6 +6287,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -6231,6 +6300,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       TRUNCATE dimension.week;
@@ -6253,6 +6323,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -6267,6 +6338,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: directory.dn_part[]
     source: |-
@@ -6284,6 +6356,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       TRUNCATE dimension.day;
@@ -6304,6 +6377,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: attribute_store_id
       data_type: integer
@@ -6323,6 +6397,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -6346,6 +6421,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -6359,6 +6435,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -6405,6 +6482,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -6426,6 +6504,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_set_store
     source: |-
@@ -6460,6 +6539,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -6476,6 +6556,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     - data_type: name
@@ -6492,6 +6573,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -6505,6 +6587,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       TRUNCATE dimension."four_consec_qtr";
@@ -6525,6 +6608,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -6536,6 +6620,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_id
       data_type: integer
@@ -6552,6 +6637,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -6573,6 +6659,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: relation_directory.type
     source: |-
@@ -6609,6 +6696,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -6626,6 +6714,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: anyelement
     - name: sql
@@ -6643,6 +6732,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -6654,6 +6744,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -6667,6 +6758,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: expression
@@ -6682,6 +6774,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -6696,6 +6789,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: expression
@@ -6711,6 +6805,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: trigger.rule
     - name: exprs
@@ -6737,6 +6832,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -6748,6 +6844,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: sql
@@ -6761,6 +6858,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: directory.entity_type
     source: |-
@@ -6772,6 +6870,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: trigger.rule
     - name: rule_view_sql
@@ -6785,6 +6884,7 @@ objects:
     language: plpgsql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - name: data_type
       data_type: text
@@ -6826,6 +6926,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: data_type_a
       data_type: text
@@ -6845,6 +6946,7 @@ objects:
     language: plpgsql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: data_type_a
       data_type: varchar
@@ -6866,6 +6968,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     - data_type: attribute_directory.attribute_descr[]
@@ -6883,6 +6986,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -6894,6 +6998,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.attribute
     source: |-
@@ -6911,6 +7016,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -6949,6 +7055,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -6973,6 +7080,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -7002,6 +7110,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - data_type: notification_directory.notification_store
@@ -7030,6 +7139,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - data_type: notification_directory.notification_store
@@ -7058,6 +7168,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: "TRUNCATE dimension.month_15m;\n    INSERT INTO dimension.month_15m SELECT\n\
       \        date_trunc('month', timestamp_15m) as timestamp,\n        timestamp_15m\n\
@@ -7071,6 +7182,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     source: |-
@@ -7105,6 +7217,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.view_trend_store_part
     source: |-
@@ -7120,6 +7233,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     - data_type: name
@@ -7135,6 +7249,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     - data_type: notification_directory.attr_def[]
@@ -7150,6 +7265,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_id
       data_type: integer
@@ -7166,6 +7282,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -7188,6 +7305,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     - name: attributes
@@ -7208,6 +7326,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.trend_store_part
     source: |-
@@ -7222,6 +7341,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.trend_store_part
     source: |-
@@ -7233,6 +7353,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -7245,6 +7366,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       TRUNCATE dimension."5m";
@@ -7265,6 +7387,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: relation_directory.type
     - data_type: text
@@ -7282,6 +7405,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -7300,6 +7424,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -7328,6 +7453,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -7343,6 +7469,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -7354,6 +7481,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7367,6 +7495,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7378,6 +7507,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7397,6 +7527,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7408,6 +7539,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7419,6 +7551,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7434,6 +7567,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7445,6 +7579,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7456,6 +7591,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7487,6 +7623,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7512,6 +7649,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7542,6 +7680,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7553,6 +7692,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7572,6 +7712,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7620,6 +7761,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7635,6 +7777,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7650,6 +7793,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7661,10 +7805,11 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
-    description: |-
-      Remove all subsequent records with duplicate attribute values and update the modified of the first
+    description: Remove all subsequent records with duplicate attribute values and
+      update the modified of the first
     source: "DECLARE\n    table_name name := attribute_directory.to_table_name($1);\n\
       \    compacted_tmp_table_name name := table_name || '_compacted_tmp';\n    compacted_view_name\
       \ name := attribute_directory.compacted_view_name($1);\n    default_columns\
@@ -7697,6 +7842,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7708,6 +7854,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7719,6 +7866,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7730,6 +7878,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     - name: column_name
@@ -7749,6 +7898,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7760,6 +7910,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7771,6 +7922,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7782,6 +7934,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7818,6 +7971,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7829,6 +7983,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7860,6 +8015,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7874,6 +8030,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7898,6 +8055,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7909,6 +8067,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7941,6 +8100,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7956,6 +8116,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -7986,6 +8147,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8010,6 +8172,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8039,6 +8202,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8050,6 +8214,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8075,6 +8240,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8100,6 +8266,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8132,6 +8299,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     source: |-
@@ -8143,6 +8311,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     source: |-
@@ -8154,6 +8323,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     - name: exprs
@@ -8167,6 +8337,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     - name: expression
@@ -8180,6 +8351,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     - name: expression
@@ -8193,6 +8365,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -8204,6 +8377,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.materialization
     source: |-
@@ -8215,6 +8389,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: system.job
     source: |-
@@ -8228,6 +8403,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: type
       data_type: varchar
@@ -8246,6 +8422,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -8269,6 +8446,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - name: schema_name
       data_type: name
@@ -8288,6 +8466,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.trend_store_part
     source: |-
@@ -8299,6 +8478,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -8321,6 +8501,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: "SELECT trigger.action($1, trigger.exception_weight_table_sql($1));\n\
@@ -8339,6 +8520,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -8357,6 +8539,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: anyelement
     - name: sql
@@ -8378,6 +8561,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: alias_directory.alias_type
     source: |-
@@ -8389,6 +8573,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8403,6 +8588,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8417,6 +8603,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8431,6 +8618,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8445,6 +8633,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.attribute
     source: |-
@@ -8474,6 +8663,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: relation_directory.type
     source: |-
@@ -8488,6 +8678,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: true
     arguments:
     - data_type: trend_directory.table_trend_store_part
     source: |-
@@ -8499,6 +8690,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8513,6 +8705,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8527,6 +8720,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: true
     arguments:
     - name: name
       data_type: name
@@ -8540,6 +8734,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: relation_directory.type
     - data_type: text
@@ -8555,6 +8750,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.view_trend_store_part
     source: |-
@@ -8570,6 +8766,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -8584,6 +8781,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8598,6 +8796,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8612,6 +8811,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8626,6 +8826,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: trend_directory.view_trend_store_part
     - name: query
@@ -8643,6 +8844,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: trend_directory.table_trend
@@ -8665,6 +8867,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -8679,6 +8882,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8693,6 +8897,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.trend_store_part
     - data_type: name
@@ -8708,6 +8913,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8722,6 +8928,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - name: type_name
       data_type: name
@@ -8736,6 +8943,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8750,6 +8958,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8761,6 +8970,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8775,6 +8985,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - name: trend_name
@@ -8803,6 +9014,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: trend_directory.trend[]
@@ -8816,6 +9028,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     source: |-
@@ -8830,11 +9043,13 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
-    description: |-
-      Create all database objects required for the trend store part to be fully functional
-      and capable of storing data.
+    description: 'Create all database objects required for the trend store part to
+      be fully functional
+
+      and capable of storing data.'
     source: |-
       SELECT trend_directory.create_base_table($1);
           SELECT trend_directory.create_staging_table($1);
@@ -8847,6 +9062,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store
     source: |-
@@ -8861,6 +9077,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8875,6 +9092,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8897,6 +9115,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -8920,6 +9139,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8934,6 +9154,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: name
@@ -8953,6 +9174,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -8964,6 +9186,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -8975,6 +9198,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -8986,6 +9210,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_id
       data_type: integer
@@ -9001,6 +9226,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -9016,6 +9242,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_id
       data_type: integer
@@ -9030,6 +9257,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9068,6 +9296,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: relation_directory.type
     source: |-
@@ -9079,6 +9308,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -9093,6 +9323,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -9107,6 +9338,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: text
@@ -9122,6 +9354,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: trend_directory.trend_descr
@@ -9134,6 +9367,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: trend_directory.trend_descr[]
@@ -9149,6 +9383,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: relation_directory.type
     - data_type: text
@@ -9164,6 +9399,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: true
     arguments:
     - data_type: relation_directory.type
     source: |-
@@ -9175,6 +9411,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     source: |-
@@ -9191,6 +9428,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: type_name
       data_type: name
@@ -9212,6 +9450,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -9224,6 +9463,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: trend_directory.trend_descr[]
@@ -9237,6 +9477,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9251,6 +9492,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9265,6 +9507,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: name
     source: |-
@@ -9276,11 +9519,13 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
-    description: |-
-      Defines a new relation type, creates the corresponding table and then returns
-      the new type record
+    description: 'Defines a new relation type, creates the corresponding table and
+      then returns
+
+      the new type record'
     source: |-
       SELECT relation_directory.create_relation_table(
               relation_directory.define($1)
@@ -9292,13 +9537,14 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     - name: view_sql
       data_type: text
-    description: |-
-      Defines a new relation type (just like relation_directory.define(name)),
-      including a view that will be used to populate the relation table.
+    description: 'Defines a new relation type (just like relation_directory.define(name)),
+
+      including a view that will be used to populate the relation table.'
     source: |-
       SELECT relation_directory.create_relation_view(
               relation_directory.create_type($1),
@@ -9311,6 +9557,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: reverse
       data_type: name
@@ -9335,6 +9582,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: name
     source: |-
@@ -9349,6 +9597,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: reverse
       data_type: name
@@ -9373,6 +9622,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - name: base_table_name
       data_type: name
@@ -9387,6 +9637,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -9412,6 +9663,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: "BEGIN\n\tPERFORM trigger.cleanup_rule(OLD);\n\n\tRETURN OLD;\nEND;"
 - function:
@@ -9421,6 +9673,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9447,6 +9700,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9461,6 +9715,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -9472,6 +9727,7 @@ objects:
     language: sql
     volatility: immutable
     strict: false
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -9483,6 +9739,7 @@ objects:
     language: sql
     volatility: immutable
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -9494,6 +9751,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -9511,6 +9769,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -9522,6 +9781,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: name
       data_type: name
@@ -9540,6 +9800,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: text
     source: |-
@@ -9553,6 +9814,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: false
     arguments:
     - data_type: text[]
     source: |-
@@ -9564,6 +9826,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - data_type: name
@@ -9586,6 +9849,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - data_type: name[]
@@ -9603,6 +9867,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - data_type: name[]
@@ -9631,6 +9896,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - data_type: name[]
@@ -9650,6 +9916,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - name: kpi_sql
@@ -9676,6 +9943,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     - name: kpi_sql
@@ -9692,6 +9960,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9712,6 +9981,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9726,6 +9996,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9737,6 +10008,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9761,6 +10033,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9782,6 +10055,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9796,6 +10070,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: notification_directory.notification_store
     source: |-
@@ -9839,6 +10114,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: name
     source: |-
@@ -9859,6 +10135,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -9882,6 +10159,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -9904,6 +10182,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: anyarray
     - data_type: anyarray
@@ -9928,6 +10207,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9957,6 +10237,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -9978,12 +10259,15 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
-    description: |-
-      Create a view on an attribute_store's history table that lists the runs of
+    description: 'Create a view on an attribute_store''s history table that lists
+      the runs of
+
       duplicate attribute data records by their entity ID and start-end. This can
-      be used as a source for compacting actions.
+
+      be used as a source for compacting actions.'
     source: |-
       SELECT public.action(
           $1,
@@ -10010,6 +10294,7 @@ objects:
     language: plpgsql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -10051,6 +10336,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -10065,6 +10351,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -10087,6 +10374,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute
     source: |-
@@ -10109,6 +10397,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       BEGIN
@@ -10125,6 +10414,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       DECLARE
@@ -10153,6 +10443,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
@@ -10193,6 +10484,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     - data_type: name
@@ -10213,6 +10505,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute
     source: |-
@@ -10228,6 +10521,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -10242,6 +10536,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_name
       data_type: text
@@ -10260,6 +10555,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_id
       data_type: integer
@@ -10278,6 +10574,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     - name: name
@@ -10299,6 +10596,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     - data_type: attribute_directory.attribute_descr[]
@@ -10315,6 +10613,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: data_source_id
       data_type: integer
@@ -10374,6 +10673,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: add_limit
       data_type: integer
@@ -10405,6 +10705,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       WITH t AS (
@@ -10791,6 +11092,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: rule_name
       data_type: name
@@ -10810,6 +11112,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: rule_name
       data_type: name
@@ -10829,6 +11132,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: rule_name
       data_type: name
@@ -10845,6 +11149,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - data_type: timestamp with time zone
@@ -10860,6 +11165,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     - data_type: interval
@@ -10874,6 +11180,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: rule_name
       data_type: name
@@ -10887,6 +11194,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -10900,6 +11208,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: rule_name
       data_type: name
@@ -10912,6 +11221,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - name: index
@@ -10925,6 +11235,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: timestamp with time zone
@@ -10941,6 +11252,7 @@ objects:
     language: sql
     volatility: stable
     strict: true
+    secdef: false
     arguments:
     - data_type: trend_directory.partition
     source: |-
@@ -10954,6 +11266,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: name
@@ -10992,6 +11305,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.partition
     source: |-
@@ -11045,6 +11359,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: partition
       data_type: trend_directory.partition
@@ -11063,6 +11378,7 @@ objects:
     language: sql
     volatility: volatile
     strict: true
+    secdef: true
     arguments:
     - data_type: trend_directory.partition
     source: |-
@@ -11074,6 +11390,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       DECLARE
@@ -11104,6 +11421,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part
       data_type: trend_directory.table_trend_store_part
@@ -11120,6 +11438,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - name: index
@@ -11136,6 +11455,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.table_trend_store_part
     - data_type: timestamp with time zone
@@ -11152,6 +11472,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: source
       data_type: trend_directory.trend_store
@@ -11202,6 +11523,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part
       data_type: trend_directory.table_trend_store_part
@@ -11233,6 +11555,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: trend_store_part
       data_type: trend_directory.table_trend_store_part
@@ -11256,6 +11579,7 @@ objects:
     language: sql
     volatility: stable
     strict: false
+    secdef: false
     arguments:
     - data_type: trend_directory.partition
     source: |-
@@ -11282,6 +11606,7 @@ objects:
     language: sql
     volatility: volatile
     strict: false
+    secdef: false
     arguments: []
     source: |-
       WITH t AS (
@@ -11298,6 +11623,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: process_limit
       data_type: integer
@@ -11320,6 +11646,7 @@ objects:
     language: plpgsql
     volatility: volatile
     strict: false
+    secdef: false
     arguments:
     - name: type_name
       data_type: name
