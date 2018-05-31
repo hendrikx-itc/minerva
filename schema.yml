@@ -99,123 +99,123 @@ objects:
 - sequence:
     name: job_source_id_seq
     schema: system
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: job_id_seq
     schema: system
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: setting_id_seq
     schema: system
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: data_source_id_seq
     schema: directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: entity_type_id_seq
     schema: directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: entity_id_seq
     schema: directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: tag_group_id_seq
     schema: directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 3
+    increment: 1
 - sequence:
     name: tag_id_seq
     schema: directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: alias_type_id_seq
     schema: alias_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 2
+    increment: 1
 - sequence:
     name: type_id_seq
     schema: relation_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 2
+    increment: 1
 - sequence:
     name: dn_id_seq
     schema: alias
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: trend_store_id_seq
     schema: trend_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: trend_store_part_id_seq
     schema: trend_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: trend_id_seq
     schema: trend_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: materialization_id_seq
     schema: trend_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: attribute_store_id_seq
     schema: attribute_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: attribute_id_seq
     schema: attribute_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: notification_store_id_seq
     schema: notification_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: attribute_id_seq
     schema: notification_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: notification_set_store_id_seq
     schema: notification_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: set_attribute_id_seq
     schema: notification_directory
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: type_id_seq
     schema: entity_tag
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: rule_id_seq
     schema: trigger
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - sequence:
     name: exception_base_id_seq
     schema: trigger
-    startvalue: '1'
-    increment: '1'
+    startvalue: 1
+    increment: 1
 - enum_type:
     schema: system
     name: job_state_enum
@@ -11085,6 +11085,48 @@ objects:
       schema: notification_directory
       name: to_char
     implicit: false
+- row:
+    table:
+      schema: directory
+      name: tag_group
+    values:
+    - column: name
+      value: default
+    - column: complementary
+      value: false
+    - column: id
+      value: 1
+- row:
+    table:
+      schema: directory
+      name: tag_group
+    values:
+    - column: name
+      value: entity_type
+    - column: complementary
+      value: true
+    - column: id
+      value: 2
+- row:
+    table:
+      schema: relation_directory
+      name: type
+    values:
+    - column: name
+      value: parent
+    - column: cardinality
+      value: null
+    - column: id
+      value: 1
+- row:
+    table:
+      schema: alias_directory
+      name: alias_type
+    values:
+    - column: name
+      value: dn
+    - column: id
+      value: 1
 - function:
     name: create_notifications
     schema: trigger
@@ -11668,3 +11710,21 @@ objects:
 
           RETURN result;
       END;
+- query:
+    query: dimension.update_month()
+- query:
+    query: dimension.update_week()
+- query:
+    query: dimension.update_day()
+- query:
+    query: dimension.update_hour()
+- query:
+    query: dimension.update_quarter()
+- query:
+    query: dimension.update_four_consec_qtr()
+- query:
+    query: dimension.update_month_15m()
+- query:
+    query: dimension.update_week_15m()
+- query:
+    query: dimension.update_day_15m()
