@@ -453,13 +453,13 @@ objects:
       - id
     indexes:
     - name: ix_directory_data_source_name
-      definition: CREATE UNIQUE INDEX ix_directory_data_source_name ON directory.data_source
-        USING btree (name)
+      unique: true
+      definition: btree (name)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: entity_type
     schema: directory
@@ -482,13 +482,13 @@ objects:
       - id
     indexes:
     - name: ix_directory_entity_type_name
-      definition: CREATE UNIQUE INDEX ix_directory_entity_type_name ON directory.entity_type
-        USING btree (lower((name)::text))
+      unique: true
+      definition: btree (lower((name)::text))
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: entity
     schema: directory
@@ -525,16 +525,16 @@ objects:
       on_delete: cascade
     indexes:
     - name: ix_directory_entity_name
-      definition: CREATE INDEX ix_directory_entity_name ON directory.entity USING
-        btree (name)
+      unique: false
+      definition: btree (name)
     - name: ix_directory_entity_entity_type_id
-      definition: CREATE INDEX ix_directory_entity_entity_type_id ON directory.entity
-        USING btree (entity_type_id)
+      unique: false
+      definition: btree (entity_type_id)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: tag_group
     schema: directory
@@ -557,13 +557,13 @@ objects:
       - id
     indexes:
     - name: ix_directory_tag_group_name
-      definition: CREATE UNIQUE INDEX ix_directory_tag_group_name ON directory.tag_group
-        USING btree (lower((name)::text))
+      unique: true
+      definition: btree (lower((name)::text))
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: tag
     schema: directory
@@ -600,16 +600,16 @@ objects:
       on_delete: cascade
     indexes:
     - name: ix_directory_tag_name
-      definition: CREATE UNIQUE INDEX ix_directory_tag_name ON directory.tag USING
-        btree (lower((name)::text))
+      unique: true
+      definition: btree (lower((name)::text))
     - name: tag_lower_id_idx
-      definition: CREATE INDEX tag_lower_id_idx ON directory.tag USING btree (lower((name)::text),
-        id)
+      unique: false
+      definition: btree (lower((name)::text), id)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: base
     schema: relation
@@ -656,13 +656,13 @@ objects:
       on_delete: cascade
     indexes:
     - name: uniqueness
-      definition: CREATE UNIQUE INDEX uniqueness ON notification_directory.notification_store
-        USING btree (data_source_id)
+      unique: true
+      definition: btree (data_source_id)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: attribute
     schema: notification_directory
@@ -701,10 +701,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: notification_set_store
     schema: notification_directory
@@ -737,10 +737,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: set_attribute
     schema: notification_directory
@@ -779,10 +779,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: setting
     schema: system
@@ -802,10 +802,10 @@ objects:
       columns:
       - id
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: 5m
     schema: dimension
@@ -824,10 +824,10 @@ objects:
       columns:
       - timestamp
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: entity_tag_link
     schema: directory
@@ -866,13 +866,13 @@ objects:
       on_delete: cascade
     indexes:
     - name: ix_directory_entity_tag_link_entity_id
-      definition: CREATE INDEX ix_directory_entity_tag_link_entity_id ON directory.entity_tag_link
-        USING btree (entity_id)
+      unique: false
+      definition: btree (entity_id)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: rule
     schema: trigger
@@ -913,12 +913,13 @@ objects:
         - id
     indexes:
     - name: rule_name_key
-      definition: CREATE UNIQUE INDEX rule_name_key ON trigger.rule USING btree (name)
+      unique: true
+      definition: btree (name)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: UPDATE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: rule_tag_link
     schema: trigger
@@ -956,10 +957,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: UPDATE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: trend_store
     schema: trend_directory
@@ -1003,9 +1004,8 @@ objects:
         - id
     indexes:
     - name: trend_store_entity_type_id_data_source_id_granularity_key
-      definition: CREATE UNIQUE INDEX trend_store_entity_type_id_data_source_id_granularity_key
-        ON trend_directory.trend_store USING btree (entity_type_id, data_source_id,
-        granularity)
+      unique: true
+      definition: btree (entity_type_id, data_source_id, granularity)
 - table:
     name: table_trend_store
     schema: trend_directory
@@ -1084,13 +1084,13 @@ objects:
       on_delete: cascade
     indexes:
     - name: ix_trend_materialization_uniqueness
-      definition: CREATE UNIQUE INDEX ix_trend_materialization_uniqueness ON trend_directory.materialization
-        USING btree (dst_trend_store_id)
+      unique: true
+      definition: btree (dst_trend_store_id)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: view_materialization
     schema: trend_directory
@@ -1169,10 +1169,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: materialization_tag_link
     schema: trend_directory
@@ -1213,10 +1213,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: materialization_trend_store_link
     schema: trend_directory
@@ -1272,10 +1272,10 @@ objects:
       columns:
       - timestamp
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: four_consec_qtr
     schema: dimension
@@ -1294,10 +1294,10 @@ objects:
       columns:
       - timestamp
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: week
     schema: dimension
@@ -1322,10 +1322,10 @@ objects:
       columns:
       - timestamp
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: week_15m
     schema: dimension
@@ -1342,13 +1342,13 @@ objects:
       - timestamp_15m
     indexes:
     - name: week_15m_timestamp_idx
-      definition: CREATE INDEX week_15m_timestamp_idx ON dimension.week_15m USING
-        btree ("timestamp")
+      unique: false
+      definition: btree ("timestamp")
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: trend
     schema: trend_directory
@@ -1429,13 +1429,13 @@ objects:
       schema: relation
     indexes:
     - name: ix_parent_target_id
-      definition: CREATE INDEX ix_parent_target_id ON relation.parent USING btree
-        (target_id)
+      unique: false
+      definition: btree (target_id)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: day_15m
     schema: dimension
@@ -1451,10 +1451,10 @@ objects:
       columns:
       - timestamp_15m
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: type
     schema: relation_directory
@@ -1475,13 +1475,13 @@ objects:
       - id
     indexes:
     - name: type_name_key
-      definition: CREATE UNIQUE INDEX type_name_key ON relation_directory.type USING
-        btree (name)
+      unique: true
+      definition: btree (name)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: entity_tag_link_denorm
     schema: directory
@@ -1501,16 +1501,16 @@ objects:
       - entity_id
     indexes:
     - name: entity_tag_link_denorm_tags_idx
-      definition: CREATE INDEX entity_tag_link_denorm_tags_idx ON directory.entity_tag_link_denorm
-        USING gin (tags)
+      unique: false
+      definition: gin (tags)
     - name: entity_tag_link_denorm_name_idx
-      definition: CREATE INDEX entity_tag_link_denorm_name_idx ON directory.entity_tag_link_denorm
-        USING btree (name)
+      unique: false
+      definition: btree (name)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: attribute_store
     schema: attribute_directory
@@ -1551,13 +1551,13 @@ objects:
         - id
     indexes:
     - name: attribute_store_uniqueness
-      definition: CREATE UNIQUE INDEX attribute_store_uniqueness ON attribute_directory.attribute_store
-        USING btree (data_source_id, entity_type_id)
+      unique: true
+      definition: btree (data_source_id, entity_type_id)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: attribute_store_curr_materialized
     schema: attribute_directory
@@ -1584,10 +1584,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: attribute_store_compacted
     schema: attribute_directory
@@ -1614,10 +1614,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: attribute_store_modified
     schema: attribute_directory
@@ -1644,10 +1644,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: entity_tag_link_staging
     schema: entity_tag
@@ -1662,10 +1662,10 @@ objects:
       data_type: integer
       nullable: false
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: group_priority
     schema: trend_directory
@@ -1692,10 +1692,10 @@ objects:
         columns:
         - id
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: trend_store_part
     schema: trend_directory
@@ -1843,10 +1843,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: day
     schema: dimension
@@ -1865,10 +1865,10 @@ objects:
       columns:
       - timestamp
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: job_error_log
     schema: system
@@ -1884,10 +1884,10 @@ objects:
       columns:
       - job_id
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: type
     schema: entity_tag
@@ -1915,8 +1915,8 @@ objects:
       on_delete: cascade
     indexes:
     - name: type_name_key
-      definition: CREATE UNIQUE INDEX type_name_key ON entity_tag.type USING btree
-        (name)
+      unique: true
+      definition: btree (name)
 - table:
     name: view_trend_store
     schema: trend_directory
@@ -1978,13 +1978,13 @@ objects:
       on_delete: cascade
     indexes:
     - name: attribute_uniqueness
-      definition: CREATE UNIQUE INDEX attribute_uniqueness ON attribute_directory.attribute
-        USING btree (attribute_store_id, name)
+      unique: true
+      definition: btree (attribute_store_id, name)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: attribute_tag_link
     schema: attribute_directory
@@ -2022,10 +2022,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: dn
     schema: alias
@@ -2056,7 +2056,8 @@ objects:
         - id
     indexes:
     - name: dn_dn_key
-      definition: CREATE UNIQUE INDEX dn_dn_key ON alias.dn USING btree (dn)
+      unique: true
+      definition: btree (dn)
 - table:
     name: alias_type
     schema: alias_directory
@@ -2074,8 +2075,8 @@ objects:
       - id
     indexes:
     - name: alias_type_name_lower_idx
-      definition: CREATE UNIQUE INDEX alias_type_name_lower_idx ON alias_directory.alias_type
-        USING btree (name, lower((name)::text))
+      unique: true
+      definition: btree (name, lower((name)::text))
 - table:
     name: exception_base
     schema: trigger
@@ -2108,10 +2109,10 @@ objects:
         columns:
         - id
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: UPDATE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: month
     schema: dimension
@@ -2130,10 +2131,10 @@ objects:
       columns:
       - timestamp
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: function_materialization
     schema: trend_directory
@@ -2254,13 +2255,13 @@ objects:
       - timestamp_15m
     indexes:
     - name: month_15m_timestamp_idx
-      definition: CREATE INDEX month_15m_timestamp_idx ON dimension.month_15m USING
-        btree ("timestamp")
+      unique: false
+      definition: btree ("timestamp")
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: hour
     schema: dimension
@@ -2279,10 +2280,10 @@ objects:
       columns:
       - timestamp
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: job_source
     schema: system
@@ -2306,13 +2307,13 @@ objects:
       - id
     indexes:
     - name: ix_system_job_source_name
-      definition: CREATE UNIQUE INDEX ix_system_job_source_name ON system.job_source
-        USING btree (name)
+      unique: true
+      definition: btree (name)
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: job
     schema: system
@@ -2363,10 +2364,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - table:
     name: job_queue
     schema: system
@@ -2390,10 +2391,10 @@ objects:
         - id
       on_delete: cascade
     privileges:
-    - role: minerva
-      privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    - role: minerva
+      privilege: SELECT
 - function:
     name: get_default_partition_size
     schema: trend_directory
