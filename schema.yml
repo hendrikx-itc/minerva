@@ -1,4 +1,30 @@
 objects:
+- role:
+    name: minerva
+    super: false
+    inherit: true
+    createrole: false
+    createdb: false
+    login: false
+- role:
+    name: minerva_writer
+    super: false
+    inherit: true
+    createrole: false
+    createdb: false
+    login: false
+    memberships:
+    - minerva
+- role:
+    name: minerva_admin
+    super: false
+    inherit: true
+    createrole: false
+    createdb: false
+    login: true
+    memberships:
+    - minerva
+    - minerva_writer
 - schema:
     name: public
 - schema:
@@ -62,32 +88,6 @@ objects:
     name: trigger
 - schema:
     name: trigger_rule
-- role:
-    name: minerva
-    super: false
-    inherit: true
-    createrole: false
-    createdb: false
-    login: false
-- role:
-    name: minerva_writer
-    super: false
-    inherit: true
-    createrole: false
-    createdb: false
-    login: false
-    memberships:
-    - minerva
-- role:
-    name: minerva_admin
-    super: false
-    inherit: true
-    createrole: false
-    createdb: false
-    login: true
-    memberships:
-    - minerva
-    - minerva_writer
 - function:
     name: integer_to_array
     schema: public
