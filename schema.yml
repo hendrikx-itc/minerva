@@ -29,12 +29,20 @@ objects:
     name: public
 - schema:
     name: dimension
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: system
 - schema:
     name: directory
     comment: Stores contextual information for the data. This includes the entities,
       entity_types, data_sources, etc. It is the entrypoint when looking for data.
+    privileges:
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: alias
 - schema:
@@ -42,52 +50,131 @@ objects:
 - schema:
     name: relation
     comment: Stores the actual relations between entities in dynamically created tables.
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: relation_def
     comment: 'Stores definitions of relations in the form of views. These views are
       used to
 
       populate the corresponding tables in the relation schema'
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: relation_directory
 - schema:
     name: trend
     comment: Stores information with fixed interval and format, like periodic measurements.
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: trend_directory
 - schema:
     name: trend_partition
     comment: Stores information with fixed interval and format, like periodic measurements.
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: attribute
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: attribute_base
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: attribute_directory
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: attribute_history
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: attribute_staging
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: notification
     comment: "Stores information of events that can occur at irregular intervals,\
       \ but\r\nstill have a fixed, known format.\r\n\r\nThis schema is dynamically\
       \ populated."
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: notification_directory
     comment: Stores meta-data about notification data in the notification schema.
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: metric
+    privileges:
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: virtual_entity
+    privileges:
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: olap
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: entity_tag
+    privileges:
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: trigger
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - schema:
     name: trigger_rule
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE
 - function:
     name: integer_to_array
     schema: public
@@ -886,24 +973,6 @@ objects:
                   '15 minute'::interval
               ) AS timestamp
           ) timestamps;
-- query:
-    query: dimension.update_month()
-- query:
-    query: dimension.update_week()
-- query:
-    query: dimension.update_day()
-- query:
-    query: dimension.update_hour()
-- query:
-    query: dimension.update_quarter()
-- query:
-    query: dimension.update_four_consec_qtr()
-- query:
-    query: dimension.update_month_15m()
-- query:
-    query: dimension.update_week_15m()
-- query:
-    query: dimension.update_day_15m()
 - enum_type:
     schema: system
     name: job_state_enum
@@ -1109,6 +1178,15 @@ objects:
           $1.major > $2.major AND
           $1.minor > $2.minor AND
           $1.patch > $2.patch;
+- operator:
+    name: <>
+    code: system.version_gtlt_version
+    left:
+      schema: system
+      name: version_tuple
+    right:
+      schema: system
+      name: version_tuple
 - function:
     name: version
     schema: system
@@ -3332,22 +3410,32 @@ objects:
     - name: dst_trend_store_id
       data_type: integer
       nullable: false
+      description: The ID of the destination table_trend_store
     - name: processing_delay
       data_type: interval
       nullable: false
+      description: The time after the destination timestamp before this materialization
+        can be executed
     - name: stability_delay
       data_type: interval
       nullable: false
+      description: The time to wait after the most recent modified timestamp before
+        the source data is considered 'stable'
     - name: reprocessing_period
       data_type: interval
       nullable: false
+      description: The maximum time after the destination timestamp that the materialization
+        is allowed to be executed
     - name: id
       data_type: integer
       nullable: false
+      description: The unique identifier of this materialization
       default: nextval('trend_directory.materialization_id_seq'::regclass)
     - name: enabled
       data_type: bool
       nullable: false
+      description: Indicates if jobs should be created for this materialization (manual
+        execution is always possible)
       default: 'false'
     - name: cost
       data_type: integer
@@ -3477,21 +3565,29 @@ objects:
     - name: materialization_id
       data_type: integer
       nullable: false
+      description: The ID of the materialization type
     - name: timestamp
       data_type: timestamp with time zone
       nullable: false
+      description: The timestamp of the materialized (materialization result) data
     - name: max_modified
       data_type: timestamp with time zone
       nullable: false
+      description: The greatest modified timestamp of all materialization sources
     - name: source_states
       data_type: trend_directory.source_fragment_state[]
       nullable: true
+      description: Array of trend_store_id/timestamp/modified combinations for all
+        source data fragments
     - name: processed_states
       data_type: trend_directory.source_fragment_state[]
       nullable: true
+      description: Array containing a snapshot of the source_states at the time of
+        the most recent materialization
     - name: job_id
       data_type: integer
       nullable: true
+      description: ID of the most recent job for this materialization
     primary_key:
       name: state_pkey
       columns:
@@ -4641,7 +4737,7 @@ objects:
               'INSERT INTO %I.%I SELECT * FROM %I.%I WHERE timestamp = $1',
               trend_directory.partition_table_schema(),
               trend_directory.table_name(trend_directory.attributes_to_partition(
-                  trend_store,
+                  trend_store_part,
                   trend_directory.timestamp_to_index(trend_store.partition_size, timestamp)
               )),
               trend_directory.staging_table_schema(),
@@ -6146,7 +6242,7 @@ objects:
       schema: trend_directory
       name: cleanup_on_data_source_delete
     when: before
-    events: &id001
+    events:
     - delete
     affecteach: row
 - trigger:
@@ -8839,6 +8935,9 @@ objects:
            JOIN pg_namespace n ON ((dependent.relnamespace = n.oid)))
            JOIN pg_attribute ON (((pg_depend.refobjid = pg_attribute.attrelid) AND (pg_depend.refobjsubid = pg_attribute.attnum))))
         WHERE ((n.nspname = 'attribute_directory'::name) AND (pg_attribute.attnum > 0));
+    privileges:
+    - role: minerva
+      privilege: SELECT
 - composite_type:
     name: attr_def
     schema: notification_directory
@@ -9734,6 +9833,7 @@ objects:
 - table:
     name: entity_tag_link_staging
     schema: entity_tag
+    persistence: unlogged
     columns:
     - name: entity_id
       data_type: integer
@@ -9837,6 +9937,9 @@ objects:
            LEFT JOIN directory.tag ON ((lower((tag.name)::text) = lower(staging.tag_name))))
         WHERE (tag.name IS NULL)
         GROUP BY staging.tag_name, staging.tag_group_id;
+    privileges:
+    - role: minerva
+      privilege: SELECT
 - function:
     name: add_new_tags
     schema: entity_tag
@@ -9864,6 +9967,9 @@ objects:
            JOIN directory.tag ON ((lower((tag.name)::text) = lower(staging.tag_name))))
            LEFT JOIN directory.entity_tag_link etl ON (((etl.entity_id = staging.entity_id) AND (etl.tag_id = tag.id))))
         WHERE (etl.entity_id IS NULL);
+    privileges:
+    - role: minerva
+      privilege: SELECT
 - function:
     name: add_new_links
     schema: entity_tag
@@ -9896,6 +10002,9 @@ objects:
         WHERE (((tag.name)::text IN ( SELECT entity_tag_link_staging.tag_name
                  FROM entity_tag.entity_tag_link_staging
                 GROUP BY entity_tag_link_staging.tag_name)) AND (staging.entity_id IS NULL));
+    privileges:
+    - role: minerva
+      privilege: SELECT
 - function:
     name: remove_obsolete_links
     schema: entity_tag
