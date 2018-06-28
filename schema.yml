@@ -973,6 +973,24 @@ objects:
                   '15 minute'::interval
               ) AS timestamp
           ) timestamps;
+- query:
+    query: dimension.update_month()
+- query:
+    query: dimension.update_week()
+- query:
+    query: dimension.update_day()
+- query:
+    query: dimension.update_hour()
+- query:
+    query: dimension.update_quarter()
+- query:
+    query: dimension.update_four_consec_qtr()
+- query:
+    query: dimension.update_month_15m()
+- query:
+    query: dimension.update_week_15m()
+- query:
+    query: dimension.update_day_15m()
 - enum_type:
     schema: system
     name: job_state_enum
