@@ -55,12 +55,6 @@ COMMENT ON SCHEMA "directory" IS 'Stores contextual information for the data. Th
 GRANT USAGE ON SCHEMA "directory" TO "minerva";
 
 
-CREATE SCHEMA IF NOT EXISTS "alias";
-
-
-CREATE SCHEMA IF NOT EXISTS "alias_directory";
-
-
 CREATE SCHEMA IF NOT EXISTS "relation";
 COMMENT ON SCHEMA "relation" IS 'Stores the actual relations between entities in dynamically created tables.';
 GRANT USAGE,CREATE ON SCHEMA "relation" TO "minerva_writer";
@@ -79,8 +73,6 @@ CREATE SCHEMA IF NOT EXISTS "relation_directory";
 
 CREATE SCHEMA IF NOT EXISTS "trend";
 COMMENT ON SCHEMA "trend" IS 'Stores information with fixed interval and format, like periodic measurements.';
-GRANT USAGE,CREATE ON SCHEMA "trend" TO "minerva_writer";
-GRANT USAGE ON SCHEMA "trend" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "trend_directory";
@@ -88,8 +80,6 @@ CREATE SCHEMA IF NOT EXISTS "trend_directory";
 
 CREATE SCHEMA IF NOT EXISTS "trend_partition";
 COMMENT ON SCHEMA "trend_partition" IS 'Stores information with fixed interval and format, like periodic measurements.';
-GRANT USAGE,CREATE ON SCHEMA "trend_partition" TO "minerva_writer";
-GRANT USAGE ON SCHEMA "trend_partition" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute";
@@ -389,9 +379,9 @@ CREATE CAST (smallint AS timestamp with time zone)
 
 CREATE TABLE "dimension"."month"
 (
-  "timestamp" timestamp with time zone NOT NULL,
-  "start" timestamp with time zone,
   "end" timestamp with time zone,
+  "start" timestamp with time zone,
+  "timestamp" timestamp with time zone NOT NULL,
   PRIMARY KEY (timestamp)
 );
 
@@ -403,10 +393,10 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."month" TO minerva_writer;
 
 CREATE TABLE "dimension"."week"
 (
-  "timestamp" timestamp with time zone NOT NULL,
-  "start" timestamp with time zone,
   "end" timestamp with time zone,
   "year" smallint,
+  "start" timestamp with time zone,
+  "timestamp" timestamp with time zone NOT NULL,
   "week_iso_8601" smallint,
   PRIMARY KEY (timestamp)
 );
@@ -433,9 +423,9 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."day" TO minerva_writer;
 
 CREATE TABLE "dimension"."hour"
 (
-  "timestamp" timestamp with time zone NOT NULL,
-  "start" timestamp with time zone,
   "end" timestamp with time zone,
+  "start" timestamp with time zone,
+  "timestamp" timestamp with time zone NOT NULL,
   PRIMARY KEY (timestamp)
 );
 
@@ -448,8 +438,8 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."hour" TO minerva_writer;
 CREATE TABLE "dimension"."quarter"
 (
   "timestamp" timestamp with time zone NOT NULL,
-  "start" timestamp with time zone,
   "end" timestamp with time zone,
+  "start" timestamp with time zone,
   PRIMARY KEY (timestamp)
 );
 
@@ -475,9 +465,9 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."5m" TO minerva_writer;
 
 CREATE TABLE "dimension"."four_consec_qtr"
 (
-  "timestamp" timestamp with time zone NOT NULL,
-  "start" timestamp with time zone,
   "end" timestamp with time zone,
+  "start" timestamp with time zone,
+  "timestamp" timestamp with time zone NOT NULL,
   PRIMARY KEY (timestamp)
 );
 
@@ -489,12 +479,12 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."four_consec_qtr" TO minerva_wri
 
 CREATE TABLE "dimension"."month_15m"
 (
-  "timestamp" timestamp with time zone,
   "timestamp_15m" timestamp with time zone NOT NULL,
+  "timestamp" timestamp with time zone,
   PRIMARY KEY (timestamp_15m)
 );
 
-CREATE INDEX month_15m_timestamp_idx ON "dimension"."month_15m" USING btree ("timestamp");
+CREATE INDEX "month_15m_timestamp_idx" ON "dimension"."month_15m" USING btree ("timestamp");
 
 GRANT SELECT ON TABLE "dimension"."month_15m" TO minerva;
 
@@ -509,7 +499,7 @@ CREATE TABLE "dimension"."week_15m"
   PRIMARY KEY (timestamp_15m)
 );
 
-CREATE INDEX week_15m_timestamp_idx ON "dimension"."week_15m" USING btree ("timestamp");
+CREATE INDEX "week_15m_timestamp_idx" ON "dimension"."week_15m" USING btree ("timestamp");
 
 GRANT SELECT ON TABLE "dimension"."week_15m" TO minerva;
 
@@ -519,8 +509,8 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."week_15m" TO minerva_writer;
 
 CREATE TABLE "dimension"."day_15m"
 (
-  "timestamp" timestamp with time zone,
   "timestamp_15m" timestamp with time zone NOT NULL,
+  "timestamp" timestamp with time zone,
   PRIMARY KEY (timestamp_15m)
 );
 
@@ -746,14 +736,14 @@ CREATE SEQUENCE system.job_source_id_seq
 
 CREATE TABLE "system"."job_source"
 (
-  "name" varchar NOT NULL,
   "job_type" varchar NOT NULL,
   "config" json,
+  "name" varchar NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('system.job_source_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX ix_system_job_source_name ON "system"."job_source" USING btree (name);
+CREATE UNIQUE INDEX "ix_system_job_source_name" ON "system"."job_source" USING btree (name);
 
 GRANT SELECT ON TABLE "system"."job_source" TO minerva;
 
@@ -771,15 +761,15 @@ CREATE SEQUENCE system.job_id_seq
 
 CREATE TABLE "system"."job"
 (
-  "type" varchar NOT NULL,
-  "description" json NOT NULL,
-  "size" bigint NOT NULL,
-  "started" timestamp with time zone,
-  "finished" timestamp with time zone,
-  "job_source_id" integer NOT NULL,
   "created" timestamp with time zone NOT NULL DEFAULT now(),
   "state" system.job_state_enum NOT NULL DEFAULT 'queued'::system.job_state_enum,
   "id" integer NOT NULL DEFAULT nextval('system.job_id_seq'::regclass),
+  "started" timestamp with time zone,
+  "type" varchar NOT NULL,
+  "description" json NOT NULL,
+  "size" bigint NOT NULL,
+  "finished" timestamp with time zone,
+  "job_source_id" integer NOT NULL,
   PRIMARY KEY (id)
 );
 
@@ -824,8 +814,8 @@ CREATE SEQUENCE system.setting_id_seq
 
 CREATE TABLE "system"."setting"
 (
-  "name" text NOT NULL,
   "value" text,
+  "name" text NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('system.setting_id_seq'::regclass),
   PRIMARY KEY (id)
 );
@@ -1069,7 +1059,7 @@ CREATE TABLE "directory"."data_source"
 
 COMMENT ON TABLE "directory"."data_source" IS 'Describes data_sources. A data_source is used to indicate where data came from. Datasources are also used to prevent collisions between sets of data from different sources, where names can be the same, but the meaning of the data differs.';
 
-CREATE UNIQUE INDEX ix_directory_data_source_name ON "directory"."data_source" USING btree (name);
+CREATE UNIQUE INDEX "ix_directory_data_source_name" ON "directory"."data_source" USING btree (name);
 
 GRANT SELECT ON TABLE "directory"."data_source" TO minerva;
 
@@ -1087,15 +1077,15 @@ CREATE SEQUENCE directory.entity_type_id_seq
 
 CREATE TABLE "directory"."entity_type"
 (
-  "name" varchar NOT NULL,
   "description" varchar NOT NULL,
+  "name" varchar NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('directory.entity_type_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
 COMMENT ON TABLE "directory"."entity_type" IS 'Stores the entity types that exist in the entity table. Entity types are also used to give context to data that is stored for entities.';
 
-CREATE UNIQUE INDEX ix_directory_entity_type_name ON "directory"."entity_type" USING btree (lower((name)::text));
+CREATE UNIQUE INDEX "ix_directory_entity_type_name" ON "directory"."entity_type" USING btree (lower((name)::text));
 
 GRANT SELECT ON TABLE "directory"."entity_type" TO minerva;
 
@@ -1114,17 +1104,20 @@ CREATE SEQUENCE directory.entity_id_seq
 CREATE TABLE "directory"."entity"
 (
   "created" timestamp with time zone NOT NULL,
-  "name" varchar NOT NULL,
   "entity_type_id" integer NOT NULL,
+  "name" varchar NOT NULL,
+  "dn" varchar NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('directory.entity_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
 COMMENT ON TABLE "directory"."entity" IS 'Describes entities. An entity is the base object for which the database can hold further information such as attributes, trends and notifications. All data must have a reference to an entity.';
 
-CREATE INDEX ix_directory_entity_name ON "directory"."entity" USING btree (name);
+CREATE UNIQUE INDEX "ix_directory_entity_dn" ON "directory"."entity" USING btree (dn);
 
-CREATE INDEX ix_directory_entity_entity_type_id ON "directory"."entity" USING btree (entity_type_id);
+CREATE INDEX "ix_directory_entity_name" ON "directory"."entity" USING btree (name);
+
+CREATE INDEX "ix_directory_entity_entity_type_id" ON "directory"."entity" USING btree (entity_type_id);
 
 GRANT SELECT ON TABLE "directory"."entity" TO minerva;
 
@@ -1142,15 +1135,15 @@ CREATE SEQUENCE directory.tag_group_id_seq
 
 CREATE TABLE "directory"."tag_group"
 (
+  "id" integer NOT NULL DEFAULT nextval('directory.tag_group_id_seq'::regclass),
   "name" varchar NOT NULL,
   "complementary" bool NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('directory.tag_group_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
 COMMENT ON TABLE "directory"."tag_group" IS 'Stores groups that can be related to by tags.';
 
-CREATE UNIQUE INDEX ix_directory_tag_group_name ON "directory"."tag_group" USING btree (lower((name)::text));
+CREATE UNIQUE INDEX "ix_directory_tag_group_name" ON "directory"."tag_group" USING btree (lower((name)::text));
 
 GRANT SELECT ON TABLE "directory"."tag_group" TO minerva;
 
@@ -1168,18 +1161,18 @@ CREATE SEQUENCE directory.tag_id_seq
 
 CREATE TABLE "directory"."tag"
 (
-  "name" varchar NOT NULL,
+  "id" integer NOT NULL DEFAULT nextval('directory.tag_id_seq'::regclass),
   "tag_group_id" integer NOT NULL,
   "description" varchar,
-  "id" integer NOT NULL DEFAULT nextval('directory.tag_id_seq'::regclass),
+  "name" varchar NOT NULL,
   PRIMARY KEY (id)
 );
 
 COMMENT ON TABLE "directory"."tag" IS 'Stores all tags. A tag is a simple label that can be attached to a number of object types in the database, such as entities and trends.';
 
-CREATE UNIQUE INDEX ix_directory_tag_name ON "directory"."tag" USING btree (lower((name)::text));
+CREATE UNIQUE INDEX "ix_directory_tag_name" ON "directory"."tag" USING btree (lower((name)::text));
 
-CREATE INDEX tag_lower_id_idx ON "directory"."tag" USING btree (lower((name)::text), id);
+CREATE INDEX "tag_lower_id_idx" ON "directory"."tag" USING btree (lower((name)::text), id);
 
 GRANT SELECT ON TABLE "directory"."tag" TO minerva;
 
@@ -1194,7 +1187,7 @@ CREATE TABLE "directory"."entity_tag_link"
   PRIMARY KEY (tag_id, entity_id)
 );
 
-CREATE INDEX ix_directory_entity_tag_link_entity_id ON "directory"."entity_tag_link" USING btree (entity_id);
+CREATE INDEX "ix_directory_entity_tag_link_entity_id" ON "directory"."entity_tag_link" USING btree (entity_id);
 
 GRANT SELECT ON TABLE "directory"."entity_tag_link" TO minerva;
 
@@ -1210,9 +1203,9 @@ CREATE TABLE "directory"."entity_tag_link_denorm"
   PRIMARY KEY (entity_id)
 );
 
-CREATE INDEX entity_tag_link_denorm_tags_idx ON "directory"."entity_tag_link_denorm" USING gin (tags);
+CREATE INDEX "entity_tag_link_denorm_tags_idx" ON "directory"."entity_tag_link_denorm" USING gin (tags);
 
-CREATE INDEX entity_tag_link_denorm_name_idx ON "directory"."entity_tag_link_denorm" USING btree (name);
+CREATE INDEX "entity_tag_link_denorm_name_idx" ON "directory"."entity_tag_link_denorm" USING btree (name);
 
 GRANT SELECT ON TABLE "directory"."entity_tag_link_denorm" TO minerva;
 
@@ -1325,36 +1318,6 @@ RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "directory"."create_entity_type_tag"()
-    RETURNS trigger
-AS $$
-BEGIN
-    BEGIN
-        INSERT INTO directory.tag (name, tag_group_id) SELECT NEW.name, id FROM directory.tag_group WHERE directory.tag_group.name = 'entity_type';
-    EXCEPTION WHEN unique_violation THEN
-        UPDATE directory.tag SET tag_group_id = (SELECT id FROM directory.tag_group WHERE directory.tag_group.name = 'entity_type') WHERE tag.name = NEW.name;
-    END;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "directory"."create_entity_tag_link"()
-    RETURNS trigger
-AS $$
-BEGIN
-    INSERT INTO directory.entity_tag_link (entity_id, tag_id) VALUES (NEW.id, (
-    SELECT tag.id FROM directory.tag
-    INNER JOIN directory.entity_type ON tag.name = entity_type.name
-    WHERE entity_type.id = NEW.entity_type_id
-    ));
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE FUNCTION "directory"."update_entity_tag_link_denorm_for_insert"()
     RETURNS trigger
 AS $$
@@ -1377,18 +1340,6 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE TRIGGER create_entity_tag_link_for_new_entity
-  AFTER INSERT ON "directory"."entity"
-  FOR EACH ROW
-  EXECUTE PROCEDURE "directory"."create_entity_tag_link"();
-
-
-CREATE TRIGGER create_tag_for_new_entity_types
-  AFTER INSERT ON "directory"."entity_type"
-  FOR EACH ROW
-  EXECUTE PROCEDURE "directory"."create_entity_type_tag"();
-
-
 CREATE TRIGGER update_denormalized_tags_on_link_insert
   AFTER INSERT ON "directory"."entity_tag_link"
   FOR EACH ROW
@@ -1399,102 +1350,6 @@ CREATE TRIGGER update_denormalized_tags_on_link_delete
   AFTER DELETE ON "directory"."entity_tag_link"
   FOR EACH ROW
   EXECUTE PROCEDURE "directory"."update_entity_tag_link_denorm_for_delete"();
-
-
-CREATE SEQUENCE alias_directory.alias_type_id_seq
-  START WITH 2
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
-CREATE TABLE "alias_directory"."alias_type"
-(
-  "name" varchar NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('alias_directory.alias_type_id_seq'::regclass),
-  PRIMARY KEY (id)
-);
-
-CREATE UNIQUE INDEX alias_type_name_lower_idx ON "alias_directory"."alias_type" USING btree (name, lower((name)::text));
-
-
-
-CREATE FUNCTION "alias_directory"."alias_schema"()
-    RETURNS name
-AS $$
-SELECT 'alias'::name;
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "alias_directory"."initialize_alias_type_sql"(alias_directory.alias_type)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-        format(
-            'CREATE TABLE %I.%I ('
-            '  id serial PRIMARY KEY,'
-            '  %I text UNIQUE NOT NULL,'
-            '  entity_id integer REFERENCES directory.entity(id)'
-            ');',
-            alias_directory.alias_schema(),
-            $1.name, $1.name
-        )
-    ];
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "alias_directory"."initialize_alias_type"(alias_directory.alias_type)
-    RETURNS alias_directory.alias_type
-AS $$
-SELECT public.action($1, alias_directory.initialize_alias_type_sql($1));
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "alias_directory"."get_alias"("entity_id" integer, "alias_type_name" text)
-    RETURNS text
-AS $$
-DECLARE
-    result text;
-BEGIN
-    EXECUTE format(
-        'SELECT %I INTO result FROM alias.%I WHERE entity_id = %s',
-        $2, $2, $1
-    );
-
-    RETURN result;
-END;
-$$ LANGUAGE plpgsql STABLE;
-
-
-CREATE FUNCTION "alias_directory"."create_alias"("entity_id" integer, "alias_type_name" text, "alias" text)
-    RETURNS text
-AS $$
-BEGIN
-    EXECUTE format(
-        'INSERT INTO alias.%I(entity_id, %I) VALUES ($1, $2)',
-        $2, $2
-    ) USING $1, $3;
-
-    RETURN result;
-END;
-$$ LANGUAGE plpgsql STABLE;
-
-
-CREATE FUNCTION "alias_directory"."define_alias_type"("name" name)
-    RETURNS alias_directory.alias_type
-AS $$
-INSERT INTO alias_directory.alias_type(name) VALUES ($1) RETURNING *;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "alias_directory"."create_alias_type"("name" name)
-    RETURNS alias_directory.alias_type
-AS $$
-SELECT alias_directory.initialize_alias_type(
-        alias_directory.define_alias_type($1)
-    );
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE TYPE "relation_directory"."type_cardinality_enum" AS ENUM (
@@ -1515,13 +1370,13 @@ CREATE SEQUENCE relation_directory.type_id_seq
 
 CREATE TABLE "relation_directory"."type"
 (
-  "name" name NOT NULL,
-  "cardinality" relation_directory.type_cardinality_enum,
   "id" integer NOT NULL DEFAULT nextval('relation_directory.type_id_seq'::regclass),
+  "cardinality" relation_directory.type_cardinality_enum,
+  "name" name NOT NULL,
   PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX type_name_key ON "relation_directory"."type" USING btree (name);
+CREATE UNIQUE INDEX "type_name_key" ON "relation_directory"."type" USING btree (name);
 
 GRANT SELECT ON TABLE "relation_directory"."type" TO minerva;
 
@@ -1616,22 +1471,22 @@ SELECT type FROM relation_directory.type WHERE name = $1;
 $$ LANGUAGE sql STABLE STRICT;
 
 
-CREATE FUNCTION "relation_directory"."define"(name)
+CREATE FUNCTION "relation_directory"."create_type"(name)
     RETURNS relation_directory.type
 AS $$
 INSERT INTO relation_directory.type (name) VALUES ($1) RETURNING type;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE FUNCTION "relation_directory"."create_type"(name)
+CREATE FUNCTION "relation_directory"."define"(name)
     RETURNS relation_directory.type
 AS $$
 SELECT relation_directory.create_relation_table(
-        relation_directory.define($1)
+        relation_directory.create_type($1)
     );
 $$ LANGUAGE sql VOLATILE;
 
-COMMENT ON FUNCTION "relation_directory"."create_type"(name) IS 'Defines a new relation type, creates the corresponding table and then returns
+COMMENT ON FUNCTION "relation_directory"."define"(name) IS 'Defines a new relation type, creates the corresponding table and then returns
 the new type record';
 
 
@@ -1655,19 +1510,6 @@ SELECT public.action(
         relation_directory.create_relation_view_sql($1, $2)
     );
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
-
-
-CREATE FUNCTION "relation_directory"."create_type"(name, "view_sql" text)
-    RETURNS relation_directory.type
-AS $$
-SELECT relation_directory.create_relation_view(
-        relation_directory.create_type($1),
-        $2
-    );
-$$ LANGUAGE sql VOLATILE;
-
-COMMENT ON FUNCTION "relation_directory"."create_type"(name, "view_sql" text) IS 'Defines a new relation type (just like relation_directory.define(name)),
-including a view that will be used to populate the relation table.';
 
 
 CREATE FUNCTION "relation_directory"."name_to_type"(name)
@@ -1735,40 +1577,6 @@ SELECT public.action(
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 
-CREATE FUNCTION "relation_directory"."create_reverse"("reverse" name, "original" name)
-    RETURNS relation_directory.type
-AS $$
-SELECT relation_directory.create_type(
-    $1,
-    format(
-        $query$SELECT
-    target_id AS source_id,
-    source_id AS target_id
-FROM %I.%I$query$,
-        relation_directory.view_schema(),
-        $2
-    )
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "relation_directory"."create_reverse"("reverse" name, "original" relation_directory.type)
-    RETURNS relation_directory.type
-AS $$
-SELECT relation_directory.create_type(
-    $1,
-    format(
-        $query$SELECT
-    target_id AS source_id,
-    source_id AS target_id
-FROM %I.%I$query$,
-        relation_directory.view_schema(),
-        $2.name
-    )
-);
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "relation_directory"."materialize_relation"("type" relation_directory.type)
     RETURNS integer
 AS $$
@@ -1807,33 +1615,10 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE SEQUENCE alias.dn_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
-CREATE TABLE "alias"."dn"
-(
-  "dn" text NOT NULL,
-  "entity_id" integer,
-  "id" integer NOT NULL DEFAULT nextval('alias.dn_id_seq'::regclass),
-  PRIMARY KEY (id)
-);
-
-CREATE UNIQUE INDEX dn_dn_key ON "alias"."dn" USING btree (dn);
-
-
-
 CREATE FUNCTION "directory"."get_entity_by_dn"(text)
     RETURNS directory.entity
 AS $$
-SELECT entity
-    FROM directory.entity
-    JOIN alias.dn ON dn.entity_id = entity.id
-    WHERE dn.dn = $1;
+SELECT * FROM directory.entity WHERE dn = $1;
 $$ LANGUAGE sql STABLE;
 
 
@@ -1924,11 +1709,12 @@ $$ LANGUAGE sql IMMUTABLE STRICT;
 CREATE FUNCTION "directory"."create_entity"(text)
     RETURNS directory.entity
 AS $$
-INSERT INTO directory.entity(created, name, entity_type_id)
+INSERT INTO directory.entity(created, name, entity_type_id, dn)
         VALUES (
             now(),
             (directory.last_dn_part(directory.explode_dn($1))).name,
-            directory.entity_type_id(directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name))
+            directory.entity_type_id(directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)),
+            $1
         )
         RETURNING entity;
 $$ LANGUAGE sql VOLATILE STRICT;
@@ -1939,23 +1725,6 @@ CREATE FUNCTION "directory"."dn_to_entity"(text)
 AS $$
 SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity($1));
 $$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "directory"."create_dn_alias"(directory.entity, "dn" text)
-    RETURNS directory.entity
-AS $$
-SELECT alias_directory.create_alias($1.id, 'dn', $2);
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "directory"."create_entity_with_alias"(text)
-    RETURNS directory.entity
-AS $$
-SELECT directory.create_dn_alias(new_entity, $1)
-    FROM directory.create_entity($1) new_entity;
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "directory"."dns_to_entity_ids"(text[])
@@ -1975,9 +1744,9 @@ INSERT INTO directory.entity_tag_link(tag_id, entity_id)
     FROM (
         SELECT
             tag.id AS tag_id,
-            dn.entity_id
-        FROM directory.tag, alias.dn
-        WHERE tag.name = $2 AND dn.dn = $1
+            entity.id AS entity_id
+        FROM directory.tag, directory.entity
+        WHERE tag.name = $2 AND entity.dn = $1
     ) f
     LEFT JOIN directory.entity_tag_link ON entity_tag_link.tag_id = f.tag_id AND entity_tag_link.entity_id = f.entity_id
     WHERE entity_tag_link.entity_id IS NULL;
@@ -2018,14 +1787,14 @@ CREATE SEQUENCE trend_directory.trend_store_id_seq
 
 CREATE TABLE "trend_directory"."trend_store"
 (
-  "entity_type_id" integer,
+  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_store_id_seq'::regclass),
   "data_source_id" integer,
   "granularity" interval NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_store_id_seq'::regclass),
+  "entity_type_id" integer,
   PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX trend_store_entity_type_id_data_source_id_granularity_key ON "trend_directory"."trend_store" USING btree (entity_type_id, data_source_id, granularity);
+CREATE UNIQUE INDEX "trend_store_entity_type_id_data_source_id_granularity_key" ON "trend_directory"."trend_store" USING btree (entity_type_id, data_source_id, granularity);
 
 
 
@@ -2039,9 +1808,9 @@ CREATE SEQUENCE trend_directory.trend_store_part_id_seq
 
 CREATE TABLE "trend_directory"."trend_store_part"
 (
-  "name" name NOT NULL,
-  "trend_store_id" integer NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_store_part_id_seq'::regclass),
+  "trend_store_id" integer NOT NULL,
+  "name" name NOT NULL,
   PRIMARY KEY (id)
 );
 
@@ -2049,11 +1818,7 @@ CREATE TABLE "trend_directory"."trend_store_part"
 
 CREATE TABLE "trend_directory"."table_trend_store"
 (
-  "entity_type_id" integer,
-  "data_source_id" integer,
-  "granularity" interval NOT NULL,
   "partition_size" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_store_id_seq'::regclass),
   "retention_period" interval NOT NULL DEFAULT '1 mon'::interval,
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend_store");
@@ -2062,9 +1827,6 @@ CREATE TABLE "trend_directory"."table_trend_store"
 
 CREATE TABLE "trend_directory"."table_trend_store_part"
 (
-  "name" name NOT NULL,
-  "trend_store_id" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_store_part_id_seq'::regclass),
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend_store_part");
 
@@ -2072,10 +1834,6 @@ CREATE TABLE "trend_directory"."table_trend_store_part"
 
 CREATE TABLE "trend_directory"."view_trend_store"
 (
-  "entity_type_id" integer,
-  "data_source_id" integer,
-  "granularity" interval NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_store_id_seq'::regclass),
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend_store");
 
@@ -2083,9 +1841,6 @@ CREATE TABLE "trend_directory"."view_trend_store"
 
 CREATE TABLE "trend_directory"."view_trend_store_part"
 (
-  "name" name NOT NULL,
-  "trend_store_id" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_store_part_id_seq'::regclass),
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend_store_part");
 
@@ -2101,11 +1856,11 @@ CREATE SEQUENCE trend_directory.trend_id_seq
 
 CREATE TABLE "trend_directory"."trend"
 (
+  "description" text NOT NULL,
+  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_id_seq'::regclass),
   "trend_store_part_id" integer NOT NULL,
   "name" name NOT NULL,
   "data_type" text NOT NULL,
-  "description" text NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
@@ -2113,11 +1868,6 @@ CREATE TABLE "trend_directory"."trend"
 
 CREATE TABLE "trend_directory"."table_trend"
 (
-  "trend_store_part_id" integer NOT NULL,
-  "name" name NOT NULL,
-  "data_type" text NOT NULL,
-  "description" text NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_id_seq'::regclass),
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend");
 
@@ -2125,11 +1875,6 @@ CREATE TABLE "trend_directory"."table_trend"
 
 CREATE TABLE "trend_directory"."view_trend"
 (
-  "trend_store_part_id" integer NOT NULL,
-  "name" name NOT NULL,
-  "data_type" text NOT NULL,
-  "description" text NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_id_seq'::regclass),
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend");
 
@@ -2137,8 +1882,8 @@ CREATE TABLE "trend_directory"."view_trend"
 
 CREATE TABLE "trend_directory"."partition"
 (
-  "table_trend_store_part_id" integer NOT NULL,
   "index" integer NOT NULL,
+  "table_trend_store_part_id" integer NOT NULL,
   PRIMARY KEY (table_trend_store_part_id, index)
 );
 
@@ -2155,10 +1900,10 @@ CREATE TABLE "trend_directory"."trend_tag_link"
 
 CREATE TABLE "trend_directory"."modified"
 (
-  "table_trend_store_part_id" integer NOT NULL,
   "timestamp" timestamp with time zone NOT NULL,
-  "start" timestamp with time zone NOT NULL,
   "end" timestamp with time zone NOT NULL,
+  "start" timestamp with time zone NOT NULL,
+  "table_trend_store_part_id" integer NOT NULL,
   PRIMARY KEY (table_trend_store_part_id, timestamp)
 );
 
@@ -2178,17 +1923,19 @@ CREATE SEQUENCE trend_directory.materialization_id_seq
 
 CREATE TABLE "trend_directory"."materialization"
 (
+  "id" integer NOT NULL DEFAULT nextval('trend_directory.materialization_id_seq'::regclass),
   "dst_trend_store_id" integer NOT NULL,
   "processing_delay" interval NOT NULL,
   "stability_delay" interval NOT NULL,
   "reprocessing_period" interval NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.materialization_id_seq'::regclass),
   "enabled" bool NOT NULL DEFAULT false,
   "cost" integer NOT NULL DEFAULT 10,
   PRIMARY KEY (id)
 );
 
 COMMENT ON TABLE "trend_directory"."materialization" IS 'Indicates if jobs should be created for this materialization (manual execution is always possible)';
+
+COMMENT ON COLUMN "trend_directory"."materialization"."id" IS 'The unique identifier of this materialization';
 
 COMMENT ON COLUMN "trend_directory"."materialization"."dst_trend_store_id" IS 'The ID of the destination table_trend_store';
 
@@ -2198,11 +1945,9 @@ COMMENT ON COLUMN "trend_directory"."materialization"."stability_delay" IS 'The 
 
 COMMENT ON COLUMN "trend_directory"."materialization"."reprocessing_period" IS 'The maximum time after the destination timestamp that the materialization is allowed to be executed';
 
-COMMENT ON COLUMN "trend_directory"."materialization"."id" IS 'The unique identifier of this materialization';
-
 COMMENT ON COLUMN "trend_directory"."materialization"."enabled" IS 'Indicates if jobs should be created for this materialization (manual execution is always possible)';
 
-CREATE UNIQUE INDEX ix_trend_materialization_uniqueness ON "trend_directory"."materialization" USING btree (dst_trend_store_id);
+CREATE UNIQUE INDEX "ix_trend_materialization_uniqueness" ON "trend_directory"."materialization" USING btree (dst_trend_store_id);
 
 GRANT SELECT ON TABLE "trend_directory"."materialization" TO minerva;
 
@@ -2212,14 +1957,7 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization" TO miner
 
 CREATE TABLE "trend_directory"."view_materialization"
 (
-  "dst_trend_store_id" integer NOT NULL,
-  "processing_delay" interval NOT NULL,
-  "stability_delay" interval NOT NULL,
-  "reprocessing_period" interval NOT NULL,
-  "src_view" regclass NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.materialization_id_seq'::regclass),
-  "enabled" bool NOT NULL DEFAULT false,
-  "cost" integer NOT NULL DEFAULT 10
+  "src_view" regclass NOT NULL
 )INHERITS ("trend_directory"."materialization");
 
 COMMENT ON TABLE "trend_directory"."view_materialization" IS 'A table_materialization is a materialization that uses the data from the function
@@ -2229,14 +1967,7 @@ registered in the src_function column to populate the target trend store.';
 
 CREATE TABLE "trend_directory"."function_materialization"
 (
-  "dst_trend_store_id" integer NOT NULL,
-  "processing_delay" interval NOT NULL,
-  "stability_delay" interval NOT NULL,
-  "reprocessing_period" interval NOT NULL,
-  "src_function" regprocedure NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.materialization_id_seq'::regclass),
-  "enabled" bool NOT NULL DEFAULT false,
-  "cost" integer NOT NULL DEFAULT 10
+  "src_function" regprocedure NOT NULL
 )INHERITS ("trend_directory"."materialization");
 
 
@@ -2288,8 +2019,8 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."state" TO minerva_writer;
 
 CREATE TABLE "trend_directory"."materialization_tag_link"
 (
-  "materialization_id" integer NOT NULL,
   "tag_id" integer NOT NULL,
+  "materialization_id" integer NOT NULL,
   PRIMARY KEY (materialization_id, tag_id)
 );
 
@@ -2736,13 +2467,6 @@ SELECT ($1 || '_' || $2)::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trend_directory"."partition_name"(trend_directory.table_trend_store_part, "index" integer)
-    RETURNS name
-AS $$
-SELECT trend_directory.partition_name(trend_directory.base_table_name($1), $2);
-$$ LANGUAGE sql STABLE STRICT;
-
-
 CREATE FUNCTION "trend_directory"."timestamp_to_index"("partition_size" integer, "timestamp" timestamp with time zone)
     RETURNS integer
 AS $$
@@ -2762,59 +2486,6 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION "trend_directory"."partition_name"(trend_directory.table_trend_store_part, timestamp with time zone)
-    RETURNS name
-AS $$
-SELECT trend_directory.partition_name(
-        $1, trend_directory.timestamp_to_index(table_trend_store.partition_size, $2)
-    )
-    FROm trend_directory.table_trend_store
-    WHERE id = $1.trend_store_id;
-$$ LANGUAGE sql STABLE STRICT;
-
-
-CREATE FUNCTION "trend_directory"."table_name"(trend_directory.partition)
-    RETURNS name
-AS $$
-SELECT trend_directory.partition_name(table_trend_store_part, $1.index)
-    FROM trend_directory.table_trend_store_part
-    WHERE id = $1.table_trend_store_part_id;
-$$ LANGUAGE sql STABLE STRICT;
-
-
-CREATE FUNCTION "trend_directory"."rename_table_trend_store_part"(trend_directory.table_trend_store_part, name)
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-SELECT public.action(
-        $1,
-        format(
-            'ALTER TABLE %I.%I RENAME TO %I',
-            trend_directory.base_table_schema(),
-            $1.name,
-            $2
-        )
-    );
-
-    SELECT public.action(
-        $1,
-        format(
-            'ALTER TABLE %I.%I RENAME TO %I',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name(partition),
-            trend_directory.partition_name($2, partition.index)
-        )
-    )
-    FROM trend_directory.partition
-    WHERE table_trend_store_part_id = $1.id;
-
-    UPDATE trend_directory.table_trend_store_part
-    SET name = $2
-    WHERE id = $1.id;
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."get_index_on"(name, name)
@@ -2961,48 +2632,6 @@ BEGIN
     );
 END;
 $$ LANGUAGE plpgsql STABLE;
-
-
-CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_directory.table_trend_store_part, "timestamp" timestamp with time zone)
-    RETURNS integer
-AS $$
-DECLARE
-    row_count integer;
-BEGIN
-    EXECUTE format(
-        'INSERT INTO %I.%I SELECT * FROM %I.%I WHERE timestamp = $1',
-        trend_directory.partition_table_schema(),
-        trend_directory.table_name(trend_directory.attributes_to_partition(
-            trend_store_part,
-            trend_directory.timestamp_to_index(trend_store.partition_size, timestamp)
-        )),
-        trend_directory.staging_table_schema(),
-        trend_directory.staging_table_name(trend_store_part)
-    ) USING timestamp;
-
-    GET DIAGNOSTICS row_count = ROW_COUNT;
-
-    RETURN row_count;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_directory.table_trend_store_part)
-    RETURNS trend_directory.table_trend_store_part
-AS $$
-SELECT
-        trend_directory.transfer_staged(trend_store_part, timestamp)
-    FROM trend_directory.staged_timestamps(trend_store_part) timestamp;
-
-    SELECT public.action(
-        $1,
-        format(
-            'TRUNCATE %I.%I',
-            trend_directory.staging_table_schema(),
-            trend_directory.staging_table_name(trend_store_part)
-        )
-    );
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."cluster_partition_table_on_timestamp_sql"("name" text)
@@ -3311,61 +2940,6 @@ SELECT trend_directory.index_to_timestamp(
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."create_partition_table_sql"(trend_directory.partition)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-        format(
-            'CREATE TABLE %I.%I ('
-            'CHECK ("timestamp" > %L AND "timestamp" <= %L)'
-            ') INHERITS (trend.%I);',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1),
-            trend_directory.data_start($1),
-            trend_directory.data_end($1),
-            trend_directory.base_table_name(trend_directory.table_trend_store_part($1))
-        ),
-        format(
-            'ALTER TABLE ONLY %I.%I '
-            'ADD PRIMARY KEY (entity_id, "timestamp");',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1)
-        ),
-        format(
-            'CREATE INDEX ON %I.%I USING btree (modified);',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1)
-        ),
-        format(
-            'CREATE INDEX ON %I.%I USING btree (timestamp);',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1)
-        ),
-        format(
-            'GRANT SELECT ON TABLE %I.%I TO minerva;',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1)
-        ),
-        format(
-            'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1)
-        ),
-        format(
-            'SELECT trend_directory.cluster_partition_table_on_timestamp(%L)',
-            trend_directory.table_name($1)
-        )
-    ];
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "trend_directory"."create_partition_table"(trend_directory.partition)
-    RETURNS trend_directory.partition
-AS $$
-SELECT public.action($1, trend_directory.create_partition_table_sql($1));
-$$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
-
-
 CREATE FUNCTION "trend_directory"."get_table_trend"(trend_directory.table_trend_store_part, name)
     RETURNS trend_directory.table_trend
 AS $$
@@ -3499,46 +3073,6 @@ INSERT INTO trend_directory.partition(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."create_partition"("trend_store_part" trend_directory.table_trend_store_part, "index" integer)
-    RETURNS trend_directory.partition
-AS $$
-SELECT trend_directory.create_partition_table(
-        trend_directory.define_partition($1, $2)
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."attributes_to_partition"(trend_directory.table_trend_store_part, "index" integer)
-    RETURNS trend_directory.partition
-AS $$
-SELECT COALESCE(
-        trend_directory.get_partition($1, $2),
-        trend_directory.create_partition($1, $2)
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."attributes_to_partition"(trend_directory.table_trend_store_part, timestamp with time zone)
-    RETURNS trend_directory.partition
-AS $$
-SELECT trend_directory.attributes_to_partition(
-        $1,
-        trend_directory.timestamp_to_index(table_trend_store.partition_size, $2)
-    )
-    FROM trend_directory.table_trend_store WHERE id = $1.trend_store_id;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."partition_exists"(trend_directory.partition)
-    RETURNS bool
-AS $$
-SELECT public.table_exists(
-        trend_directory.partition_table_schema(),
-        trend_directory.table_name($1)
-    );
-$$ LANGUAGE sql STABLE;
-
-
 CREATE FUNCTION "trend_directory"."partition_exists"(trend_directory.table_trend_store_part, integer)
     RETURNS bool
 AS $$
@@ -3645,63 +3179,11 @@ trend_directory.modified table has become corrupt or records are missing for
 some reason.';
 
 
-CREATE FUNCTION "trend_directory"."available_timestamps"("partition" trend_directory.partition)
-    RETURNS SETOF timestamp with time zone
-AS $$
-BEGIN
-    RETURN QUERY EXECUTE format(
-        'SELECT timestamp FROM %I.%I GROUP BY timestamp',
-        trend_directory.partition_table_schema(),
-        trend_directory.table_name(partition)
-    );
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE TYPE "trend_directory"."transfer_result" AS (
   "row_count" integer,
   "max_modified" timestamp with time zone
 );
 
-
-
-CREATE FUNCTION "trend_directory"."transfer"("source" trend_directory.trend_store, "target" trend_directory.trend_store, "timestamp" timestamp with time zone, "trend_names" text[])
-    RETURNS trend_directory.transfer_result
-AS $$
-DECLARE
-    columns_part text;
-    dst_partition trend_directory.partition;
-    result trend_directory.transfer_result;
-BEGIN
-    SELECT
-        array_to_string(array_agg(quote_ident(trend_name)), ',') INTO columns_part
-    FROM unnest(
-        ARRAY['entity_id', 'timestamp', 'modified'] || trend_names
-    ) AS trend_name;
-
-    dst_partition = trend_directory.attributes_to_partition(target, timestamp);
-
-    EXECUTE format(
-        'INSERT INTO trend_directory.%I (%s) SELECT %s FROM trend_directory.%I WHERE timestamp = $1',
-        dst_partition.table_name,
-        columns_part,
-        columns_part,
-        trend_directory.base_table_name(source)
-    ) USING timestamp;
-
-    GET DIAGNOSTICS result.row_count = ROW_COUNT;
-
-    SELECT (
-        trend_directory.mark_modified(
-            target.id,
-            timestamp,
-            trend_directory.get_max_modified(target, timestamp)
-        )
-    ).end INTO result.max_modified;
-
-    RETURN result;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."show_trends"("trend_store_part_id" integer)
@@ -3897,33 +3379,6 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."drop_partition_table_on_delete"()
-    RETURNS trigger
-AS $$
-DECLARE
-    kind CHAR;
-BEGIN
-    SELECT INTO kind relkind
-    FROM pg_class
-    WHERE relname = trend_directory.table_name(OLD);
-
-    IF kind = 'r' THEN
-        EXECUTE format(
-            'DROP TABLE IF EXISTS trend_directory.%I CASCADE',
-            trend_directory.table_name(OLD)
-        );
-    ELSIF kind = 'v' THEN
-        EXECUTE format(
-            'DROP VIEW trend_directory.%I',
-            trend_directory.table_name(OLD)
-        );
-    END IF;
-
-    RETURN OLD;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE FUNCTION "trend_directory"."update_modified_column"()
     RETURNS trigger
 AS $$
@@ -3975,12 +3430,6 @@ CREATE TRIGGER propagate_changes_on_trend_update
   EXECUTE PROCEDURE "trend_directory"."changes_on_trend_update"();
 
 
-CREATE TRIGGER drop_table_on_delete
-  AFTER DELETE ON "trend_directory"."partition"
-  FOR EACH ROW
-  EXECUTE PROCEDURE "trend_directory"."drop_partition_table_on_delete"();
-
-
 CREATE TRIGGER delete_trend_stores_on_data_source_delete
   BEFORE DELETE ON "directory"."data_source"
   FOR EACH ROW
@@ -4009,13 +3458,13 @@ CREATE SEQUENCE attribute_directory.attribute_store_id_seq
 
 CREATE TABLE "attribute_directory"."attribute_store"
 (
+  "id" integer NOT NULL DEFAULT nextval('attribute_directory.attribute_store_id_seq'::regclass),
   "data_source_id" integer NOT NULL,
   "entity_type_id" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('attribute_directory.attribute_store_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX attribute_store_uniqueness ON "attribute_directory"."attribute_store" USING btree (data_source_id, entity_type_id);
+CREATE UNIQUE INDEX "attribute_store_uniqueness" ON "attribute_directory"."attribute_store" USING btree (data_source_id, entity_type_id);
 
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store" TO minerva;
 
@@ -4041,15 +3490,15 @@ CREATE SEQUENCE attribute_directory.attribute_id_seq
 
 CREATE TABLE "attribute_directory"."attribute"
 (
-  "attribute_store_id" integer NOT NULL,
-  "description" text,
-  "name" name NOT NULL,
   "data_type" text NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('attribute_directory.attribute_id_seq'::regclass),
+  "attribute_store_id" integer NOT NULL,
+  "name" name NOT NULL,
+  "description" text,
   PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX attribute_uniqueness ON "attribute_directory"."attribute" USING btree (attribute_store_id, name);
+CREATE UNIQUE INDEX "attribute_uniqueness" ON "attribute_directory"."attribute" USING btree (attribute_store_id, name);
 
 GRANT SELECT ON TABLE "attribute_directory"."attribute" TO minerva;
 
@@ -4059,8 +3508,8 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute" TO minerva
 
 CREATE TABLE "attribute_directory"."attribute_tag_link"
 (
-  "attribute_id" integer NOT NULL,
   "tag_id" integer NOT NULL,
+  "attribute_id" integer NOT NULL,
   PRIMARY KEY (attribute_id, tag_id)
 );
 
@@ -4072,8 +3521,8 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_tag_link" T
 
 CREATE TABLE "attribute_directory"."attribute_store_modified"
 (
-  "attribute_store_id" integer NOT NULL,
   "modified" timestamp with time zone NOT NULL,
+  "attribute_store_id" integer NOT NULL,
   PRIMARY KEY (attribute_store_id)
 );
 
@@ -4085,8 +3534,8 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_modif
 
 CREATE TABLE "attribute_directory"."attribute_store_curr_materialized"
 (
-  "attribute_store_id" integer NOT NULL,
   "materialized" timestamp with time zone NOT NULL,
+  "attribute_store_id" integer NOT NULL,
   PRIMARY KEY (attribute_store_id)
 );
 
@@ -4098,8 +3547,8 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_curr_
 
 CREATE TABLE "attribute_directory"."attribute_store_compacted"
 (
-  "attribute_store_id" integer NOT NULL,
   "compacted" timestamp with time zone NOT NULL,
+  "attribute_store_id" integer NOT NULL,
   PRIMARY KEY (attribute_store_id)
 );
 
@@ -5840,14 +5289,14 @@ CREATE SEQUENCE notification_directory.notification_store_id_seq
 
 CREATE TABLE "notification_directory"."notification_store"
 (
-  "data_source_id" integer,
   "id" integer NOT NULL DEFAULT nextval('notification_directory.notification_store_id_seq'::regclass),
+  "data_source_id" integer,
   PRIMARY KEY (id)
 );
 
 COMMENT ON TABLE "notification_directory"."notification_store" IS 'Describes notification_stores. Each notification_store maps to a set of tables and functions that can store and manage notifications of a certain type. These corresponding tables and functions are created automatically for each notification_store. Because each notification_store maps one-on-one to a data_source, the name of the notification_store is the same as that of the data_source. Use the create_notification_store function to create new notification_stores.';
 
-CREATE UNIQUE INDEX uniqueness ON "notification_directory"."notification_store" USING btree (data_source_id);
+CREATE UNIQUE INDEX "uniqueness" ON "notification_directory"."notification_store" USING btree (data_source_id);
 
 GRANT SELECT ON TABLE "notification_directory"."notification_store" TO minerva;
 
@@ -5865,11 +5314,11 @@ CREATE SEQUENCE notification_directory.attribute_id_seq
 
 CREATE TABLE "notification_directory"."attribute"
 (
-  "notification_store_id" integer,
   "name" name NOT NULL,
   "data_type" name NOT NULL,
-  "description" varchar NOT NULL,
+  "notification_store_id" integer,
   "id" integer NOT NULL DEFAULT nextval('notification_directory.attribute_id_seq'::regclass),
+  "description" varchar NOT NULL,
   PRIMARY KEY (id)
 );
 
@@ -5891,8 +5340,8 @@ CREATE SEQUENCE notification_directory.notification_set_store_id_seq
 
 CREATE TABLE "notification_directory"."notification_set_store"
 (
-  "name" name NOT NULL,
   "notification_store_id" integer,
+  "name" name NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('notification_directory.notification_set_store_id_seq'::regclass),
   PRIMARY KEY (id)
 );
@@ -5915,11 +5364,11 @@ CREATE SEQUENCE notification_directory.set_attribute_id_seq
 
 CREATE TABLE "notification_directory"."set_attribute"
 (
-  "notification_set_store_id" integer,
-  "name" name NOT NULL,
-  "data_type" name NOT NULL,
   "description" varchar NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('notification_directory.set_attribute_id_seq'::regclass),
+  "notification_set_store_id" integer,
+  "data_type" name NOT NULL,
+  "name" name NOT NULL,
   PRIMARY KEY (id)
 );
 
@@ -6391,12 +5840,12 @@ CREATE SEQUENCE entity_tag.type_id_seq
 
 CREATE TABLE "entity_tag"."type"
 (
-  "name" name,
+  "id" integer NOT NULL DEFAULT nextval('entity_tag.type_id_seq'::regclass),
   "tag_group_id" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('entity_tag.type_id_seq'::regclass)
+  "name" name
 );
 
-CREATE UNIQUE INDEX type_name_key ON "entity_tag"."type" USING btree (name);
+CREATE UNIQUE INDEX "type_name_key" ON "entity_tag"."type" USING btree (name);
 
 
 
@@ -6470,19 +5919,6 @@ CREATE VIEW "entity_tag"."_new_tags_in_staging" AS
 GRANT SELECT ON TABLE "entity_tag"."_new_tags_in_staging" TO minerva;
 
 
-CREATE FUNCTION "entity_tag"."add_new_tags"()
-    RETURNS bigint
-AS $$
-WITH t AS (
-        INSERT INTO directory.tag(name, tag_group_id, description)
-        SELECT name, tag_group_id, 'created by entity_tag.update'
-        FROM entity_tag._new_tags_in_staging
-        RETURNING *
-    )
-    SELECT count(*) FROM t;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE VIEW "entity_tag"."_new_links_in_staging" AS
  SELECT staging.entity_id,
     tag.id AS tag_id
@@ -6542,23 +5978,6 @@ CREATE TYPE "entity_tag"."process_staged_links_result" AS (
 
 
 
-CREATE FUNCTION "entity_tag"."process_staged_links"("process_limit" integer)
-    RETURNS entity_tag.process_staged_links_result
-AS $$
-DECLARE
-    result entity_tag.process_staged_links_result;
-BEGIN
-    result.tags_added = entity_tag.add_new_tags();
-    result.links_added = entity_tag.add_new_links($1);
-    result.links_removed = entity_tag.remove_obsolete_links();
-
-    TRUNCATE entity_tag.entity_tag_link_staging;
-
-    RETURN result;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE TYPE "entity_tag"."update_result" AS (
   "staged" bigint,
   "tags_added" bigint,
@@ -6566,26 +5985,6 @@ CREATE TYPE "entity_tag"."update_result" AS (
   "links_removed" bigint
 );
 
-
-
-CREATE FUNCTION "entity_tag"."update"("type_name" name, "update_limit" integer DEFAULT 50000)
-    RETURNS entity_tag.update_result
-AS $$
-DECLARE
-    result entity_tag.update_result;
-    process_result entity_tag.process_staged_links_result;
-BEGIN
-    result.staged = entity_tag.transfer_to_staging(type_name);
-
-    process_result = entity_tag.process_staged_links(update_limit);
-
-    result.tags_added = process_result.tags_added;
-    result.links_added = process_result.links_added;
-    result.links_removed = process_result.links_removed;
-
-    RETURN result;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE TYPE "trigger"."kpi_def" AS (
@@ -6605,16 +6004,16 @@ CREATE SEQUENCE trigger.rule_id_seq
 
 CREATE TABLE "trigger"."rule"
 (
-  "name" name,
-  "notification_store_id" integer,
-  "granularity" interval,
-  "default_interval" interval,
-  "id" integer NOT NULL DEFAULT nextval('trigger.rule_id_seq'::regclass),
   "enabled" bool NOT NULL DEFAULT false,
+  "id" integer NOT NULL DEFAULT nextval('trigger.rule_id_seq'::regclass),
+  "default_interval" interval,
+  "granularity" interval,
+  "notification_store_id" integer,
+  "name" name,
   PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX rule_name_key ON "trigger"."rule" USING btree (name);
+CREATE UNIQUE INDEX "rule_name_key" ON "trigger"."rule" USING btree (name);
 
 GRANT SELECT ON TABLE "trigger"."rule" TO minerva;
 
@@ -6632,11 +6031,11 @@ CREATE SEQUENCE trigger.exception_base_id_seq
 
 CREATE TABLE "trigger"."exception_base"
 (
-  "entity_id" integer,
-  "start" timestamp with time zone,
-  "expires" timestamp with time zone,
   "id" integer NOT NULL DEFAULT nextval('trigger.exception_base_id_seq'::regclass),
-  "created" timestamp with time zone DEFAULT now()
+  "expires" timestamp with time zone,
+  "start" timestamp with time zone,
+  "created" timestamp with time zone DEFAULT now(),
+  "entity_id" integer
 );
 
 GRANT SELECT ON TABLE "trigger"."exception_base" TO minerva;
@@ -7492,16 +6891,6 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, timestamp with time zone)
-    RETURNS integer
-AS $$
-SELECT
-        trigger.create_notifications($1, notification_store, $2)
-    FROM notification_directory.notification_store
-    WHERE id = $1.notification_store_id;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, notification_directory.notification_store, interval)
     RETURNS integer
 AS $$
@@ -7522,70 +6911,6 @@ $query$,
     RETURN num_rows;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, interval)
-    RETURNS integer
-AS $$
-SELECT trigger.create_notifications($1, notification_store, $2)
-    FROM notification_directory.notification_store
-    WHERE id = $1.notification_store_id;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notifications"(trigger.rule)
-    RETURNS integer
-AS $$
-SELECT trigger.create_notifications($1, notification_store, $1.default_interval)
-    FROM notification_directory.notification_store
-    WHERE id = $1.notification_store_id;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, timestamp with time zone)
-    RETURNS integer
-AS $$
-SELECT trigger.create_notifications(
-        trigger.get_rule($1),
-        notification_directory.get_notification_store($2),
-        $3
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, timestamp with time zone)
-    RETURNS integer
-AS $$
-SELECT trigger.create_notifications(rule, notification_store, $2)
-    FROM trigger.rule
-    JOIN notification_directory.notification_store ON notification_store.id = rule.notification_store_id
-    WHERE rule.name = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, interval)
-    RETURNS integer
-AS $$
-SELECT trigger.create_notifications(
-        trigger.get_rule($1),
-        notification_directory.get_notification_store($2),
-        $3
-    );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, interval)
-    RETURNS integer
-AS $$
-SELECT trigger.create_notifications(trigger.get_rule($1), $2);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notifications"("rule_name" name)
-    RETURNS integer
-AS $$
-SELECT trigger.create_notifications(trigger.get_rule($1));
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trigger"."setup_rule"(trigger.rule, "kpi_sql" text, name[], "sql" text)
@@ -7689,37 +7014,739 @@ CREATE TRIGGER cleanup_on_rule_delete
   EXECUTE PROCEDURE "trigger"."cleanup_on_rule_delete"();
 
 
-CREATE TABLE "relation"."parent"
+CREATE SEQUENCE directory.alias_type_id_seq
+  START WITH 2
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
+
+
+CREATE TYPE "directory"."query_part" AS (
+  "c" text[],
+  "s" text
+);
+
+
+
+CREATE TYPE "directory"."query_row" AS (
+  "id" integer,
+  "dn" text,
+  "entity_type_id" integer
+);
+
+
+
+CREATE TABLE "relation"."self"
 (
-  "source_id" integer NOT NULL,
-  "target_id" integer NOT NULL,
   PRIMARY KEY (source_id, target_id)
 )INHERITS ("relation"."base");
 
-CREATE INDEX ix_parent_target_id ON "relation"."parent" USING btree (target_id);
+CREATE INDEX "ix_self_target_id" ON "relation"."self" USING btree (target_id);
 
-GRANT SELECT ON TABLE "relation"."parent" TO minerva;
+GRANT SELECT ON TABLE "relation"."self" TO minerva;
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "relation"."parent" TO minerva_writer;
-
-
-
-INSERT INTO "directory"."tag_group" (name, complementary, id) VALUES ('default', False, 1);
+GRANT INSERT,UPDATE,DELETE ON TABLE "relation"."self" TO minerva_writer;
 
 
-INSERT INTO "directory"."tag_group" (name, complementary, id) VALUES ('entity_type', True, 2);
+
+CREATE TABLE "directory"."alias_type"
+(
+  "id" integer NOT NULL DEFAULT nextval('directory.alias_type_id_seq'::regclass),
+  "name" varchar NOT NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE UNIQUE INDEX "ix_directory_alias_type_name" ON "directory"."alias_type" USING btree (lower((name)::text));
+
+GRANT SELECT ON TABLE "directory"."alias_type" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."alias_type" TO minerva_writer;
 
 
-INSERT INTO "relation_directory"."type" (name, cardinality, id) VALUES ('parent', null, 1);
+
+CREATE TABLE "directory"."alias"
+(
+  "entity_id" integer NOT NULL,
+  "name" varchar NOT NULL,
+  "type_id" integer NOT NULL,
+  PRIMARY KEY (entity_id, type_id)
+);
+
+CREATE INDEX "alias_name_idx" ON "directory"."alias" USING btree (name);
+
+CREATE INDEX "alias_lower_idx" ON "directory"."alias" USING btree (lower((name)::text));
+
+GRANT SELECT ON TABLE "directory"."alias" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."alias" TO minerva_writer;
 
 
-INSERT INTO "alias_directory"."alias_type" (name, id) VALUES ('dn', 1);
+
+CREATE FUNCTION "directory"."create tag for new entity_types (func)"()
+    RETURNS trigger
+AS $$
+BEGIN
+    BEGIN
+        INSERT INTO directory.tag (name, tag_group_id) SELECT NEW.name, id FROM directory.tag_group WHERE directory.tag_group.name = 'entity_type';
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE directory.tag SET tag_group_id = (SELECT id FROM directory.tag_group WHERE directory.tag_group.name = 'entity_type') WHERE tag.name = NEW.name;
+    END;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
-ALTER TABLE "alias"."dn"
-  ADD CONSTRAINT "dn_entity_id_fkey"
-  FOREIGN KEY (entity_id)
-  REFERENCES "directory"."entity" (id);
+CREATE TRIGGER create_tag_for_new_entity_types
+  AFTER INSERT ON "directory"."entity_type"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "directory"."create tag for new entity_types (func)"();
+
+
+CREATE FUNCTION "directory"."create entity_tag_link for new entity (func)"()
+    RETURNS trigger
+AS $$
+BEGIN
+    INSERT INTO directory.entity_tag_link (entity_id, tag_id) VALUES (NEW.id, (
+    SELECT tag.id FROM directory.tag
+    INNER JOIN directory.entity_type ON tag.name = entity_type.name
+    WHERE entity_type.id = NEW.entity_type_id
+    ));
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TRIGGER create_entity_tag_link_for_new_entity
+  AFTER INSERT ON "directory"."entity"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "directory"."create entity_tag_link for new entity (func)"();
+
+
+CREATE FUNCTION "directory"."make_c_join"("index" integer, "entity_id_table" text, "entity_id_column" text, "tag_index" integer, "tag" text)
+    RETURNS text
+AS $$
+DECLARE
+    entity_tag_link_alias text;
+    entitytag_alias text;
+BEGIN
+    entity_tag_link_alias = 'tl_' || index || '_' || tag_index;
+    entitytag_alias = 't_' || index || '_' || tag_index;
+
+    IF NOT entity_id_table = entity_tag_link_alias THEN
+        RETURN format(' JOIN directory.entity_tag_link %I ON %I.%I = %I.entity_id', entity_tag_link_alias, entity_id_table, entity_id_column, entity_tag_link_alias) ||
+            format(' JOIN directory.tag %I ON %I.id = %I.entitytag_id AND lower(%I.name) = lower(%L)', entitytag_alias, entitytag_alias, entity_tag_link_alias, entitytag_alias, tag);
+    ELSE
+        RETURN format(' JOIN directory.tag %I ON %I.id = %I.entitytag_id AND lower(%I.name) = lower(%L)', entitytag_alias, entitytag_alias, entity_tag_link_alias, entitytag_alias, tag);
+    END IF;
+END;
+$$ LANGUAGE plpgsql STABLE STRICT;
+
+
+CREATE FUNCTION "directory"."make_s_join"("index" integer, "entity_id_table" text, "entity_id_column" text, "alias" text)
+    RETURNS text
+AS $$
+DECLARE
+    alias_alias text;
+    aliastype_alias text;
+BEGIN
+    alias_alias = 'a_' || index;
+    aliastype_alias = 'at_' || index;
+
+    RETURN format(' JOIN directory.alias %I ON %I.entity_id = %I.%I', alias_alias, alias_alias, entity_id_table, entity_id_column) ||
+        format(' JOIN directory.aliastype %I ON %I.id = %I.type_id and %I.name = %L AND lower(%I.name) = lower(%L)', aliastype_alias, aliastype_alias, alias_alias, aliastype_alias, 'name', alias_alias, alias);
+END;
+$$ LANGUAGE plpgsql STABLE STRICT;
+
+
+CREATE FUNCTION "directory"."compile_minerva_query"("query" directory.query_part[])
+    RETURNS text
+AS $$
+DECLARE
+    sql text;
+    entity_id_table text;
+    entity_id_column text;
+    q_part directory.query_part;
+    tag text;
+BEGIN
+    sql = 'SELECT entity.id, entity.dn, entity.entity_type_id FROM directory.entity_tag_link tl_1_1';
+
+    entity_id_table = 'tl_1_1';
+    entity_id_column = 'entity_id';
+
+    FOR index IN array_lower(query, 1)..array_upper(query, 1) LOOP
+        q_part = query[index];
+
+        IF index > 1 THEN
+            sql = sql || format(' JOIN directory.relation r_%s ON r_%s.source_id = %I.%I', index, index, entity_id_table, entity_id_column);
+
+            entity_id_table = format('r_%s', index);
+            entity_id_column = 'target_id';
+        END IF;
+
+        FOR i IN array_lower(q_part.c, 1)..array_upper(q_part.c, 1) LOOP
+            tag = q_part.c[i];
+
+            sql = sql || directory.make_c_join(index, entity_id_table, entity_id_column, i, tag);
+        END LOOP;
+
+        IF NOT q_part.s IS NULL THEN
+            sql = sql || directory.make_s_join(index, entity_id_table, entity_id_column, q_part.s);
+        END IF;
+
+    END LOOP;
+
+    RETURN sql || format(' JOIN directory.entity entity ON entity.id = %I.%I', entity_id_table, entity_id_column);
+END;
+$$ LANGUAGE plpgsql STABLE STRICT;
+
+
+CREATE FUNCTION "directory"."get_alias"("entity_id" integer, "alias_type_name" text)
+    RETURNS text
+AS $$
+SELECT a.name
+      FROM directory.alias a
+      JOIN directory.alias_type at on at.id = a.type_id
+     WHERE a.entity_id = $1 and at.name = $2;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "relation_directory"."create_self_relation"()
+    RETURNS trigger
+AS $$
+BEGIN
+    INSERT INTO relation.self (source_id, target_id)
+    VALUES (NEW.id, NEW.id);
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "directory"."create alias for new entity (func)"()
+    RETURNS trigger
+AS $$
+BEGIN
+    INSERT INTO directory.alias (entity_id, name, type_id)
+        SELECT NEW.id, NEW.name, id FROM directory.alias_type WHERE name = 'name';
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "directory"."compile_minerva_query"("query" text)
+    RETURNS text
+AS $$
+DECLARE
+    parts text[];
+    c_str text;
+    cs text[];
+    s_str text;
+    minerva_query directory.query_part[];
+BEGIN
+    parts = regexp_split_to_array(query, E'(\\w)[ ]+(?=\\w)');
+
+    for i in 1..2 LOOP
+        c_str = parts[i];
+        cs = regexp_split_to_array(c_str, E'[+ ]+');
+        s_str = parts[i + 1];
+
+        minerva_query = minerva_query || (cs, s_str)::directory.query_part;
+    end loop;
+
+    return directory.compile_minerva_query(minerva_query);
+END;
+$$ LANGUAGE plpgsql STABLE STRICT;
+
+
+CREATE FUNCTION "directory"."run_minerva_query"("query" directory.query_part[])
+    RETURNS TABLE("id" integer, "dn" varchar, "entity_type_id" integer)
+AS $$
+BEGIN
+    RETURN QUERY EXECUTE directory.compile_minerva_query(query);
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "relation_directory"."define"(name, "view_sql" text)
+    RETURNS relation_directory.type
+AS $$
+SELECT relation_directory.create_relation_view(
+        relation_directory.define($1),
+        $2
+    );
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "relation_directory"."define"(name, "view_sql" text) IS 'Defines a new relation type (just like relation_directory.define(name)),
+including a view that will be used to populate the relation table.';
+
+
+CREATE FUNCTION "relation_directory"."define_reverse"("reverse" name, "original" relation_directory.type)
+    RETURNS relation_directory.type
+AS $$
+SELECT relation_directory.define(
+    $1,
+    format(
+        $query$SELECT
+    target_id AS source_id,
+    source_id AS target_id
+FROM %I.%I$query$,
+        relation_directory.view_schema(),
+        $2.name
+    )
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "relation_directory"."define_reverse"("reverse" name, "original" name)
+    RETURNS relation_directory.type
+AS $$
+SELECT relation_directory.define(
+    $1,
+    format(
+        $query$SELECT
+    target_id AS source_id,
+    source_id AS target_id
+FROM %I.%I$query$,
+        relation_directory.view_schema(),
+        $2
+    )
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE TRIGGER create_alias_for_new_entity
+  AFTER INSERT ON "directory"."entity"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "directory"."create alias for new entity (func)"();
+
+
+CREATE TRIGGER create_self_relation_on_entity_insert
+  AFTER INSERT ON "directory"."entity"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "relation_directory"."create_self_relation"();
+
+
+INSERT INTO "directory"."tag_group" (id, name, complementary) VALUES (1, 'default', False);
+
+
+INSERT INTO "directory"."tag_group" (id, name, complementary) VALUES (2, 'entity_type', True);
+
+
+INSERT INTO "relation_directory"."type" (id, cardinality, name) VALUES (1, null, 'self');
+
+
+INSERT INTO "directory"."alias_type" (id, name) VALUES (1, 'name');
+
+
+CREATE FUNCTION "trend_directory"."partition_name"(trend_directory.table_trend_store_part, "index" integer)
+    RETURNS name
+AS $$
+SELECT trend_directory.partition_name(trend_directory.base_table_name($1), $2);
+$$ LANGUAGE sql STABLE STRICT;
+
+
+CREATE FUNCTION "trend_directory"."partition_name"(trend_directory.table_trend_store_part, timestamp with time zone)
+    RETURNS name
+AS $$
+SELECT trend_directory.partition_name(
+        $1, trend_directory.timestamp_to_index(table_trend_store.partition_size, $2)
+    )
+    FROm trend_directory.table_trend_store
+    WHERE id = $1.trend_store_id;
+$$ LANGUAGE sql STABLE STRICT;
+
+
+CREATE FUNCTION "trend_directory"."table_name"(trend_directory.partition)
+    RETURNS name
+AS $$
+SELECT trend_directory.partition_name(table_trend_store_part, $1.index)
+    FROM trend_directory.table_trend_store_part
+    WHERE id = $1.table_trend_store_part_id;
+$$ LANGUAGE sql STABLE STRICT;
+
+
+CREATE FUNCTION "trend_directory"."rename_table_trend_store_part"(trend_directory.table_trend_store_part, name)
+    RETURNS trend_directory.table_trend_store_part
+AS $$
+SELECT public.action(
+        $1,
+        format(
+            'ALTER TABLE %I.%I RENAME TO %I',
+            trend_directory.base_table_schema(),
+            $1.name,
+            $2
+        )
+    );
+
+    SELECT public.action(
+        $1,
+        format(
+            'ALTER TABLE %I.%I RENAME TO %I',
+            trend_directory.partition_table_schema(),
+            trend_directory.table_name(partition),
+            trend_directory.partition_name($2, partition.index)
+        )
+    )
+    FROM trend_directory.partition
+    WHERE table_trend_store_part_id = $1.id;
+
+    UPDATE trend_directory.table_trend_store_part
+    SET name = $2
+    WHERE id = $1.id;
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."create_partition_table_sql"(trend_directory.partition)
+    RETURNS text[]
+AS $$
+SELECT ARRAY[
+        format(
+            'CREATE TABLE %I.%I ('
+            'CHECK ("timestamp" > %L AND "timestamp" <= %L)'
+            ') INHERITS (trend.%I);',
+            trend_directory.partition_table_schema(),
+            trend_directory.table_name($1),
+            trend_directory.data_start($1),
+            trend_directory.data_end($1),
+            trend_directory.base_table_name(trend_directory.table_trend_store_part($1))
+        ),
+        format(
+            'ALTER TABLE ONLY %I.%I '
+            'ADD PRIMARY KEY (entity_id, "timestamp");',
+            trend_directory.partition_table_schema(),
+            trend_directory.table_name($1)
+        ),
+        format(
+            'CREATE INDEX ON %I.%I USING btree (modified);',
+            trend_directory.partition_table_schema(),
+            trend_directory.table_name($1)
+        ),
+        format(
+            'CREATE INDEX ON %I.%I USING btree (timestamp);',
+            trend_directory.partition_table_schema(),
+            trend_directory.table_name($1)
+        ),
+        format(
+            'GRANT SELECT ON TABLE %I.%I TO minerva;',
+            trend_directory.partition_table_schema(),
+            trend_directory.table_name($1)
+        ),
+        format(
+            'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
+            trend_directory.partition_table_schema(),
+            trend_directory.table_name($1)
+        ),
+        format(
+            'SELECT trend_directory.cluster_partition_table_on_timestamp(%L)',
+            trend_directory.table_name($1)
+        )
+    ];
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."create_partition_table"(trend_directory.partition)
+    RETURNS trend_directory.partition
+AS $$
+SELECT public.action($1, trend_directory.create_partition_table_sql($1));
+$$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
+
+
+CREATE FUNCTION "trend_directory"."create_partition"("trend_store_part" trend_directory.table_trend_store_part, "index" integer)
+    RETURNS trend_directory.partition
+AS $$
+SELECT trend_directory.create_partition_table(
+        trend_directory.define_partition($1, $2)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."attributes_to_partition"(trend_directory.table_trend_store_part, "index" integer)
+    RETURNS trend_directory.partition
+AS $$
+SELECT COALESCE(
+        trend_directory.get_partition($1, $2),
+        trend_directory.create_partition($1, $2)
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."attributes_to_partition"(trend_directory.table_trend_store_part, timestamp with time zone)
+    RETURNS trend_directory.partition
+AS $$
+SELECT trend_directory.attributes_to_partition(
+        $1,
+        trend_directory.timestamp_to_index(table_trend_store.partition_size, $2)
+    )
+    FROM trend_directory.table_trend_store WHERE id = $1.trend_store_id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_directory.table_trend_store_part, "timestamp" timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
+    EXECUTE format(
+        'INSERT INTO %I.%I SELECT * FROM %I.%I WHERE timestamp = $1',
+        trend_directory.partition_table_schema(),
+        trend_directory.table_name(trend_directory.attributes_to_partition(
+            trend_store,
+            trend_directory.timestamp_to_index(trend_store.partition_size, timestamp)
+        )),
+        trend_directory.staging_table_schema(),
+        trend_directory.staging_table_name(trend_store_part)
+    ) USING timestamp;
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_directory.table_trend_store_part)
+    RETURNS trend_directory.table_trend_store_part
+AS $$
+SELECT
+        trend_directory.transfer_staged(trend_store_part, timestamp)
+    FROM trend_directory.staged_timestamps(trend_store_part) timestamp;
+
+    SELECT public.action(
+        $1,
+        format(
+            'TRUNCATE %I.%I',
+            trend_directory.staging_table_schema(),
+            trend_directory.staging_table_name(trend_store_part)
+        )
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."partition_exists"(trend_directory.partition)
+    RETURNS bool
+AS $$
+SELECT public.table_exists(
+        trend_directory.partition_table_schema(),
+        trend_directory.table_name($1)
+    );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."available_timestamps"("partition" trend_directory.partition)
+    RETURNS SETOF timestamp with time zone
+AS $$
+BEGIN
+    RETURN QUERY EXECUTE format(
+        'SELECT timestamp FROM %I.%I GROUP BY timestamp',
+        trend_directory.partition_table_schema(),
+        trend_directory.table_name(partition)
+    );
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."transfer"("source" trend_directory.trend_store, "target" trend_directory.trend_store, "timestamp" timestamp with time zone, "trend_names" text[])
+    RETURNS trend_directory.transfer_result
+AS $$
+DECLARE
+    columns_part text;
+    dst_partition trend_directory.partition;
+    result trend_directory.transfer_result;
+BEGIN
+    SELECT
+        array_to_string(array_agg(quote_ident(trend_name)), ',') INTO columns_part
+    FROM unnest(
+        ARRAY['entity_id', 'timestamp', 'modified'] || trend_names
+    ) AS trend_name;
+
+    dst_partition = trend_directory.attributes_to_partition(target, timestamp);
+
+    EXECUTE format(
+        'INSERT INTO trend_directory.%I (%s) SELECT %s FROM trend_directory.%I WHERE timestamp = $1',
+        dst_partition.table_name,
+        columns_part,
+        columns_part,
+        trend_directory.base_table_name(source)
+    ) USING timestamp;
+
+    GET DIAGNOSTICS result.row_count = ROW_COUNT;
+
+    SELECT (
+        trend_directory.mark_modified(
+            target.id,
+            timestamp,
+            trend_directory.get_max_modified(target, timestamp)
+        )
+    ).end INTO result.max_modified;
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."drop_partition_table_on_delete"()
+    RETURNS trigger
+AS $$
+DECLARE
+    kind CHAR;
+BEGIN
+    SELECT INTO kind relkind
+    FROM pg_class
+    WHERE relname = trend_directory.table_name(OLD);
+
+    IF kind = 'r' THEN
+        EXECUTE format(
+            'DROP TABLE IF EXISTS trend_directory.%I CASCADE',
+            trend_directory.table_name(OLD)
+        );
+    ELSIF kind = 'v' THEN
+        EXECUTE format(
+            'DROP VIEW trend_directory.%I',
+            trend_directory.table_name(OLD)
+        );
+    END IF;
+
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TRIGGER drop_table_on_delete
+  AFTER DELETE ON "trend_directory"."partition"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."drop_partition_table_on_delete"();
+
+
+CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, timestamp with time zone)
+    RETURNS integer
+AS $$
+SELECT
+        trigger.create_notifications($1, notification_store, $2)
+    FROM notification_directory.notification_store
+    WHERE id = $1.notification_store_id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"(trigger.rule, interval)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications($1, notification_store, $2)
+    FROM notification_directory.notification_store
+    WHERE id = $1.notification_store_id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"(trigger.rule)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications($1, notification_store, $1.default_interval)
+    FROM notification_directory.notification_store
+    WHERE id = $1.notification_store_id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(trigger.get_rule($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, timestamp with time zone)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(
+        trigger.get_rule($1),
+        notification_directory.get_notification_store($2),
+        $3
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, "notification_store_name" name, interval)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(
+        trigger.get_rule($1),
+        notification_directory.get_notification_store($2),
+        $3
+    );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, timestamp with time zone)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(rule, notification_store, $2)
+    FROM trigger.rule
+    JOIN notification_directory.notification_store ON notification_store.id = rule.notification_store_id
+    WHERE rule.name = $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_notifications"("rule_name" name, interval)
+    RETURNS integer
+AS $$
+SELECT trigger.create_notifications(trigger.get_rule($1), $2);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity_tag"."add_new_tags"()
+    RETURNS bigint
+AS $$
+WITH t AS (
+        INSERT INTO directory.tag(name, tag_group_id, description)
+        SELECT name, tag_group_id, 'created by entity_tag.update'
+        FROM entity_tag._new_tags_in_staging
+        RETURNING *
+    )
+    SELECT count(*) FROM t;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity_tag"."process_staged_links"("process_limit" integer)
+    RETURNS entity_tag.process_staged_links_result
+AS $$
+DECLARE
+    result entity_tag.process_staged_links_result;
+BEGIN
+    result.tags_added = entity_tag.add_new_tags();
+    result.links_added = entity_tag.add_new_links($1);
+    result.links_removed = entity_tag.remove_obsolete_links();
+
+    TRUNCATE entity_tag.entity_tag_link_staging;
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "entity_tag"."update"("type_name" name, "update_limit" integer DEFAULT 50000)
+    RETURNS entity_tag.update_result
+AS $$
+DECLARE
+    result entity_tag.update_result;
+    process_result entity_tag.process_staged_links_result;
+BEGIN
+    result.staged = entity_tag.transfer_to_staging(type_name);
+
+    process_result = entity_tag.process_staged_links(update_limit);
+
+    result.tags_added = process_result.tags_added;
+    result.links_added = process_result.links_added;
+    result.links_removed = process_result.links_removed;
+
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
 
 ALTER TABLE "attribute_directory"."attribute_store"
   ADD CONSTRAINT "attribute_attribute_store_entity_type_id_fkey"
@@ -7780,6 +7807,16 @@ ALTER TABLE "directory"."entity_tag_link"
   ADD CONSTRAINT "entity_tag_link_tag_id_fkey"
   FOREIGN KEY (tag_id)
   REFERENCES "directory"."tag" (id) ON DELETE CASCADE;
+
+ALTER TABLE "directory"."alias"
+  ADD CONSTRAINT "alias_entity_id_fkey"
+  FOREIGN KEY (entity_id)
+  REFERENCES "directory"."entity" (id) ON DELETE CASCADE;
+
+ALTER TABLE "directory"."alias"
+  ADD CONSTRAINT "alias_alias_type_id_fkey"
+  FOREIGN KEY (type_id)
+  REFERENCES "directory"."alias_type" (id) ON DELETE CASCADE;
 
 ALTER TABLE "entity_tag"."type"
   ADD CONSTRAINT "type_tag_group_id_fkey"
