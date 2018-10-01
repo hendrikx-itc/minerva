@@ -6,7 +6,7 @@ granularity of 1 day.
 This specific form of existence storage is designed as a more efficient replacement for the current attribute based storage. We use a fixed interval to be able to store a sequence of boolean markers (bits) with a known offset as existence markers. A bigint column type is chosen to encode 64 days of existence information in one value:
 
     minerva=# select 15::bigint::bit(64);
-                                   bit                                
+                                   bit
     ------------------------------------------------------------------
      0000000000000000000000000000000000000000000000000000000000001111
     (1 row)
@@ -14,7 +14,7 @@ This specific form of existence storage is designed as a more efficient replacem
 
 Here the last 4 days are marked as existing using this encoding scheme. When we add the knowledge that the first bit encodes day with timestamp 2018-07-12 00:00:
 
-    minerva=# select * from unnest(gis.existence_to_array('2108-07-12 00:00', 115));                                                                                                                                                                          
+    minerva=# select * from unnest(gis.existence_to_array('2108-07-12 00:00', 115));
            timestamp        | exists
     ------------------------+--------
      2108-07-12 00:00:00+02 | f
@@ -92,4 +92,5 @@ Calling example:
     and trendstore::text = 'transform-retainability_HandoverRelation_day';
 
 
-timestamp
+Existence timestamps are at the start of the day, while the trend data has a
+timestamp at the end of the day.
