@@ -262,7 +262,7 @@ begin
         FROM %s AS t
         WHERE t.timestamp = $1 AND t.entity_id = e.entity_id',
         gis.existence_table_name($1, $3),
-        63 - gis.timestamp_to_existence_bit_index($1.epoch, $3 - '1 day'::interval),
+        63 - gis.timestamp_to_existence_bit_index($1.epoch, $3),
         $2
     ) using $3;
 
@@ -287,7 +287,7 @@ begin
             WHERE t.timestamp = $1 AND e.entity_id IS NULL
         )',
         gis.existence_table_name($1, $3),
-        63 - gis.timestamp_to_existence_bit_index($1.epoch, $3 - '1 day'::interval),
+        63 - gis.timestamp_to_existence_bit_index($1.epoch, $3),
         $2,
         gis.existence_table_name($1, $3)
     ) using $3;
