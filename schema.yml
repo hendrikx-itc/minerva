@@ -3122,6 +3122,8 @@ objects:
     inherits:
       name: trend_store
       schema: trend_directory
+    description: |-
+      Table based trend stores describing the common properties of all its partitions like entity type, data granularity, etc.
 - table:
     name: table_trend_store_part
     schema: trend_directory
@@ -3154,6 +3156,8 @@ objects:
         columns:
         - id
       on_delete: cascade
+    description: |-
+      The parts of a horizontally partitioned table trend store. Each table trend store has at least 1 part.
 - table:
     name: view_trend_store
     schema: trend_directory
@@ -3178,6 +3182,8 @@ objects:
     inherits:
       name: trend_store
       schema: trend_directory
+    description: |-
+      View based trend stores describing the properties like entity type, data granularity, etc.
 - table:
     name: view_trend_store_part
     schema: trend_directory
