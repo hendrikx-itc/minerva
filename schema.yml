@@ -1867,6 +1867,18 @@ objects:
           VALUES ($1, 'default')
           RETURNING data_source;
 - function:
+    name: delete_data_source
+    schema: directory
+    return_type: directory.data_source
+    language: sql
+    volatility: volatile
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: text
+    source: |-
+      DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
+- function:
     name: create_entity_type
     schema: directory
     return_type: directory.entity_type
@@ -3928,14 +3940,13 @@ objects:
               'CREATE TABLE %I.%I ('
               'entity_id integer NOT NULL, '
               '"timestamp" timestamp with time zone NOT NULL, '
-              'modified timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP, '
+              'modified timestamp with time zone NOT NULL '
               '%s'
-              'PRIMARY KEY (entity_id, "timestamp") '
-              ');',
+              ') PARTITION BY RANGE ("timestamp");',
               trend_directory.base_table_schema(),
               name,
               (
-                  SELECT string_agg(format('%I %s,', t.name, t.data_type), ' ')
+                  SELECT string_agg(format(',%I %s', t.name, t.data_type), ' ')
                   FROM unnest($2) t
               )
           ),
@@ -3946,16 +3957,6 @@ objects:
           ),
           format(
               'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
-              trend_directory.base_table_schema(),
-              name
-          ),
-          format(
-              'CREATE INDEX ON %I.%I USING btree (modified);',
-              trend_directory.base_table_schema(),
-              name
-          ),
-          format(
-              'CREATE INDEX ON %I.%I USING btree (timestamp);',
               trend_directory.base_table_schema(),
               name
           )
@@ -4042,7 +4043,7 @@ objects:
     source: |-
       SELECT ARRAY[
           format(
-              'CREATE UNLOGGED TABLE %I.%I () INHERITS (%I.%I);',
+              'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone);',
               trend_directory.staging_table_schema(),
               trend_directory.staging_table_name($1),
               trend_directory.staging_table_schema(),
@@ -5267,14 +5268,13 @@ objects:
     source: |-
       SELECT ARRAY[
               format(
-                  'CREATE TABLE %I.%I ('
-                  'CHECK ("timestamp" > %L AND "timestamp" <= %L)'
-                  ') INHERITS (trend.%I);',
+                  'CREATE TABLE %I.%I PARTITION OF trend.%I '
+                  'FOR VALUES FROM (%L) TO (%L);',
                   trend_directory.partition_table_schema(),
                   trend_directory.table_name($1),
+                  trend_directory.base_table_name(trend_directory.table_trend_store_part($1)),
                   trend_directory.data_start($1),
-                  trend_directory.data_end($1),
-                  trend_directory.base_table_name(trend_directory.table_trend_store_part($1))
+                  trend_directory.data_end($1)
               ),
               format(
                   'ALTER TABLE ONLY %I.%I '
