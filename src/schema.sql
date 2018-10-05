@@ -1458,6 +1458,25 @@ SELECT public.action($1, alias_directory.initialize_alias_type_sql($1));
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "alias_directory"."drop_alias_type_sql"(alias_directory.alias_type)
+    RETURNS text
+AS $$
+SELECT format(
+    'DROP TABLE %I.%I;',
+    alias_directory.alias_schema(),
+    $1.name
+);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "alias_directory"."delete_alias_type"(alias_directory.alias_type)
+    RETURNS alias_directory.alias_type
+AS $$
+DELETE FROM alias_directory.alias_type WHERE id = $1.id;
+SELECT public.action($1, alias_directory.drop_alias_type_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "alias_directory"."get_alias"("entity_id" integer, "alias_type_name" text)
     RETURNS text
 AS $$
@@ -1494,6 +1513,8 @@ AS $$
 INSERT INTO alias_directory.alias_type(name) VALUES ($1) RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
+COMMENT ON FUNCTION "alias_directory"."define_alias_type"("name" name) IS 'Define a new alias type, but do not create a table for it.';
+
 
 CREATE FUNCTION "alias_directory"."create_alias_type"("name" name)
     RETURNS alias_directory.alias_type
@@ -1502,6 +1523,8 @@ SELECT alias_directory.initialize_alias_type(
         alias_directory.define_alias_type($1)
     );
 $$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "alias_directory"."create_alias_type"("name" name) IS 'Define a new alias type and created the table for storing the aliases.';
 
 
 CREATE TYPE "relation_directory"."type_cardinality_enum" AS ENUM (

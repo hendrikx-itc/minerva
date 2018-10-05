@@ -2183,6 +2183,33 @@ objects:
     source: |-
       SELECT public.action($1, alias_directory.initialize_alias_type_sql($1));
 - function:
+    name: drop_alias_type_sql
+    schema: alias_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: alias_directory.alias_type
+    source: |-
+      SELECT format(
+          'DROP TABLE %I.%I;',
+          alias_directory.alias_schema(),
+          $1.name
+      );
+- function:
+    name: delete_alias_type
+    schema: alias_directory
+    return_type: alias_directory.alias_type
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: alias_directory.alias_type
+    source: |-
+      DELETE FROM alias_directory.alias_type WHERE id = $1.id;
+      SELECT public.action($1, alias_directory.drop_alias_type_sql($1));
+- function:
     name: get_alias
     schema: alias_directory
     return_type: text
@@ -2243,6 +2270,8 @@ objects:
       data_type: name
     source: |-
       INSERT INTO alias_directory.alias_type(name) VALUES ($1) RETURNING *;
+    description: |-
+      Define a new alias type, but do not create a table for it.
 - function:
     name: create_alias_type
     schema: alias_directory
@@ -2258,6 +2287,8 @@ objects:
       SELECT alias_directory.initialize_alias_type(
               alias_directory.define_alias_type($1)
           );
+    description: |-
+      Define a new alias type and created the table for storing the aliases.
 - enum_type:
     schema: relation_directory
     name: type_cardinality_enum
