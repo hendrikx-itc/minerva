@@ -17,6 +17,8 @@ node('git'){
   }
 
   stage('Build documentation') {
+    sh 'rm -r doc/_build'
+    
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
     img.inside("-v ${WORKSPACE}/doc:/documents/"){
       sh "cd /documents/ && make html"
