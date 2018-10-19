@@ -1,4 +1,4 @@
-FROM       ubuntu:latest
+FROM ubuntu:latest
 
 # Usage:
 # docker run -it -v <your directory>:/documents/
