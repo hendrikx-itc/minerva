@@ -11,7 +11,7 @@ node('git'){
 
     }
 
-    archiveArtifacts('database/test_results/*.tap')
+    archiveArtifacts('${WORKSPACE}/test_results/*.tap')
     step([$class: 'TapPublisher', testResults: '${WORKSPACE}/test_results/*.tap'])
   }
 
