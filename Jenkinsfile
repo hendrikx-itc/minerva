@@ -22,6 +22,6 @@ node('git'){
 
     }
 
-
+    sh "ls -la ./doc"
   }
 }
