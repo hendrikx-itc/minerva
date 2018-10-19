@@ -1,0 +1,372 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>relation_directory &#8212; Minerva Schema 5.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="system" href="system.html" />
+    <link rel="prev" title="relation_def" href="relation_def.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="system.html" title="system"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="relation_def.html" title="relation_def"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Schema Reference</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="relation-directory">
+<h1>relation_directory<a class="headerlink" href="#relation-directory" title="Permalink to this headline">¶</a></h1>
+<p>Stores directional relations between entities.</p>
+<div class="section" id="tables">
+<h2>Tables<a class="headerlink" href="#tables" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="type">
+<span id="relation-directory-type"></span><h3>type<a class="headerlink" href="#type" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="25%" />
+<col width="45%" />
+<col width="29%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>name</td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>cardinality</td>
+<td>type_cardinality_enum</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="61%" />
+<col width="9%" />
+<col width="30%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Return Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-create-relation-table-on-insert"><span class="std std-ref">create_relation_table_on_insert()</span></a></td>
+<td>trigger</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-define-char"><span class="std std-ref">define(char[])</span></a></td>
+<td>relation_directory.type</td>
+<td>Defines a new relation type, creates the corresponding table and then returns</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-define-char-text"><span class="std std-ref">define(char[], text)</span></a></td>
+<td>relation_directory.type</td>
+<td>Defines a new relation type (just like relation_directory.define(name)),</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-define-reverse-char-char"><span class="std std-ref">define_reverse(char[], char[])</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-create-self-relation"><span class="std std-ref">create_self_relation()</span></a></td>
+<td>trigger</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-define-reverse-char-relation-directory-type"><span class="std std-ref">define_reverse(char[], relation_directory.type)</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-materialize-relation-relation-directory-type"><span class="std std-ref">materialize_relation(relation_directory.type)</span></a></td>
+<td>integer</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-drop-table-on-type-delete"><span class="std std-ref">drop_table_on_type_delete()</span></a></td>
+<td>trigger</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-table-schema"><span class="std std-ref">table_schema()</span></a></td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-drop-relation-view-sql-relation-directory-type"><span class="std std-ref">drop_relation_view_sql(relation_directory.type)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-get-type-char"><span class="std std-ref">get_type(char[])</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-view-schema"><span class="std std-ref">view_schema()</span></a></td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-create-relation-table-sql-relation-directory-type"><span class="std std-ref">create_relation_table_sql(relation_directory.type)</span></a></td>
+<td>text[]</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-create-or-replace-relation-view-sql-relation-directory-type-text"><span class="std std-ref">create_or_replace_relation_view_sql(relation_directory.type, text)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-create-relation-table-relation-directory-type"><span class="std std-ref">create_relation_table(relation_directory.type)</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-drop-relation-table-relation-directory-type"><span class="std std-ref">drop_relation_table(relation_directory.type)</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-create-type-char"><span class="std std-ref">create_type(char[])</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-name-to-type-char"><span class="std std-ref">name_to_type(char[])</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-create-relation-view-sql-relation-directory-type-text"><span class="std std-ref">create_relation_view_sql(relation_directory.type, text)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-create-relation-view-relation-directory-type-text"><span class="std std-ref">create_relation_view(relation_directory.type, text)</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-drop-relation-table-sql-relation-directory-type"><span class="std std-ref">drop_relation_table_sql(relation_directory.type)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-drop-relation-view-relation-directory-type"><span class="std std-ref">drop_relation_view(relation_directory.type)</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#relation-directory-update-relation-directory-type-text"><span class="std std-ref">update(relation_directory.type, text)</span></a></td>
+<td>relation_directory.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#relation-directory-remove-char"><span class="std std-ref">remove(char[])</span></a></td>
+<td>void</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="create-relation-table-on-insert-trigger">
+<span id="relation-directory-create-relation-table-on-insert"></span><h3>create_relation_table_on_insert() -&gt; trigger<a class="headerlink" href="#create-relation-table-on-insert-trigger" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-char-relation-directory-type">
+<span id="relation-directory-define-char"></span><h3>define(char[]) -&gt; relation_directory.type<a class="headerlink" href="#define-char-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+<p>Defines a new relation type, creates the corresponding table and then returns
+the new type record</p>
+</div>
+<div class="section" id="define-char-text-relation-directory-type">
+<span id="relation-directory-define-char-text"></span><h3>define(char[], text) -&gt; relation_directory.type<a class="headerlink" href="#define-char-text-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+<p>Defines a new relation type (just like relation_directory.define(name)),
+including a view that will be used to populate the relation table.</p>
+</div>
+<div class="section" id="define-reverse-char-char-relation-directory-type">
+<span id="relation-directory-define-reverse-char-char"></span><h3>define_reverse(char[], char[]) -&gt; relation_directory.type<a class="headerlink" href="#define-reverse-char-char-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-self-relation-trigger">
+<span id="relation-directory-create-self-relation"></span><h3>create_self_relation() -&gt; trigger<a class="headerlink" href="#create-self-relation-trigger" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-reverse-char-relation-directory-type-relation-directory-type">
+<span id="relation-directory-define-reverse-char-relation-directory-type"></span><h3>define_reverse(char[], relation_directory.type) -&gt; relation_directory.type<a class="headerlink" href="#define-reverse-char-relation-directory-type-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="materialize-relation-relation-directory-type-integer">
+<span id="relation-directory-materialize-relation-relation-directory-type"></span><h3>materialize_relation(relation_directory.type) -&gt; integer<a class="headerlink" href="#materialize-relation-relation-directory-type-integer" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="drop-table-on-type-delete-trigger">
+<span id="relation-directory-drop-table-on-type-delete"></span><h3>drop_table_on_type_delete() -&gt; trigger<a class="headerlink" href="#drop-table-on-type-delete-trigger" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="table-schema-name">
+<span id="relation-directory-table-schema"></span><h3>table_schema() -&gt; name<a class="headerlink" href="#table-schema-name" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="drop-relation-view-sql-relation-directory-type-text">
+<span id="relation-directory-drop-relation-view-sql-relation-directory-type"></span><h3>drop_relation_view_sql(relation_directory.type) -&gt; text<a class="headerlink" href="#drop-relation-view-sql-relation-directory-type-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-type-char-relation-directory-type">
+<span id="relation-directory-get-type-char"></span><h3>get_type(char[]) -&gt; relation_directory.type<a class="headerlink" href="#get-type-char-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="view-schema-name">
+<span id="relation-directory-view-schema"></span><h3>view_schema() -&gt; name<a class="headerlink" href="#view-schema-name" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-relation-table-sql-relation-directory-type-text">
+<span id="relation-directory-create-relation-table-sql-relation-directory-type"></span><h3>create_relation_table_sql(relation_directory.type) -&gt; text[]<a class="headerlink" href="#create-relation-table-sql-relation-directory-type-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-or-replace-relation-view-sql-relation-directory-type-text-text">
+<span id="relation-directory-create-or-replace-relation-view-sql-relation-directory-type-text"></span><h3>create_or_replace_relation_view_sql(relation_directory.type, text) -&gt; text<a class="headerlink" href="#create-or-replace-relation-view-sql-relation-directory-type-text-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-relation-table-relation-directory-type-relation-directory-type">
+<span id="relation-directory-create-relation-table-relation-directory-type"></span><h3>create_relation_table(relation_directory.type) -&gt; relation_directory.type<a class="headerlink" href="#create-relation-table-relation-directory-type-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="drop-relation-table-relation-directory-type-relation-directory-type">
+<span id="relation-directory-drop-relation-table-relation-directory-type"></span><h3>drop_relation_table(relation_directory.type) -&gt; relation_directory.type<a class="headerlink" href="#drop-relation-table-relation-directory-type-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-type-char-relation-directory-type">
+<span id="relation-directory-create-type-char"></span><h3>create_type(char[]) -&gt; relation_directory.type<a class="headerlink" href="#create-type-char-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="name-to-type-char-relation-directory-type">
+<span id="relation-directory-name-to-type-char"></span><h3>name_to_type(char[]) -&gt; relation_directory.type<a class="headerlink" href="#name-to-type-char-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-relation-view-sql-relation-directory-type-text-text">
+<span id="relation-directory-create-relation-view-sql-relation-directory-type-text"></span><h3>create_relation_view_sql(relation_directory.type, text) -&gt; text<a class="headerlink" href="#create-relation-view-sql-relation-directory-type-text-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-relation-view-relation-directory-type-text-relation-directory-type">
+<span id="relation-directory-create-relation-view-relation-directory-type-text"></span><h3>create_relation_view(relation_directory.type, text) -&gt; relation_directory.type<a class="headerlink" href="#create-relation-view-relation-directory-type-text-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="drop-relation-table-sql-relation-directory-type-text">
+<span id="relation-directory-drop-relation-table-sql-relation-directory-type"></span><h3>drop_relation_table_sql(relation_directory.type) -&gt; text<a class="headerlink" href="#drop-relation-table-sql-relation-directory-type-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="drop-relation-view-relation-directory-type-relation-directory-type">
+<span id="relation-directory-drop-relation-view-relation-directory-type"></span><h3>drop_relation_view(relation_directory.type) -&gt; relation_directory.type<a class="headerlink" href="#drop-relation-view-relation-directory-type-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="update-relation-directory-type-text-relation-directory-type">
+<span id="relation-directory-update-relation-directory-type-text"></span><h3>update(relation_directory.type, text) -&gt; relation_directory.type<a class="headerlink" href="#update-relation-directory-type-text-relation-directory-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="remove-char-void">
+<span id="relation-directory-remove-char"></span><h3>remove(char[]) -&gt; void<a class="headerlink" href="#remove-char-void" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">relation_directory</a><ul>
+<li><a class="reference internal" href="#tables">Tables</a><ul>
+<li><a class="reference internal" href="#type">type</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#create-relation-table-on-insert-trigger">create_relation_table_on_insert() -&gt; trigger</a></li>
+<li><a class="reference internal" href="#define-char-relation-directory-type">define(char[]) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#define-char-text-relation-directory-type">define(char[], text) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#define-reverse-char-char-relation-directory-type">define_reverse(char[], char[]) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#create-self-relation-trigger">create_self_relation() -&gt; trigger</a></li>
+<li><a class="reference internal" href="#define-reverse-char-relation-directory-type-relation-directory-type">define_reverse(char[], relation_directory.type) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#materialize-relation-relation-directory-type-integer">materialize_relation(relation_directory.type) -&gt; integer</a></li>
+<li><a class="reference internal" href="#drop-table-on-type-delete-trigger">drop_table_on_type_delete() -&gt; trigger</a></li>
+<li><a class="reference internal" href="#table-schema-name">table_schema() -&gt; name</a></li>
+<li><a class="reference internal" href="#drop-relation-view-sql-relation-directory-type-text">drop_relation_view_sql(relation_directory.type) -&gt; text</a></li>
+<li><a class="reference internal" href="#get-type-char-relation-directory-type">get_type(char[]) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#view-schema-name">view_schema() -&gt; name</a></li>
+<li><a class="reference internal" href="#create-relation-table-sql-relation-directory-type-text">create_relation_table_sql(relation_directory.type) -&gt; text[]</a></li>
+<li><a class="reference internal" href="#create-or-replace-relation-view-sql-relation-directory-type-text-text">create_or_replace_relation_view_sql(relation_directory.type, text) -&gt; text</a></li>
+<li><a class="reference internal" href="#create-relation-table-relation-directory-type-relation-directory-type">create_relation_table(relation_directory.type) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#drop-relation-table-relation-directory-type-relation-directory-type">drop_relation_table(relation_directory.type) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#create-type-char-relation-directory-type">create_type(char[]) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#name-to-type-char-relation-directory-type">name_to_type(char[]) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#create-relation-view-sql-relation-directory-type-text-text">create_relation_view_sql(relation_directory.type, text) -&gt; text</a></li>
+<li><a class="reference internal" href="#create-relation-view-relation-directory-type-text-relation-directory-type">create_relation_view(relation_directory.type, text) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#drop-relation-table-sql-relation-directory-type-text">drop_relation_table_sql(relation_directory.type) -&gt; text</a></li>
+<li><a class="reference internal" href="#drop-relation-view-relation-directory-type-relation-directory-type">drop_relation_view(relation_directory.type) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#update-relation-directory-type-text-relation-directory-type">update(relation_directory.type, text) -&gt; relation_directory.type</a></li>
+<li><a class="reference internal" href="#remove-char-void">remove(char[]) -&gt; void</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="relation_def.html"
+                        title="previous chapter">relation_def</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="system.html"
+                        title="next chapter">system</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/schema/relation_directory.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="system.html" title="system"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="relation_def.html" title="relation_def"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Schema Reference</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2013, Hendrikx ITC.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,541 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>notification_directory &#8212; Minerva Schema 5.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="olap" href="olap.html" />
+    <link rel="prev" title="notification" href="notification.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="olap.html" title="olap"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="notification.html" title="notification"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Schema Reference</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="notification-directory">
+<h1>notification_directory<a class="headerlink" href="#notification-directory" title="Permalink to this headline">¶</a></h1>
+<p>Stores meta-data about notification data in the notification schema.</p>
+<div class="section" id="tables">
+<h2>Tables<a class="headerlink" href="#tables" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="notification-store">
+<span id="notification-directory-notification-store"></span><h3>notification_store<a class="headerlink" href="#notification-store" title="Permalink to this headline">¶</a></h3>
+<p>Describes notification_stores. Each notification_store maps to a set of tables and functions that can store and manage notifications of a certain type. These corresponding tables and functions are created automatically for each notification_store. Because each notification_store maps one-on-one to a data_source, the name of the notification_store is the same as that of the data_source. Use the create_notification_store function to create new notification_stores.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="41%" />
+<col width="21%" />
+<col width="38%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>data_source_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="notification-set-store">
+<span id="notification-directory-notification-set-store"></span><h3>notification_set_store<a class="headerlink" href="#notification-set-store" title="Permalink to this headline">¶</a></h3>
+<p>Describes notification_set_stores. A notification_set_store can hold information over sets of notifications that are related to each other.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="50%" />
+<col width="17%" />
+<col width="33%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>name</td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>notification_store_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="set-attribute">
+<span id="notification-directory-set-attribute"></span><h3>set_attribute<a class="headerlink" href="#set-attribute" title="Permalink to this headline">¶</a></h3>
+<p>Describes attributes of notification_set_stores. A set_attribute of a notification_set_store is an attribute that each notification set has. A set_attribute corresponds directly to a column in the main notification_set_store table.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="53%" />
+<col width="18%" />
+<col width="29%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>notification_set_store_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>name</td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>data_type</td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>description</td>
+<td>varchar</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="attribute">
+<span id="notification-directory-attribute"></span><h3>attribute<a class="headerlink" href="#attribute" title="Permalink to this headline">¶</a></h3>
+<p>Describes attributes of notification stores. An attribute of a notification store is an attribute that each notification stored in that notification store has. An attribute corresponds directly to a column in the main notification store table</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="49%" />
+<col width="19%" />
+<col width="32%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>notification_store_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>name</td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>data_type</td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>description</td>
+<td>varchar</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="76%" />
+<col width="18%" />
+<col width="6%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Return Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-add-attribute-column-sql-char-notification-directory-attribute"><span class="std std-ref">add_attribute_column_sql(char[], notification_directory.attribute)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-notification-store-schema"><span class="std std-ref">notification_store_schema()</span></a></td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-to-char-notification-directory-notification-store"><span class="std std-ref">to_char(notification_directory.notification_store)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-get-notification-store-char"><span class="std std-ref">get_notification_store(char[])</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-table-name-notification-directory-notification-store"><span class="std std-ref">table_name(notification_directory.notification_store)</span></a></td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-create-table-sql-notification-directory-notification-store"><span class="std std-ref">create_table_sql(notification_directory.notification_store)</span></a></td>
+<td>text[]</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-create-table-notification-directory-notification-store"><span class="std std-ref">create_table(notification_directory.notification_store)</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-initialize-notification-store-notification-directory-notification-store"><span class="std std-ref">initialize_notification_store(notification_directory.notification_store)</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-create-staging-table-sql-notification-directory-notification-store"><span class="std std-ref">create_staging_table_sql(notification_directory.notification_store)</span></a></td>
+<td>text[]</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-create-staging-table-notification-directory-notification-store"><span class="std std-ref">create_staging_table(notification_directory.notification_store)</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-define-attribute-notification-directory-notification-store-char-char-text"><span class="std std-ref">define_attribute(notification_directory.notification_store, char[], char[], text)</span></a></td>
+<td>SETOF notification_directory.attribute</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-define-attributes-notification-directory-notification-store-attr-def"><span class="std std-ref">define_attributes(notification_directory.notification_store, attr_def[])</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-define-notification-store-integer"><span class="std std-ref">define_notification_store(integer)</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-define-notification-store-integer-attr-def"><span class="std std-ref">define_notification_store(integer, attr_def[])</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-create-notification-store-integer-attr-def"><span class="std std-ref">create_notification_store(integer, attr_def[])</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-create-notification-store-text-attr-def"><span class="std std-ref">create_notification_store(text, attr_def[])</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-create-notification-store-integer"><span class="std std-ref">create_notification_store(integer)</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-create-notification-store-text"><span class="std std-ref">create_notification_store(text)</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-define-notification-set-store-char-integer"><span class="std std-ref">define_notification_set_store(char[], integer)</span></a></td>
+<td>notification_directory.notification_set_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-notification-store-notification-directory-notification-set-store"><span class="std std-ref">notification_store(notification_directory.notification_set_store)</span></a></td>
+<td>notification_directory.notification_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-init-notification-set-store-notification-directory-notification-set-store"><span class="std std-ref">init_notification_set_store(notification_directory.notification_set_store)</span></a></td>
+<td>notification_directory.notification_set_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-create-notification-set-store-char-integer"><span class="std std-ref">create_notification_set_store(char[], integer)</span></a></td>
+<td>notification_directory.notification_set_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-create-notification-set-store-char-notification-directory-notification-store"><span class="std std-ref">create_notification_set_store(char[], notification_directory.notification_store)</span></a></td>
+<td>notification_directory.notification_set_store</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-get-column-type-name-notification-directory-notification-store-char"><span class="std std-ref">get_column_type_name(notification_directory.notification_store, char[])</span></a></td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-add-staging-attribute-column-sql-notification-directory-attribute"><span class="std std-ref">add_staging_attribute_column_sql(notification_directory.attribute)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-create-attribute-column-notification-directory-attribute"><span class="std std-ref">create_attribute_column(notification_directory.attribute)</span></a></td>
+<td>notification_directory.attribute</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-get-attr-defs-notification-directory-notification-store"><span class="std std-ref">get_attr_defs(notification_directory.notification_store)</span></a></td>
+<td>SETOF notification_directory.attr_def</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-drop-table-on-delete"><span class="std std-ref">drop_table_on_delete()</span></a></td>
+<td>trigger</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-drop-notification-set-store-table-on-delete"><span class="std std-ref">drop_notification_set_store_table_on_delete()</span></a></td>
+<td>trigger</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-cleanup-on-data-source-delete"><span class="std std-ref">cleanup_on_data_source_delete()</span></a></td>
+<td>trigger</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#notification-directory-staging-table-name-notification-directory-notification-store"><span class="std std-ref">staging_table_name(notification_directory.notification_store)</span></a></td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#notification-directory-get-column-type-name-char-char-char"><span class="std std-ref">get_column_type_name(char[], char[], char[])</span></a></td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="add-attribute-column-sql-char-notification-directory-attribute-text">
+<span id="notification-directory-add-attribute-column-sql-char-notification-directory-attribute"></span><h3>add_attribute_column_sql(char[], notification_directory.attribute) -&gt; text<a class="headerlink" href="#add-attribute-column-sql-char-notification-directory-attribute-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="notification-store-schema-name">
+<span id="notification-directory-notification-store-schema"></span><h3>notification_store_schema() -&gt; name<a class="headerlink" href="#notification-store-schema-name" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="to-char-notification-directory-notification-store-text">
+<span id="notification-directory-to-char-notification-directory-notification-store"></span><h3>to_char(notification_directory.notification_store) -&gt; text<a class="headerlink" href="#to-char-notification-directory-notification-store-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-notification-store-char-notification-directory-notification-store">
+<span id="notification-directory-get-notification-store-char"></span><h3>get_notification_store(char[]) -&gt; notification_directory.notification_store<a class="headerlink" href="#get-notification-store-char-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="table-name-notification-directory-notification-store-name">
+<span id="notification-directory-table-name-notification-directory-notification-store"></span><h3>table_name(notification_directory.notification_store) -&gt; name<a class="headerlink" href="#table-name-notification-directory-notification-store-name" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-table-sql-notification-directory-notification-store-text">
+<span id="notification-directory-create-table-sql-notification-directory-notification-store"></span><h3>create_table_sql(notification_directory.notification_store) -&gt; text[]<a class="headerlink" href="#create-table-sql-notification-directory-notification-store-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-table-notification-directory-notification-store-notification-directory-notification-store">
+<span id="notification-directory-create-table-notification-directory-notification-store"></span><h3>create_table(notification_directory.notification_store) -&gt; notification_directory.notification_store<a class="headerlink" href="#create-table-notification-directory-notification-store-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="initialize-notification-store-notification-directory-notification-store-notification-directory-notification-store">
+<span id="notification-directory-initialize-notification-store-notification-directory-notification-store"></span><h3>initialize_notification_store(notification_directory.notification_store) -&gt; notification_directory.notification_store<a class="headerlink" href="#initialize-notification-store-notification-directory-notification-store-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-staging-table-sql-notification-directory-notification-store-text">
+<span id="notification-directory-create-staging-table-sql-notification-directory-notification-store"></span><h3>create_staging_table_sql(notification_directory.notification_store) -&gt; text[]<a class="headerlink" href="#create-staging-table-sql-notification-directory-notification-store-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-staging-table-notification-directory-notification-store-notification-directory-notification-store">
+<span id="notification-directory-create-staging-table-notification-directory-notification-store"></span><h3>create_staging_table(notification_directory.notification_store) -&gt; notification_directory.notification_store<a class="headerlink" href="#create-staging-table-notification-directory-notification-store-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-attribute-notification-directory-notification-store-char-char-text-setof-notification-directory-attribute">
+<span id="notification-directory-define-attribute-notification-directory-notification-store-char-char-text"></span><h3>define_attribute(notification_directory.notification_store, char[], char[], text) -&gt; SETOF notification_directory.attribute<a class="headerlink" href="#define-attribute-notification-directory-notification-store-char-char-text-setof-notification-directory-attribute" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-attributes-notification-directory-notification-store-attr-def-notification-directory-notification-store">
+<span id="notification-directory-define-attributes-notification-directory-notification-store-attr-def"></span><h3>define_attributes(notification_directory.notification_store, attr_def[]) -&gt; notification_directory.notification_store<a class="headerlink" href="#define-attributes-notification-directory-notification-store-attr-def-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-notification-store-integer-notification-directory-notification-store">
+<span id="notification-directory-define-notification-store-integer"></span><h3>define_notification_store(integer) -&gt; notification_directory.notification_store<a class="headerlink" href="#define-notification-store-integer-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-notification-store-integer-attr-def-notification-directory-notification-store">
+<span id="notification-directory-define-notification-store-integer-attr-def"></span><h3>define_notification_store(integer, attr_def[]) -&gt; notification_directory.notification_store<a class="headerlink" href="#define-notification-store-integer-attr-def-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-notification-store-integer-attr-def-notification-directory-notification-store">
+<span id="notification-directory-create-notification-store-integer-attr-def"></span><h3>create_notification_store(integer, attr_def[]) -&gt; notification_directory.notification_store<a class="headerlink" href="#create-notification-store-integer-attr-def-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-notification-store-text-attr-def-notification-directory-notification-store">
+<span id="notification-directory-create-notification-store-text-attr-def"></span><h3>create_notification_store(text, attr_def[]) -&gt; notification_directory.notification_store<a class="headerlink" href="#create-notification-store-text-attr-def-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-notification-store-integer-notification-directory-notification-store">
+<span id="notification-directory-create-notification-store-integer"></span><h3>create_notification_store(integer) -&gt; notification_directory.notification_store<a class="headerlink" href="#create-notification-store-integer-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-notification-store-text-notification-directory-notification-store">
+<span id="notification-directory-create-notification-store-text"></span><h3>create_notification_store(text) -&gt; notification_directory.notification_store<a class="headerlink" href="#create-notification-store-text-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-notification-set-store-char-integer-notification-directory-notification-set-store">
+<span id="notification-directory-define-notification-set-store-char-integer"></span><h3>define_notification_set_store(char[], integer) -&gt; notification_directory.notification_set_store<a class="headerlink" href="#define-notification-set-store-char-integer-notification-directory-notification-set-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="notification-store-notification-directory-notification-set-store-notification-directory-notification-store">
+<span id="notification-directory-notification-store-notification-directory-notification-set-store"></span><h3>notification_store(notification_directory.notification_set_store) -&gt; notification_directory.notification_store<a class="headerlink" href="#notification-store-notification-directory-notification-set-store-notification-directory-notification-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="init-notification-set-store-notification-directory-notification-set-store-notification-directory-notification-set-store">
+<span id="notification-directory-init-notification-set-store-notification-directory-notification-set-store"></span><h3>init_notification_set_store(notification_directory.notification_set_store) -&gt; notification_directory.notification_set_store<a class="headerlink" href="#init-notification-set-store-notification-directory-notification-set-store-notification-directory-notification-set-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-notification-set-store-char-integer-notification-directory-notification-set-store">
+<span id="notification-directory-create-notification-set-store-char-integer"></span><h3>create_notification_set_store(char[], integer) -&gt; notification_directory.notification_set_store<a class="headerlink" href="#create-notification-set-store-char-integer-notification-directory-notification-set-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-notification-set-store-char-notification-directory-notification-store-notification-directory-notification-set-store">
+<span id="notification-directory-create-notification-set-store-char-notification-directory-notification-store"></span><h3>create_notification_set_store(char[], notification_directory.notification_store) -&gt; notification_directory.notification_set_store<a class="headerlink" href="#create-notification-set-store-char-notification-directory-notification-store-notification-directory-notification-set-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-column-type-name-notification-directory-notification-store-char-name">
+<span id="notification-directory-get-column-type-name-notification-directory-notification-store-char"></span><h3>get_column_type_name(notification_directory.notification_store, char[]) -&gt; name<a class="headerlink" href="#get-column-type-name-notification-directory-notification-store-char-name" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="add-staging-attribute-column-sql-notification-directory-attribute-text">
+<span id="notification-directory-add-staging-attribute-column-sql-notification-directory-attribute"></span><h3>add_staging_attribute_column_sql(notification_directory.attribute) -&gt; text<a class="headerlink" href="#add-staging-attribute-column-sql-notification-directory-attribute-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-attribute-column-notification-directory-attribute-notification-directory-attribute">
+<span id="notification-directory-create-attribute-column-notification-directory-attribute"></span><h3>create_attribute_column(notification_directory.attribute) -&gt; notification_directory.attribute<a class="headerlink" href="#create-attribute-column-notification-directory-attribute-notification-directory-attribute" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-attr-defs-notification-directory-notification-store-setof-notification-directory-attr-def">
+<span id="notification-directory-get-attr-defs-notification-directory-notification-store"></span><h3>get_attr_defs(notification_directory.notification_store) -&gt; SETOF notification_directory.attr_def<a class="headerlink" href="#get-attr-defs-notification-directory-notification-store-setof-notification-directory-attr-def" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="drop-table-on-delete-trigger">
+<span id="notification-directory-drop-table-on-delete"></span><h3>drop_table_on_delete() -&gt; trigger<a class="headerlink" href="#drop-table-on-delete-trigger" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="drop-notification-set-store-table-on-delete-trigger">
+<span id="notification-directory-drop-notification-set-store-table-on-delete"></span><h3>drop_notification_set_store_table_on_delete() -&gt; trigger<a class="headerlink" href="#drop-notification-set-store-table-on-delete-trigger" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="cleanup-on-data-source-delete-trigger">
+<span id="notification-directory-cleanup-on-data-source-delete"></span><h3>cleanup_on_data_source_delete() -&gt; trigger<a class="headerlink" href="#cleanup-on-data-source-delete-trigger" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="staging-table-name-notification-directory-notification-store-name">
+<span id="notification-directory-staging-table-name-notification-directory-notification-store"></span><h3>staging_table_name(notification_directory.notification_store) -&gt; name<a class="headerlink" href="#staging-table-name-notification-directory-notification-store-name" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-column-type-name-char-char-char-name">
+<span id="notification-directory-get-column-type-name-char-char-char"></span><h3>get_column_type_name(char[], char[], char[]) -&gt; name<a class="headerlink" href="#get-column-type-name-char-char-char-name" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">notification_directory</a><ul>
+<li><a class="reference internal" href="#tables">Tables</a><ul>
+<li><a class="reference internal" href="#notification-store">notification_store</a></li>
+<li><a class="reference internal" href="#notification-set-store">notification_set_store</a></li>
+<li><a class="reference internal" href="#set-attribute">set_attribute</a></li>
+<li><a class="reference internal" href="#attribute">attribute</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#add-attribute-column-sql-char-notification-directory-attribute-text">add_attribute_column_sql(char[], notification_directory.attribute) -&gt; text</a></li>
+<li><a class="reference internal" href="#notification-store-schema-name">notification_store_schema() -&gt; name</a></li>
+<li><a class="reference internal" href="#to-char-notification-directory-notification-store-text">to_char(notification_directory.notification_store) -&gt; text</a></li>
+<li><a class="reference internal" href="#get-notification-store-char-notification-directory-notification-store">get_notification_store(char[]) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#table-name-notification-directory-notification-store-name">table_name(notification_directory.notification_store) -&gt; name</a></li>
+<li><a class="reference internal" href="#create-table-sql-notification-directory-notification-store-text">create_table_sql(notification_directory.notification_store) -&gt; text[]</a></li>
+<li><a class="reference internal" href="#create-table-notification-directory-notification-store-notification-directory-notification-store">create_table(notification_directory.notification_store) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#initialize-notification-store-notification-directory-notification-store-notification-directory-notification-store">initialize_notification_store(notification_directory.notification_store) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#create-staging-table-sql-notification-directory-notification-store-text">create_staging_table_sql(notification_directory.notification_store) -&gt; text[]</a></li>
+<li><a class="reference internal" href="#create-staging-table-notification-directory-notification-store-notification-directory-notification-store">create_staging_table(notification_directory.notification_store) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#define-attribute-notification-directory-notification-store-char-char-text-setof-notification-directory-attribute">define_attribute(notification_directory.notification_store, char[], char[], text) -&gt; SETOF notification_directory.attribute</a></li>
+<li><a class="reference internal" href="#define-attributes-notification-directory-notification-store-attr-def-notification-directory-notification-store">define_attributes(notification_directory.notification_store, attr_def[]) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#define-notification-store-integer-notification-directory-notification-store">define_notification_store(integer) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#define-notification-store-integer-attr-def-notification-directory-notification-store">define_notification_store(integer, attr_def[]) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#create-notification-store-integer-attr-def-notification-directory-notification-store">create_notification_store(integer, attr_def[]) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#create-notification-store-text-attr-def-notification-directory-notification-store">create_notification_store(text, attr_def[]) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#create-notification-store-integer-notification-directory-notification-store">create_notification_store(integer) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#create-notification-store-text-notification-directory-notification-store">create_notification_store(text) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#define-notification-set-store-char-integer-notification-directory-notification-set-store">define_notification_set_store(char[], integer) -&gt; notification_directory.notification_set_store</a></li>
+<li><a class="reference internal" href="#notification-store-notification-directory-notification-set-store-notification-directory-notification-store">notification_store(notification_directory.notification_set_store) -&gt; notification_directory.notification_store</a></li>
+<li><a class="reference internal" href="#init-notification-set-store-notification-directory-notification-set-store-notification-directory-notification-set-store">init_notification_set_store(notification_directory.notification_set_store) -&gt; notification_directory.notification_set_store</a></li>
+<li><a class="reference internal" href="#create-notification-set-store-char-integer-notification-directory-notification-set-store">create_notification_set_store(char[], integer) -&gt; notification_directory.notification_set_store</a></li>
+<li><a class="reference internal" href="#create-notification-set-store-char-notification-directory-notification-store-notification-directory-notification-set-store">create_notification_set_store(char[], notification_directory.notification_store) -&gt; notification_directory.notification_set_store</a></li>
+<li><a class="reference internal" href="#get-column-type-name-notification-directory-notification-store-char-name">get_column_type_name(notification_directory.notification_store, char[]) -&gt; name</a></li>
+<li><a class="reference internal" href="#add-staging-attribute-column-sql-notification-directory-attribute-text">add_staging_attribute_column_sql(notification_directory.attribute) -&gt; text</a></li>
+<li><a class="reference internal" href="#create-attribute-column-notification-directory-attribute-notification-directory-attribute">create_attribute_column(notification_directory.attribute) -&gt; notification_directory.attribute</a></li>
+<li><a class="reference internal" href="#get-attr-defs-notification-directory-notification-store-setof-notification-directory-attr-def">get_attr_defs(notification_directory.notification_store) -&gt; SETOF notification_directory.attr_def</a></li>
+<li><a class="reference internal" href="#drop-table-on-delete-trigger">drop_table_on_delete() -&gt; trigger</a></li>
+<li><a class="reference internal" href="#drop-notification-set-store-table-on-delete-trigger">drop_notification_set_store_table_on_delete() -&gt; trigger</a></li>
+<li><a class="reference internal" href="#cleanup-on-data-source-delete-trigger">cleanup_on_data_source_delete() -&gt; trigger</a></li>
+<li><a class="reference internal" href="#staging-table-name-notification-directory-notification-store-name">staging_table_name(notification_directory.notification_store) -&gt; name</a></li>
+<li><a class="reference internal" href="#get-column-type-name-char-char-char-name">get_column_type_name(char[], char[], char[]) -&gt; name</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="notification.html"
+                        title="previous chapter">notification</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="olap.html"
+                        title="next chapter">olap</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/schema/notification_directory.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="olap.html" title="olap"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="notification.html" title="notification"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Schema Reference</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2013, Hendrikx ITC.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,426 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>How To &#8212; Minerva Schema 5.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Schema Reference" href="../schema/index.html" />
+    <link rel="prev" title="User Guide" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../schema/index.html" title="Schema Reference"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="User Guide"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">User Guide</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="how-to">
+<h1>How To<a class="headerlink" href="#how-to" title="Permalink to this headline">¶</a></h1>
+<p>Examples are executed on a psql prompt.</p>
+<div class="section" id="create-entities">
+<h2>Create Entities<a class="headerlink" href="#create-entities" title="Permalink to this headline">¶</a></h2>
+<p>Before any data is stored, entities have to be created to which the data
+belongs. Basic information about entities is stored in the tables
+<a class="reference internal" href="../schema/directory.html#directory-entity-type"><span class="std std-ref">entity_type</span></a> and <a class="reference internal" href="../schema/directory.html#directory-entity"><span class="std std-ref">entity</span></a>. These tables are
+automatically populated when the appropriate functions are used to create the
+entities.</p>
+<p>Create an entity using <a class="reference internal" href="../schema/directory.html#directory-create-entity-text"><span class="std std-ref">create_entity</span></a>:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="n">directory</span><span class="mf">.</span><span class="n">create_entity</span><span class="p">(</span><span class="s1">&#39;Node=root&#39;</span><span class="p">);</span>
+<span class="go">                     create_entity</span>
+<span class="go">-------------------------------------------------------</span>
+<span class="go"> (1,&quot;2015-09-07 12:21:01.594337+00&quot;,root,2,Node=root,)</span>
+</pre></div>
+</div>
+<p>The directory.create_entity function returns a value of type <a class="reference internal" href="../schema/directory.html#directory-entity"><span class="std std-ref">entity</span></a>
+and this is exactly the record you will find in the table <a class="reference internal" href="../schema/directory.html#directory-entity"><span class="std std-ref">entity</span></a>:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">directory</span><span class="mf">.</span><span class="n">entity</span> <span class="k">where</span> <span class="n">id</span> <span class="o">=</span> <span class="mf">1</span><span class="p">;</span>
+<span class="go"> id |       first_appearance        | name | entitytype_id |    dn     | parent_id</span>
+<span class="go">----+-------------------------------+------+---------------+-----------+-----------</span>
+<span class="go">  1 | 2015-09-07 12:21:01.594337+00 | root |             2 | Node=root |</span>
+</pre></div>
+</div>
+<p>The function <a class="reference internal" href="../schema/directory.html#directory-create-entity-text"><span class="std std-ref">create_entity</span></a>
+will also define new entitytypes if required. So the previous example will
+have resulted in a new record in the <a class="reference internal" href="../schema/directory.html#directory-entity-type"><span class="std std-ref">entity_type</span></a> table:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">directory</span><span class="mf">.</span><span class="n">entitytype</span> <span class="k">where</span> <span class="n">id</span> <span class="o">=</span> <span class="mf">2</span><span class="p">;</span>
+<span class="go"> id |       name       | description</span>
+<span class="go">----+------------------+-------------</span>
+<span class="go">  2 | Node             |</span>
+</pre></div>
+</div>
+<p>Any required intermediate entities are also automatically created:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="n">directory</span><span class="mf">.</span><span class="n">create_entity</span><span class="p">(</span><span class="s1">&#39;Node=root,Slot=c1,Port=12&#39;</span><span class="p">);</span>
+<span class="go">                             create_entity</span>
+<span class="go">------------------------------------------------------------------------</span>
+<span class="go"> (2,&quot;2015-09-07 13:10:11.809796+00&quot;,12,3,&quot;Node=root,Slot=c1,Port=12&quot;,3)</span>
+
+<span class="gp">minerva=#</span> <span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">directory</span><span class="mf">.</span><span class="n">entity</span><span class="p">;</span>
+<span class="go"> id |       first_appearance        | name | entitytype_id |            dn             | parent_id</span>
+<span class="go">----+-------------------------------+------+---------------+---------------------------+-----------</span>
+<span class="go">  1 | 2015-09-07 12:21:01.594337+00 | root |             2 | Node=root                 |</span>
+<span class="go">  3 | 2015-09-07 13:10:11.809796+00 | c1   |             4 | Node=root,Slot=c1         |         1</span>
+<span class="go">  2 | 2015-09-07 13:10:11.809796+00 | 12   |             3 | Node=root,Slot=c1,Port=12 |         3</span>
+</pre></div>
+</div>
+<p>The intermediate ‘Node=root,Slot=c1’ entity and its type are automatically
+created.</p>
+</div>
+<div class="section" id="define-data-sources">
+<h2>Define Data Sources<a class="headerlink" href="#define-data-sources" title="Permalink to this headline">¶</a></h2>
+<p>All data about entities is linked to a data source. Data sources are used to
+organize different sets of data for potentially overlapping sets of entities.
+This solves the problem of having conflicting facts about entities when they
+have the same name, but come from different sources and have different values
+and meanings.</p>
+<p>To create a data source, use the function
+<a class="reference internal" href="../schema/directory.html#directory-create-data-source-text"><span class="std std-ref">create_datasource</span></a>:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="n">directory</span><span class="mf">.</span><span class="n">create_datasource</span><span class="p">(</span><span class="s1">&#39;network-conf&#39;</span><span class="p">);</span>
+<span class="go">      create_datasource</span>
+<span class="go">------------------------------</span>
+<span class="go"> (2,network-conf,default,UTC)</span>
+</pre></div>
+</div>
+<p>The function returns a value of type <a class="reference internal" href="../schema/directory.html#directory-data-source"><span class="std std-ref">data_source</span></a>, and is the
+record inserted into the <a class="reference internal" href="../schema/directory.html#directory-data-source"><span class="std std-ref">data_source</span></a> table:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">directory</span><span class="mf">.</span><span class="n">datasource</span> <span class="k">where</span> <span class="n">id</span> <span class="o">=</span> <span class="mf">2</span><span class="p">;</span>
+<span class="go"> id |     name     | description | timezone</span>
+<span class="go">----+--------------+-------------+----------</span>
+<span class="go">  2 | network-conf | default     | UTC</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="store-attributes">
+<h2>Store Attributes<a class="headerlink" href="#store-attributes" title="Permalink to this headline">¶</a></h2>
+<p>To store attributes of entities, you have to create one or more attribute
+stores. One attribute store can hold data for exactly one entity type of one
+data source. What data an attribute store can hold is reflected in the name:
+&lt;data source name&gt;_&lt;entity type name&gt;</p>
+<div class="section" id="create-the-attribute-store">
+<h3>Create the attribute store<a class="headerlink" href="#create-the-attribute-store" title="Permalink to this headline">¶</a></h3>
+<p>Create an attribute store to hold data for the entity type ‘Port’ of data
+source ‘network-conf’:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="n">attribute_directory</span><span class="mf">.</span><span class="n">create_attributestore</span><span class="p">(</span><span class="s1">&#39;network-conf&#39;</span><span class="p">,</span> <span class="s1">&#39;Port&#39;</span><span class="p">,</span> <span class="k">ARRAY</span><span class="p">[(</span><span class="s1">&#39;speed&#39;</span><span class="p">,</span><span class="s1">&#39;integer&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)]</span><span class="o">::</span><span class="n">attribute_directory</span><span class="mf">.</span><span class="n">attribute_descr</span><span class="p">[]);</span>
+<span class="go"> create_attributestore</span>
+<span class="go">-----------------------</span>
+<span class="go"> (1,1,1)</span>
+</pre></div>
+</div>
+<p>Like the functions mentioned in the previous sections, this function also
+returns a value of its corresponding type
+<a class="reference internal" href="../schema/attribute_directory.html#attribute-directory-attribute-store"><span class="std std-ref">attribute_store</span></a>, which is the record inserted into the
+table <a class="reference internal" href="../schema/attribute_directory.html#attribute-directory-attribute-store"><span class="std std-ref">attribute_store</span></a>:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">attribute_directory</span><span class="mf">.</span><span class="n">attributestore</span> <span class="k">where</span> <span class="n">id</span> <span class="o">=</span> <span class="mf">2</span><span class="p">;</span>
+<span class="go"> id | datasource_id | entitytype_id</span>
+<span class="go">----+---------------+---------------</span>
+<span class="go">  1 |             1 |             1</span>
+</pre></div>
+</div>
+<p>Now this record doesn’t read as easily as the records seen in the previous
+sections about entities and data sources because there is no textual component
+in the attributestore record. An easy way to make this more readable is by
+using the to-text-cast to obtain the ‘name’ of the attribute store:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="n">attributestore</span><span class="o">::</span><span class="nb">text</span><span class="p">,</span> <span class="o">*</span> <span class="k">from</span> <span class="n">attribute_directory</span><span class="mf">.</span><span class="n">attributestore</span> <span class="k">where</span> <span class="n">id</span> <span class="o">=</span> <span class="mf">1</span><span class="p">;</span>
+<span class="go">  attributestore   | id | datasource_id | entitytype_id</span>
+<span class="go">-------------------+----+---------------+---------------</span>
+<span class="go"> network-conf_Port |  1 |             1 |             1</span>
+</pre></div>
+</div>
+<p>Here you can see the textual representation of the attribute store that is
+used for naming the corresponding tables, functions and views of the attribute
+store.</p>
+</div>
+<div class="section" id="store-attribute-data">
+<h3>Store attribute data<a class="headerlink" href="#store-attribute-data" title="Permalink to this headline">¶</a></h3>
+<p>Now the attribute store is ready to hold data, add an initial value. First
+insert the data into the staging table:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">insert</span> <span class="k">into</span> <span class="n">attribute_staging</span><span class="mf">.</span><span class="s s-Name">&quot;network-conf_Port&quot;</span><span class="p">(</span><span class="n">entity_id</span><span class="p">,</span> <span class="nb">timestamp</span><span class="p">,</span> <span class="n">speed</span><span class="p">)</span> <span class="k">values</span> <span class="p">(</span><span class="mf">2</span><span class="p">,</span> <span class="n">now</span><span class="p">(),</span> <span class="mf">1000</span><span class="p">);</span>
+<span class="go">INSERT 0 1</span>
+</pre></div>
+</div>
+<p>And then transfer the staged data to the history table:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="n">attribute_directory</span><span class="mf">.</span><span class="n">transfer_staged</span><span class="p">(</span><span class="n">attributestore</span><span class="p">)</span> <span class="k">from</span> <span class="n">attribute_directory</span><span class="mf">.</span><span class="n">attributestore</span> <span class="k">where</span> <span class="n">attributestore</span><span class="o">::</span><span class="nb">text</span> <span class="o">=</span> <span class="s1">&#39;network-conf_Port&#39;</span><span class="p">;</span>
+<span class="go"> transfer_staged</span>
+<span class="go">-----------------</span>
+<span class="go"> (1,1,1)</span>
+
+<span class="gp">minerva=#</span> <span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">attribute_history</span><span class="mf">.</span><span class="s s-Name">&quot;network-conf_Port&quot;</span><span class="p">;</span>
+<span class="go"> entity_id |           timestamp           | speed |       first_appearance        |           modified            |               hash</span>
+<span class="go"> -----------+-------------------------------+-------+-------------------------------+-------------------------------+----------------------------------</span>
+<span class="go">          2 | 2015-09-07 14:11:47.768745+00 |  1000 | 2015-09-07 14:14:51.160655+00 | 2015-09-07 14:14:51.160655+00 | a9b7ba70783b617e9998dc4dd82eb3c5</span>
+</pre></div>
+</div>
+<p>It can be difficult to script the insertion of attribute data when the entity
+Id is not yet known. For this reason, there is a convenience function to
+lookup the entity by its Distinguished Name, named <a class="reference internal" href="../schema/directory.html#directory-dn-to-entity-text"><span class="std std-ref">dn_to_entity(text) -&gt; directory.entity</span></a>.
+This function returns an existing entity or creates a new one and returns
+that. Now to combine that with adding a new attribute record that updates
+the ‘current’ state:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">insert</span> <span class="k">into</span> <span class="n">attribute_staging</span><span class="mf">.</span><span class="s s-Name">&quot;network-conf_Port&quot;</span><span class="p">(</span><span class="n">entity_id</span><span class="p">,</span> <span class="nb">timestamp</span><span class="p">,</span> <span class="n">speed</span><span class="p">)</span> <span class="k">values</span> <span class="p">((</span><span class="n">directory</span><span class="mf">.</span><span class="n">dn_to_entity</span><span class="p">(</span><span class="s1">&#39;Node=root,Slot=c1,Port=12&#39;</span><span class="p">))</span><span class="mf">.</span><span class="n">id</span><span class="p">,</span> <span class="n">now</span><span class="p">(),</span> <span class="mf">5000</span><span class="p">);</span>
+<span class="go">INSERT 0 1</span>
+
+<span class="gp">minerva=#</span> <span class="k">select</span> <span class="n">attribute_directory</span><span class="mf">.</span><span class="n">transfer_staged</span><span class="p">(</span><span class="n">attributestore</span><span class="p">)</span> <span class="k">from</span> <span class="n">attribute_directory</span><span class="mf">.</span><span class="n">attributestore</span> <span class="k">where</span> <span class="n">attributestore</span><span class="o">::</span><span class="nb">text</span> <span class="o">=</span> <span class="s1">&#39;network-conf_Port&#39;</span><span class="p">;</span>
+<span class="go"> transfer_staged</span>
+<span class="go">-----------------</span>
+<span class="go"> (2,2,3)</span>
+
+<span class="gp">minerva=#</span> <span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">attribute_history</span><span class="mf">.</span><span class="s s-Name">&quot;network-conf_Port&quot;</span><span class="p">;</span>
+<span class="go"> entity_id |           timestamp           | speed |       first_appearance        |           modified            |               hash</span>
+<span class="go">-----------+-------------------------------+-------+-------------------------------+-------------------------------+----------------------------------</span>
+<span class="go">         2 | 2015-09-07 14:11:47.768745+00 |  1000 | 2015-09-07 14:14:51.160655+00 | 2015-09-07 14:14:51.160655+00 | a9b7ba70783b617e9998dc4dd82eb3c5</span>
+<span class="go">         2 | 2015-09-07 14:27:13.738692+00 |  5000 | 2015-09-07 14:27:18.066607+00 | 2015-09-07 14:27:18.066607+00 | a35fe7f7fe8217b4369a0af4244d1fca</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="store-trends">
+<h2>Store Trends<a class="headerlink" href="#store-trends" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="create-the-trend-store">
+<h3>Create the trend store<a class="headerlink" href="#create-the-trend-store" title="Permalink to this headline">¶</a></h3>
+<p>Create a trend store to hold data for the entity type ‘Port’ of data source
+‘network-measurements’ with a granularity of 15 minutes:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="n">trend</span><span class="mf">.</span><span class="n">create_trendstore</span><span class="p">(</span><span class="s1">&#39;network-measurements&#39;</span><span class="p">,</span> <span class="s1">&#39;Port&#39;</span><span class="p">,</span> <span class="s1">&#39;900&#39;</span><span class="p">,</span> <span class="k">ARRAY</span><span class="p">[(</span><span class="s1">&#39;bytes_transferred&#39;</span><span class="p">,</span> <span class="s1">&#39;bigint&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)]</span><span class="o">::</span><span class="n">trend</span><span class="mf">.</span><span class="n">trend_descr</span><span class="p">[]);</span>
+<span class="go">         create_trendstore</span>
+<span class="go">-----------------------------------</span>
+<span class="go"> (1,3,3,900,21600,table,4,&quot;1 mon&quot;)</span>
+</pre></div>
+</div>
+<p>The return value is of type <cite>trend.trendstore</cite> and holds the record inserted into the trend.trendstore table:</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="gp">minerva=#</span> <span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">trend</span><span class="mf">.</span><span class="n">trendstore</span> <span class="k">where</span> <span class="n">id</span> <span class="o">=</span> <span class="mf">1</span><span class="p">;</span>
+<span class="go"> id | entitytype_id | datasource_id | granularity | partition_size | type  | version | retention_period</span>
+<span class="go">----+---------------+---------------+-------------+----------------+-------+---------+------------------</span>
+<span class="go">  1 |             3 |             3 | 900         |          21600 | table |       4 | 1 mon</span>
+</pre></div>
+</div>
+<p>By default, a trend store with a granularity of 900 seconds is partitioned
+into tables with a partition size of 6 hours (21600 seconds) and has a data
+retention period of 1 month.</p>
+</div>
+</div>
+<div class="section" id="materialize-trend-data">
+<h2>Materialize Trend Data<a class="headerlink" href="#materialize-trend-data" title="Permalink to this headline">¶</a></h2>
+<p>To be documented</p>
+</div>
+<div class="section" id="define-triggers">
+<h2>Define Triggers<a class="headerlink" href="#define-triggers" title="Permalink to this headline">¶</a></h2>
+<p>Triggers are defined in a number of steps:</p>
+<ol class="arabic simple">
+<li>Create a function that returns records with all KPI’s, measurement values, etc that are needed to calculate the notifications for a specific timestamp.</li>
+<li>Create the new rule with it’s name and thresholds.</li>
+<li>Define the actual rule in the form of a where-clause.</li>
+<li>Set the threshold values for the defined thresholds in step 1.</li>
+<li>Define the weighing function.</li>
+<li>Define the notification details text.</li>
+</ol>
+<p>Here, we will work out an example trigger named ‘high_traffic’.</p>
+<div class="section" id="create-kpi-function">
+<h3>Create KPI function<a class="headerlink" href="#create-kpi-function" title="Permalink to this headline">¶</a></h3>
+<p>This function should return all data that is required for the actual rule and
+weight calculation. Before we can create this function, we need to define a
+return record type:</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">TYPE</span> <span class="n">trigger_rule</span><span class="mf">.</span><span class="n">high_traffic_kpi</span> <span class="k">AS</span> <span class="p">(</span>
+    <span class="n">entity_id</span> <span class="nb">integer</span><span class="p">,</span>
+    <span class="nb">timestamp</span> <span class="nb">timestamp</span> <span class="nb">with time zone</span><span class="p">,</span>
+    <span class="n">traffic</span> <span class="nb">bigint</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+<p>Now we can create the actual function:</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">FUNCTION</span> <span class="n">trigger_rule</span><span class="mf">.</span><span class="n">high_traffic_kpi</span><span class="p">(</span><span class="nb">timestamp</span> <span class="nb">with time zone</span><span class="p">)</span>
+    <span class="k">RETURNS</span> <span class="k">SETOF</span> <span class="n">trigger_rule</span><span class="mf">.</span><span class="n">high_traffic_kpi</span>
+<span class="k">AS</span> <span class="s">$$</span>
+<span class="k">BEGIN</span>
+    <span class="k">RETURNS</span> <span class="k">QUERY</span> <span class="k">EXECUTE</span> <span class="s">$</span><span class="dl">query</span><span class="s">$</span>
+<span class="s">    SELECT entity_id, timestamp, traffic</span>
+<span class="s">    FROM trend.&quot;network-measurements_Port_qtr&quot;</span>
+<span class="s">    WHERE timestamp = $1</span>
+<span class="s">    $</span><span class="dl">query</span><span class="s">$</span> <span class="k">USING</span> <span class="nv">$1</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="s">$$</span> <span class="k">LANGUAGE</span> <span class="n">plpgsql</span> <span class="k">STABLE</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="create-new-rule">
+<h3>Create New Rule<a class="headerlink" href="#create-new-rule" title="Permalink to this headline">¶</a></h3>
+<p>The following statement defines the rule in the system.</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">SELECT</span> <span class="k">trigger</span><span class="mf">.</span><span class="n">create_rule</span><span class="p">(</span>
+    <span class="s1">&#39;high_traffic&#39;</span><span class="p">,</span>
+    <span class="k">ARRAY</span><span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;max_traffic&#39;</span><span class="p">,</span> <span class="s1">&#39;bigint&#39;</span><span class="p">)</span>
+    <span class="p">]</span><span class="o">::</span><span class="k">trigger</span><span class="mf">.</span><span class="n">threshold_def</span><span class="p">[]</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="define-rule-condition">
+<h3>Define Rule Condition<a class="headerlink" href="#define-rule-condition" title="Permalink to this headline">¶</a></h3>
+<p>Now set the actual condition of the rule that defines when a record results in
+a notification:</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">SELECT</span> <span class="k">trigger</span><span class="mf">.</span><span class="n">set_condition</span><span class="p">(</span>
+    <span class="s1">&#39;high_traffic&#39;</span><span class="p">,</span>
+    <span class="s">$</span><span class="dl">predicate</span><span class="s">$</span>
+<span class="s">    traffic &gt; max_traffic</span>
+<span class="s">    $</span><span class="dl">predicate</span><span class="s">$</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="set-threshold-values">
+<h3>Set Threshold Values<a class="headerlink" href="#set-threshold-values" title="Permalink to this headline">¶</a></h3>
+<p>Set the threshold values for the condition. The arguments are in the same order
+as defined in the create_rule statement:</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">SELECT</span> <span class="n">trigger_rule</span><span class="mf">.</span><span class="s s-Name">&quot;high_traffic_set_thresholds&quot;</span><span class="p">(</span><span class="mf">50000</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="define-weighing-function">
+<h3>Define Weighing Function<a class="headerlink" href="#define-weighing-function" title="Permalink to this headline">¶</a></h3>
+<p>The logic for determining the weight of a notification can be as complex as you
+want, or as simple as a constant value. Here we choose a simple case selection:</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">SELECT</span> <span class="k">trigger</span><span class="mf">.</span><span class="n">set_weight</span><span class="p">(</span>
+    <span class="s1">&#39;high_traffic&#39;</span><span class="p">,</span>
+    <span class="s">$</span><span class="dl">query</span><span class="s">$</span>
+<span class="s">    SELECT CASE</span>
+<span class="s">    WHEN $1.traffic &gt; 1000000 THEN</span>
+<span class="s">        100</span>
+<span class="s">    WHEN $1.traffic &gt; 500000 THEN</span>
+<span class="s">        50</span>
+<span class="s">    ELSE</span>
+<span class="s">        10</span>
+<span class="s">    END</span>
+<span class="s">    $</span><span class="dl">query</span><span class="s">$</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="define-notification-details">
+<h3>Define Notification Details<a class="headerlink" href="#define-notification-details" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">SELECT</span> <span class="k">trigger</span><span class="mf">.</span><span class="n">define_notification</span><span class="p">(</span>
+    <span class="s1">&#39;high_traffic&#39;</span><span class="p">,</span>
+    <span class="s">$</span><span class="dl">details</span><span class="s">$</span>
+<span class="s">    SELECT format(&#39;traffic(%s) &gt; max_traffic(%s)&#39;, $1.traffic, $1.max_traffic);</span>
+<span class="s">    $</span><span class="dl">details</span><span class="s">$</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">How To</a><ul>
+<li><a class="reference internal" href="#create-entities">Create Entities</a></li>
+<li><a class="reference internal" href="#define-data-sources">Define Data Sources</a></li>
+<li><a class="reference internal" href="#store-attributes">Store Attributes</a><ul>
+<li><a class="reference internal" href="#create-the-attribute-store">Create the attribute store</a></li>
+<li><a class="reference internal" href="#store-attribute-data">Store attribute data</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#store-trends">Store Trends</a><ul>
+<li><a class="reference internal" href="#create-the-trend-store">Create the trend store</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#materialize-trend-data">Materialize Trend Data</a></li>
+<li><a class="reference internal" href="#define-triggers">Define Triggers</a><ul>
+<li><a class="reference internal" href="#create-kpi-function">Create KPI function</a></li>
+<li><a class="reference internal" href="#create-new-rule">Create New Rule</a></li>
+<li><a class="reference internal" href="#define-rule-condition">Define Rule Condition</a></li>
+<li><a class="reference internal" href="#set-threshold-values">Set Threshold Values</a></li>
+<li><a class="reference internal" href="#define-weighing-function">Define Weighing Function</a></li>
+<li><a class="reference internal" href="#define-notification-details">Define Notification Details</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">User Guide</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../schema/index.html"
+                        title="next chapter">Schema Reference</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/user_guide/how_to.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../schema/index.html" title="Schema Reference"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="User Guide"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >User Guide</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2013, Hendrikx ITC.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

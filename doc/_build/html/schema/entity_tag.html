@@ -1,0 +1,278 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>entity_tag &#8212; Minerva Schema 5.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="metric" href="metric.html" />
+    <link rel="prev" title="directory" href="directory.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="metric.html" title="metric"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="directory.html" title="directory"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Schema Reference</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="entity-tag">
+<h1>entity_tag<a class="headerlink" href="#entity-tag" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="tables">
+<h2>Tables<a class="headerlink" href="#tables" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="type">
+<span id="entity-tag-type"></span><h3>type<a class="headerlink" href="#type" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="38%" />
+<col width="22%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>name</td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>tag_group_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="entity-tag-link-staging">
+<span id="entity-tag-entity-tag-link-staging"></span><h3>entity_tag_link_staging<a class="headerlink" href="#entity-tag-link-staging" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="38%" />
+<col width="22%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>entity_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>tag_name</td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>tag_group_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="59%" />
+<col width="30%" />
+<col width="11%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Return Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="#entity-tag-create-view-sql-char-text"><span class="std std-ref">create_view_sql(char[], text)</span></a></td>
+<td>text[]</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#entity-tag-define-char-text-text"><span class="std std-ref">define(char[], text, text)</span></a></td>
+<td>entity_tag.type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#entity-tag-add-new-tags"><span class="std std-ref">add_new_tags()</span></a></td>
+<td>bigint</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#entity-tag-create-view-char-text"><span class="std std-ref">create_view(char[], text)</span></a></td>
+<td>name</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#entity-tag-transfer-to-staging-char"><span class="std std-ref">transfer_to_staging(char[])</span></a></td>
+<td>bigint</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#entity-tag-add-new-links-integer"><span class="std std-ref">add_new_links(integer)</span></a></td>
+<td>bigint</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#entity-tag-remove-obsolete-links"><span class="std std-ref">remove_obsolete_links()</span></a></td>
+<td>bigint</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#entity-tag-process-staged-links-integer"><span class="std std-ref">process_staged_links(integer)</span></a></td>
+<td>entity_tag.process_staged_links_result</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#entity-tag-update-char-integer"><span class="std std-ref">update(char[], integer)</span></a></td>
+<td>entity_tag.update_result</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="create-view-sql-char-text-text">
+<span id="entity-tag-create-view-sql-char-text"></span><h3>create_view_sql(char[], text) -&gt; text[]<a class="headerlink" href="#create-view-sql-char-text-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-char-text-text-entity-tag-type">
+<span id="entity-tag-define-char-text-text"></span><h3>define(char[], text, text) -&gt; entity_tag.type<a class="headerlink" href="#define-char-text-text-entity-tag-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="add-new-tags-bigint">
+<span id="entity-tag-add-new-tags"></span><h3>add_new_tags() -&gt; bigint<a class="headerlink" href="#add-new-tags-bigint" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-view-char-text-name">
+<span id="entity-tag-create-view-char-text"></span><h3>create_view(char[], text) -&gt; name<a class="headerlink" href="#create-view-char-text-name" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="transfer-to-staging-char-bigint">
+<span id="entity-tag-transfer-to-staging-char"></span><h3>transfer_to_staging(char[]) -&gt; bigint<a class="headerlink" href="#transfer-to-staging-char-bigint" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="add-new-links-integer-bigint">
+<span id="entity-tag-add-new-links-integer"></span><h3>add_new_links(integer) -&gt; bigint<a class="headerlink" href="#add-new-links-integer-bigint" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="remove-obsolete-links-bigint">
+<span id="entity-tag-remove-obsolete-links"></span><h3>remove_obsolete_links() -&gt; bigint<a class="headerlink" href="#remove-obsolete-links-bigint" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="process-staged-links-integer-entity-tag-process-staged-links-result">
+<span id="entity-tag-process-staged-links-integer"></span><h3>process_staged_links(integer) -&gt; entity_tag.process_staged_links_result<a class="headerlink" href="#process-staged-links-integer-entity-tag-process-staged-links-result" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="update-char-integer-entity-tag-update-result">
+<span id="entity-tag-update-char-integer"></span><h3>update(char[], integer) -&gt; entity_tag.update_result<a class="headerlink" href="#update-char-integer-entity-tag-update-result" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">entity_tag</a><ul>
+<li><a class="reference internal" href="#tables">Tables</a><ul>
+<li><a class="reference internal" href="#type">type</a></li>
+<li><a class="reference internal" href="#entity-tag-link-staging">entity_tag_link_staging</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#create-view-sql-char-text-text">create_view_sql(char[], text) -&gt; text[]</a></li>
+<li><a class="reference internal" href="#define-char-text-text-entity-tag-type">define(char[], text, text) -&gt; entity_tag.type</a></li>
+<li><a class="reference internal" href="#add-new-tags-bigint">add_new_tags() -&gt; bigint</a></li>
+<li><a class="reference internal" href="#create-view-char-text-name">create_view(char[], text) -&gt; name</a></li>
+<li><a class="reference internal" href="#transfer-to-staging-char-bigint">transfer_to_staging(char[]) -&gt; bigint</a></li>
+<li><a class="reference internal" href="#add-new-links-integer-bigint">add_new_links(integer) -&gt; bigint</a></li>
+<li><a class="reference internal" href="#remove-obsolete-links-bigint">remove_obsolete_links() -&gt; bigint</a></li>
+<li><a class="reference internal" href="#process-staged-links-integer-entity-tag-process-staged-links-result">process_staged_links(integer) -&gt; entity_tag.process_staged_links_result</a></li>
+<li><a class="reference internal" href="#update-char-integer-entity-tag-update-result">update(char[], integer) -&gt; entity_tag.update_result</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="directory.html"
+                        title="previous chapter">directory</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="metric.html"
+                        title="next chapter">metric</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/schema/entity_tag.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="metric.html" title="metric"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="directory.html" title="directory"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Schema Reference</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2013, Hendrikx ITC.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

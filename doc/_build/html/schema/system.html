@@ -1,0 +1,475 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>system &#8212; Minerva Schema 5.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="trend" href="trend.html" />
+    <link rel="prev" title="relation_directory" href="relation_directory.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="trend.html" title="trend"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="relation_directory.html" title="relation_directory"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Schema Reference</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="system">
+<h1>system<a class="headerlink" href="#system" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="tables">
+<h2>Tables<a class="headerlink" href="#tables" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="job-source">
+<span id="system-job-source"></span><h3>job_source<a class="headerlink" href="#job-source" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="29%" />
+<col width="26%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>name</td>
+<td>varchar</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>job_type</td>
+<td>varchar</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>config</td>
+<td>json</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="job">
+<span id="system-job"></span><h3>job<a class="headerlink" href="#job" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="35%" />
+<col width="33%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>type</td>
+<td>varchar</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>description</td>
+<td>json</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>size</td>
+<td>int8</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>started</td>
+<td>timestamptz</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>finished</td>
+<td>timestamptz</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>job_source_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>created</td>
+<td>timestamptz</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>state</td>
+<td>job_state_enum</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="job-error-log">
+<span id="system-job-error-log"></span><h3>job_error_log<a class="headerlink" href="#job-error-log" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="27%" />
+<col width="27%" />
+<col width="45%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>job_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>message</td>
+<td>varchar</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="setting">
+<span id="system-setting"></span><h3>setting<a class="headerlink" href="#setting" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="26%" />
+<col width="26%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>name</td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>value</td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="job-queue">
+<span id="system-job-queue"></span><h3>job_queue<a class="headerlink" href="#job-queue" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="26%" />
+<col width="26%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>job_id</td>
+<td>int4</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="80%" />
+<col width="12%" />
+<col width="8%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Return Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="#system-version-gtlt-version-system-version-tuple-system-version-tuple"><span class="std std-ref">version_gtlt_version(system.version_tuple, system.version_tuple)</span></a></td>
+<td>boolean</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-set-version-system-version-tuple"><span class="std std-ref">set_version(system.version_tuple)</span></a></td>
+<td>system.version_tuple</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-set-version-integer-integer-integer"><span class="std std-ref">set_version(integer, integer, integer)</span></a></td>
+<td>system.version_tuple</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-get-job"><span class="std std-ref">get_job()</span></a></td>
+<td>system.job_type</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-finish-job-integer"><span class="std std-ref">finish_job(integer)</span></a></td>
+<td>void</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-fail-job-integer"><span class="std std-ref">fail_job(integer)</span></a></td>
+<td>void</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-fail-job-integer-text"><span class="std std-ref">fail_job(integer, text)</span></a></td>
+<td>void</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-create-job-source-text-text-json"><span class="std std-ref">create_job_source(text, text, json)</span></a></td>
+<td>system.job_source</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-remove-jobs-timestamp-with-time-zone-bigint"><span class="std std-ref">remove_jobs(timestamp with time zone, bigint)</span></a></td>
+<td>bigint</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-get-setting-text"><span class="std std-ref">get_setting(text)</span></a></td>
+<td>system.setting</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-add-setting-text-text"><span class="std std-ref">add_setting(text, text)</span></a></td>
+<td>system.setting</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-update-setting-text-text"><span class="std std-ref">update_setting(text, text)</span></a></td>
+<td>system.setting</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-get-setting-value-text-text"><span class="std std-ref">get_setting_value(text, text)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-get-job-source-integer"><span class="std std-ref">get_job_source(integer)</span></a></td>
+<td>system.job_source</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-version"><span class="std std-ref">version()</span></a></td>
+<td>system.version_tuple</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-enqueue-job-system-job"><span class="std std-ref">enqueue_job(system.job)</span></a></td>
+<td>system.job</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-define-job-character-varying-json-bigint-integer"><span class="std std-ref">define_job(character varying, json, bigint, integer)</span></a></td>
+<td>system.job</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-create-job-character-varying-json-bigint-integer"><span class="std std-ref">create_job(character varying, json, bigint, integer)</span></a></td>
+<td>system.job</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#system-set-setting-text-text"><span class="std std-ref">set_setting(text, text)</span></a></td>
+<td>system.setting</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#system-get-setting-value-text"><span class="std std-ref">get_setting_value(text)</span></a></td>
+<td>text</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="version-gtlt-version-system-version-tuple-system-version-tuple-boolean">
+<span id="system-version-gtlt-version-system-version-tuple-system-version-tuple"></span><h3>version_gtlt_version(system.version_tuple, system.version_tuple) -&gt; boolean<a class="headerlink" href="#version-gtlt-version-system-version-tuple-system-version-tuple-boolean" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="set-version-system-version-tuple-system-version-tuple">
+<span id="system-set-version-system-version-tuple"></span><h3>set_version(system.version_tuple) -&gt; system.version_tuple<a class="headerlink" href="#set-version-system-version-tuple-system-version-tuple" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="set-version-integer-integer-integer-system-version-tuple">
+<span id="system-set-version-integer-integer-integer"></span><h3>set_version(integer, integer, integer) -&gt; system.version_tuple<a class="headerlink" href="#set-version-integer-integer-integer-system-version-tuple" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-job-system-job-type">
+<span id="system-get-job"></span><h3>get_job() -&gt; system.job_type<a class="headerlink" href="#get-job-system-job-type" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="finish-job-integer-void">
+<span id="system-finish-job-integer"></span><h3>finish_job(integer) -&gt; void<a class="headerlink" href="#finish-job-integer-void" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="fail-job-integer-void">
+<span id="system-fail-job-integer"></span><h3>fail_job(integer) -&gt; void<a class="headerlink" href="#fail-job-integer-void" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="fail-job-integer-text-void">
+<span id="system-fail-job-integer-text"></span><h3>fail_job(integer, text) -&gt; void<a class="headerlink" href="#fail-job-integer-text-void" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-job-source-text-text-json-system-job-source">
+<span id="system-create-job-source-text-text-json"></span><h3>create_job_source(text, text, json) -&gt; system.job_source<a class="headerlink" href="#create-job-source-text-text-json-system-job-source" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="remove-jobs-timestamp-with-time-zone-bigint-bigint">
+<span id="system-remove-jobs-timestamp-with-time-zone-bigint"></span><h3>remove_jobs(timestamp with time zone, bigint) -&gt; bigint<a class="headerlink" href="#remove-jobs-timestamp-with-time-zone-bigint-bigint" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-setting-text-system-setting">
+<span id="system-get-setting-text"></span><h3>get_setting(text) -&gt; system.setting<a class="headerlink" href="#get-setting-text-system-setting" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="add-setting-text-text-system-setting">
+<span id="system-add-setting-text-text"></span><h3>add_setting(text, text) -&gt; system.setting<a class="headerlink" href="#add-setting-text-text-system-setting" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="update-setting-text-text-system-setting">
+<span id="system-update-setting-text-text"></span><h3>update_setting(text, text) -&gt; system.setting<a class="headerlink" href="#update-setting-text-text-system-setting" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-setting-value-text-text-text">
+<span id="system-get-setting-value-text-text"></span><h3>get_setting_value(text, text) -&gt; text<a class="headerlink" href="#get-setting-value-text-text-text" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-job-source-integer-system-job-source">
+<span id="system-get-job-source-integer"></span><h3>get_job_source(integer) -&gt; system.job_source<a class="headerlink" href="#get-job-source-integer-system-job-source" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="version-system-version-tuple">
+<span id="system-version"></span><h3>version() -&gt; system.version_tuple<a class="headerlink" href="#version-system-version-tuple" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="enqueue-job-system-job-system-job">
+<span id="system-enqueue-job-system-job"></span><h3>enqueue_job(system.job) -&gt; system.job<a class="headerlink" href="#enqueue-job-system-job-system-job" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="define-job-character-varying-json-bigint-integer-system-job">
+<span id="system-define-job-character-varying-json-bigint-integer"></span><h3>define_job(character varying, json, bigint, integer) -&gt; system.job<a class="headerlink" href="#define-job-character-varying-json-bigint-integer-system-job" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="create-job-character-varying-json-bigint-integer-system-job">
+<span id="system-create-job-character-varying-json-bigint-integer"></span><h3>create_job(character varying, json, bigint, integer) -&gt; system.job<a class="headerlink" href="#create-job-character-varying-json-bigint-integer-system-job" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="set-setting-text-text-system-setting">
+<span id="system-set-setting-text-text"></span><h3>set_setting(text, text) -&gt; system.setting<a class="headerlink" href="#set-setting-text-text-system-setting" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="get-setting-value-text-text">
+<span id="system-get-setting-value-text"></span><h3>get_setting_value(text) -&gt; text<a class="headerlink" href="#get-setting-value-text-text" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">system</a><ul>
+<li><a class="reference internal" href="#tables">Tables</a><ul>
+<li><a class="reference internal" href="#job-source">job_source</a></li>
+<li><a class="reference internal" href="#job">job</a></li>
+<li><a class="reference internal" href="#job-error-log">job_error_log</a></li>
+<li><a class="reference internal" href="#setting">setting</a></li>
+<li><a class="reference internal" href="#job-queue">job_queue</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#version-gtlt-version-system-version-tuple-system-version-tuple-boolean">version_gtlt_version(system.version_tuple, system.version_tuple) -&gt; boolean</a></li>
+<li><a class="reference internal" href="#set-version-system-version-tuple-system-version-tuple">set_version(system.version_tuple) -&gt; system.version_tuple</a></li>
+<li><a class="reference internal" href="#set-version-integer-integer-integer-system-version-tuple">set_version(integer, integer, integer) -&gt; system.version_tuple</a></li>
+<li><a class="reference internal" href="#get-job-system-job-type">get_job() -&gt; system.job_type</a></li>
+<li><a class="reference internal" href="#finish-job-integer-void">finish_job(integer) -&gt; void</a></li>
+<li><a class="reference internal" href="#fail-job-integer-void">fail_job(integer) -&gt; void</a></li>
+<li><a class="reference internal" href="#fail-job-integer-text-void">fail_job(integer, text) -&gt; void</a></li>
+<li><a class="reference internal" href="#create-job-source-text-text-json-system-job-source">create_job_source(text, text, json) -&gt; system.job_source</a></li>
+<li><a class="reference internal" href="#remove-jobs-timestamp-with-time-zone-bigint-bigint">remove_jobs(timestamp with time zone, bigint) -&gt; bigint</a></li>
+<li><a class="reference internal" href="#get-setting-text-system-setting">get_setting(text) -&gt; system.setting</a></li>
+<li><a class="reference internal" href="#add-setting-text-text-system-setting">add_setting(text, text) -&gt; system.setting</a></li>
+<li><a class="reference internal" href="#update-setting-text-text-system-setting">update_setting(text, text) -&gt; system.setting</a></li>
+<li><a class="reference internal" href="#get-setting-value-text-text-text">get_setting_value(text, text) -&gt; text</a></li>
+<li><a class="reference internal" href="#get-job-source-integer-system-job-source">get_job_source(integer) -&gt; system.job_source</a></li>
+<li><a class="reference internal" href="#version-system-version-tuple">version() -&gt; system.version_tuple</a></li>
+<li><a class="reference internal" href="#enqueue-job-system-job-system-job">enqueue_job(system.job) -&gt; system.job</a></li>
+<li><a class="reference internal" href="#define-job-character-varying-json-bigint-integer-system-job">define_job(character varying, json, bigint, integer) -&gt; system.job</a></li>
+<li><a class="reference internal" href="#create-job-character-varying-json-bigint-integer-system-job">create_job(character varying, json, bigint, integer) -&gt; system.job</a></li>
+<li><a class="reference internal" href="#set-setting-text-text-system-setting">set_setting(text, text) -&gt; system.setting</a></li>
+<li><a class="reference internal" href="#get-setting-value-text-text">get_setting_value(text) -&gt; text</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="relation_directory.html"
+                        title="previous chapter">relation_directory</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="trend.html"
+                        title="next chapter">trend</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/schema/system.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="trend.html" title="trend"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="relation_directory.html" title="relation_directory"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Minerva Schema 5.0.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Schema Reference</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2013, Hendrikx ITC.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>
