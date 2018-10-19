@@ -7,15 +7,12 @@ node('git'){
     sh "mkdir -p test_results && chmod 777 test_results"
     sh "rm -f test_results/*"
 
-    def img = docker.build('minerva50db_test', '-f test.dockerfile .')
-    img.withRun("-v ${WORKSPACE}/test_results/:/test_results/ -v ${WORKSPACE}/tests/:/tests/"){
-
+    def img = docker.build("database_unittest", "-f test.Dockerfile .")
+    img.withRun("-v ${WORKSPACE}/test_results:/test_results -v ${WORKSPACE}/tests:/tests") {
+        /* do nothning */
     }
 
-    sh "echo ${WORKSPACE}"
-
-    archiveArtifacts("${WORKSPACE}/test_results/*.tap")
-    step([$class: 'TapPublisher', testResults: "${WORKSPACE}/test_results/*.tap"])
+    archive("database/test_results/*.tap")
   }
 
   stage('Build documentation') {
