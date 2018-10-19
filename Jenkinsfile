@@ -12,7 +12,7 @@ node('git'){
         /* do nothning */
     }
 
-    archiveArtifacts("/test_results/*.tap")
+    archiveArtifacts("${WORKSPACE}/test_results/*.tap")
   }
 
   stage('Build documentation') {
