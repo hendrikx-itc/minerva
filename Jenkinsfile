@@ -13,8 +13,8 @@ node('git'){
 
     sh "echo ${WORKSPACE}"
 
-    archiveArtifacts("./test_results/*.tap")
-    step([$class: 'TapPublisher', testResults: "./test_results/*.tap"])
+    archiveArtifacts("${WORKSPACE}/test_results/*.tap")
+    step([$class: 'TapPublisher', testResults: "${WORKSPACE}/test_results/*.tap"])
   }
 
   stage('Build documentation') {
