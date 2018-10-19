@@ -7,7 +7,7 @@ node('git'){
     sh "rm -f test_results/*"
 
     def img = docker.build('minerva50db', '-f develop.dockerfile .')
-    img.withRun("-v ${WORKSPACE}/test_results:/test_results -v ${WORKSPACE}/tests:/tests"){
+    img.withRun("-v ${WORKSPACE}/test_results/:/test_results/ -v ${WORKSPACE}/tests/:/tests/"){
 
     }
 
