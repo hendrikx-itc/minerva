@@ -17,14 +17,19 @@ node('git'){
   }
 
   stage('Build documentation') {
+    sh 'chmod 777 doc/*'
+    sh 'rm -r doc/_build'
+
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
-    img.withRun("-v ${WORKSPACE}/doc/:/documents/"){
-      img.inside {
-        sh "ls -la"
-      }
+    img.inside(){
+      sh "cd doc/ && make html"
     }
 
-    sh "tar -czvf readthedocs.tar.gz doc/_build"
+    sh "tar -czvf readthedocs.tar.gz doc/_build/*"
     archiveArtifacts("readthedocs.tar.gz")
+  }
+
+  stage('Publish documentation') {
+    sh "cp -R ${WORKSPACE}/doc/_build/html/* /documentation/minerva-prototype-doc/"
   }
 }
