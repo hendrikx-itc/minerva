@@ -17,9 +17,10 @@ node('git'){
   }
 
   stage('Build documentation') {
+    sh 'chmod 777 doc/*'
+    
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
     img.withRun("-v ${WORKSPACE}/doc/:/documents/"){
-      sh 'chmod 777 doc/*'
       sh 'cd doc && make html'
     }
 
