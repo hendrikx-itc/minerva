@@ -4,6 +4,7 @@ node('git'){
   }
 
   stage('Unittests database') {
+    sh "mkdir -p test_results && chmod 777 test_results"
     sh "rm -f test_results/*"
 
     def img = docker.build('minerva50db', '-f develop.dockerfile .')
