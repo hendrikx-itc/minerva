@@ -25,4 +25,8 @@ node('git'){
     sh "tar -czvf readthedocs.tar.gz doc/_build/*"
     archiveArtifacts("readthedocs.tar.gz")
   }
+
+  stage('Publish documentation') {
+    sh "cp -R ${WORKSPACE}/doc/_build/html/* /documentation/minerva-prototype-doc/"
+  }
 }
