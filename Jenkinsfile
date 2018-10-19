@@ -19,6 +19,7 @@ node('git'){
   stage('Build documentation') {
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
     img.inside("-v ${WORKSPACE}/doc/:/documents/"){
+      sh 'chown root:root /doc/*'
       sh 'cd doc && make html'
     }
 
