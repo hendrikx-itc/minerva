@@ -17,11 +17,9 @@ node('git'){
   }
 
   stage('Build documentation') {
-    dir('doc') {
-      def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
-      img.withRun("-v ${WORKSPACE}/doc/:/documents/"){
-        sh "make html"
-      }
+    def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
+    img.withRun("-v ${WORKSPACE}/doc/:/documents/"){
+      
     }
 
     sh "tar -czvf readthedocs.tar.gz doc/_build"

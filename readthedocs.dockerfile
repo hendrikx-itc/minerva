@@ -13,6 +13,4 @@ RUN mkdir documents
 
 WORKDIR /documents
 
-RUN ls -la
-
-CMD ["/bin/bash"]
+CMD ["make html"]
