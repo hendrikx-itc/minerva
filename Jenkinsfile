@@ -18,8 +18,10 @@ node('git'){
 
   stage('Build documentation') {
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
-    img.inside("-v ${WORKSPACE}/doc/:/documents/", "make html"){
-
+    img.withRun("-v ${WORKSPACE}/doc/:/documents/"){
+      img.inside {
+        sh "ls -la"
+      }
     }
 
     sh "tar -czvf readthedocs.tar.gz doc/_build"
