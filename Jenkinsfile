@@ -22,6 +22,7 @@ node('git'){
 
     }
 
-    archiveArtifacts("doc/*")
+    sh "tar -czvf readthedocs.tar.gz doc/"
+    archiveArtifacts("readthedocs.tar.gz")
   }
 }
