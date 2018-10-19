@@ -17,11 +17,11 @@ node('git'){
   }
 
   stage('Build documentation') {
-    sh 'chown -R root doc/'
-
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
     img.withRun("-v ${WORKSPACE}/doc/:/documents/"){
-      sh 'cd doc && make html'
+      img.inside {
+        sh "ls -la"
+      }
     }
 
     sh "tar -czvf readthedocs.tar.gz doc/_build"
