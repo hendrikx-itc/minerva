@@ -2,7 +2,7 @@ FROM ubuntu:latest
 
 # Usage:
 # docker run -it -v <your directory>:/documents/
-
+RUN apt-get install -y git
 
 ENV DEBIAN_FRONTEND noninteractive
 
