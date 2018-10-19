@@ -13,4 +13,4 @@ RUN mkdir documents
 
 WORKDIR /documents
 
-CMD ["make html"]
+CMD ["/bin/bash"]
