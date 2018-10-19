@@ -12,7 +12,7 @@ node('git'){
         /* do nothning */
     }
 
-    archive("database/test_results/*.tap")
+    archiveArtifacts("/test_results/*.tap")
   }
 
   stage('Build documentation') {
