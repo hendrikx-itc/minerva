@@ -12,6 +12,5 @@ RUN apt-get update && apt-get install -y -q python-sphinx texlive texlive-latex-
 RUN mkdir documents
 
 WORKDIR /documents
-VOLUME /documents
 
 CMD ["/bin/bash"]
