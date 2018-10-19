@@ -1,6 +1,6 @@
 #!/bin/bash
-TESTS_DIR="/mimir/tests"
-RESULTS_DIR="/mimir/test_results"
+TESTS_DIR="/tests"
+RESULTS_DIR="/test_results"
 
 echo "Running Tests..."
 find $TESTS_DIR -type f -name '*.sql' | while read filepath
