@@ -11,7 +11,7 @@ node('git'){
 
     }
 
-    archive('database/test_results/*.tap')
+    archiveArtifacts('database/test_results/*.tap')
     step([$class: 'TapPublisher', testResults: 'database/test_results/*.tap'])
   }
 
@@ -20,5 +20,7 @@ node('git'){
     img.withRun("-v ${WORKSPACE}/doc/:/documents/", "make html"){
 
     }
+
+
   }
 }
