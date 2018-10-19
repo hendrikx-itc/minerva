@@ -19,7 +19,7 @@ node('git'){
   stage('Build documentation') {
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
     img.inside(){
-      sh "cd /doc/ && make html"
+      sh "cd doc/ && make html"
     }
 
     sh "tar -czvf readthedocs.tar.gz doc/_build/*"
