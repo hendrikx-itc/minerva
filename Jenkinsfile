@@ -11,8 +11,10 @@ node('git'){
 
     }
 
-    archiveArtifacts("/test_results/*.tap")
-    step([$class: 'TapPublisher', testResults: "/test_results/*.tap"])
+    sh "echo ${WORKSPACE}"
+
+    archiveArtifacts("./test_results/*.tap")
+    step([$class: 'TapPublisher', testResults: "./test_results/*.tap"])
   }
 
   stage('Build documentation') {
