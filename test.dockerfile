@@ -24,3 +24,4 @@ RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
 
 COPY run-tests /docker-entrypoint-initdb.d/
 RUN chmod +x /docker-entrypoint-initdb.d/run-tests
+CMD ["/docker-entrypoint-initdb.d/run-tests"]
