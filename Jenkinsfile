@@ -17,7 +17,7 @@ node('git'){
 
   stage('Build documentation') {
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
-    img.withRun("-v ${WORKSPACE}/doc/:/documents/ make html"){
+    img.withRun("-v ${WORKSPACE}/doc/:/documents/", "make html"){
 
     }
   }
