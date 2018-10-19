@@ -1,20 +1,22 @@
-pipeline {
-    agent any
-    stages {
-        stage ('checkout') {
-            steps {
-                checkout scm
-            }
-        }
+node('git'){
+  stage('Checkout') {
+    checkout scm
+  }
 
-        stage ('build') {
-            steps {
-                gitlabCommitStatus(name: 'build') {
-                    script {
-                        def image = docker.build('minerva50', "-f develop.dockerfile ${WORKSPACE}")
-                    }
-                }
-            }
-        }
+  stage('Unittests database') {
+    def img = docker.build('minerva50db', '-f develop.dockerfile .')
+    img.withRun("-v ${WORKSPACE}/test_results:/test_results -v ${WORKSPACE}/tests:/tests"){
+
     }
+
+    archive('database/test_results/*.tap')
+    step([$class: 'TapPublisher', testResults: 'database/test_results/*.tap'])
+  }
+
+  stage('Build documentation') {
+    def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
+    img.withRun("-v ${WORKSPACE}/doc:/documents"){
+      sh 'sphinx-quickstart'
+    }
+  }
 }
