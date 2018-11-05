@@ -70,3 +70,31 @@ GRANT ALL ON materialization.modified_state_fingerprint TO minerva_admin;
 GRANT ALL ON materialization.modified_state_fingerprint TO minerva_admin;
 GRANT SELECT ON materialization.modified_state_fingerprint TO minerva;
 
+
+
+CREATE OR REPLACE VIEW system.materialization_job_stats AS
+WITH raw_stats AS (
+    SELECT
+        ((description::json)->>'type_id')::integer as type_id,
+        created,
+        ((description::json)->>'timestamp')::timestamptz as timestamp,
+        finished - started as duration
+    FROM system.job_finished
+    WHERE type = 'materialize'
+    UNION ALL
+    SELECT
+        ((description::json)->>'type_id')::integer as type_id,
+        created,
+        ((description::json)->>'timestamp')::timestamptz as timestamp,
+        NULL as duration
+    FROM system.job
+    WHERE type = 'materialize'
+)
+SELECT
+    type::text AS type,
+    created,
+    timestamp,
+    duration,
+    created - timestamp AS creation_delay
+FROM raw_stats
+JOIN materialization.type ON type.id = raw_stats.type_id;

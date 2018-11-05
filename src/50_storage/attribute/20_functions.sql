@@ -1015,34 +1015,6 @@ COMMENT ON FUNCTION attribute_directory.compact(attribute_directory.attributesto
 'Remove all subsequent records with duplicate attribute values and update the modified of the first';
 
 
-CREATE OR REPLACE FUNCTION attribute_directory.init(attribute_directory.attribute)
-    RETURNS attribute_directory.attribute
-AS $$
-DECLARE
-    table_name name;
-    tmp_attributestore attribute_directory.attributestore;
-    --generated_dependees dep_recurse.dep[];
-BEGIN
-    SELECT * INTO tmp_attributestore
-    FROM attribute_directory.attributestore WHERE id = $1.attributestore_id;
-
-    table_name = attribute_directory.to_char(tmp_attributestore);
-
-    --generated_dependees = attribute_directory.dependees(tmp_attributestore);
-
-    PERFORM dep_recurse.alter(
-        dep_recurse.table_ref('attribute_base', table_name),
-        ARRAY[
-            format('SELECT attribute_directory.add_attribute_column(attributestore, %L, %L) FROM attribute_directory.attributestore WHERE id = %s', $1.name, $1.datatype, $1.attributestore_id)
-        ],
-        attribute_directory.dependees(tmp_attributestore)
-    );
-
-    RETURN $1;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
 CREATE OR REPLACE FUNCTION attribute_directory.add_attribute_column(attribute_directory.attributestore, name, text)
     RETURNS attribute_directory.attributestore
 AS $$
@@ -1054,6 +1026,15 @@ AS $$
             format('SELECT attribute_directory.create_dependees(attributestore) FROM attribute_directory.attributestore WHERE id = %s', $1.id)
         ]
     );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE OR REPLACE FUNCTION attribute_directory.init(attribute_directory.attribute)
+    RETURNS attribute_directory.attribute
+AS $$
+    SELECT attribute_directory.add_attribute_column(attributestore, $1.name, $1.datatype) FROM attribute_directory.attributestore WHERE id = $1.attributestore_id;
+
+    SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 

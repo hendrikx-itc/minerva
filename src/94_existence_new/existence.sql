@@ -10,6 +10,11 @@
 -- select gis.update_existence(existence_store, 'trend."transform-retainability_HandoverRelation_day"', '2018-09-07 00:00')
 -- from gis.existence_store where existence_store::text = 'HandoverRelation';
 
+CREATE SCHEMA gis;
+ALTER SCHEMA gis OWNER TO minerva_admin;
+
+GRANT ALL ON SCHEMA gis TO minerva_writer;
+
 
 CREATE TABLE gis.existence_store (
     id serial primary key,
@@ -59,14 +64,6 @@ AS $function$
 $function$;
 
 
-CREATE OR REPLACE FUNCTION gis.existence_partition_index_to_timestamp(epoch timestamp with time zone, index integer)
- RETURNS timestamp with time zone
- LANGUAGE sql
-AS $function$
-    select gis.existence_index_to_timestamp(index * 64);
-$function$;
-
-
 CREATE OR REPLACE FUNCTION gis.timestamp_to_existence_bit_index(epoch timestamp with time zone, ts timestamp with time zone)
  RETURNS integer
  LANGUAGE sql
@@ -88,6 +85,14 @@ CREATE OR REPLACE FUNCTION gis.existence_index_to_timestamp(gis.existence_store,
     LANGUAGE sql
 AS $function$
     select $1.epoch + (existence_index * '1 day'::interval);
+$function$;
+
+
+CREATE OR REPLACE FUNCTION gis.existence_partition_index_to_timestamp(epoch timestamp with time zone, index integer)
+    RETURNS timestamp with time zone
+    LANGUAGE sql
+AS $function$
+    select epoch + (index * 64 * '1 day'::interval);
 $function$;
 
 
