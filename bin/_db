@@ -1,0 +1,7 @@
+#compdef db
+
+_db() {
+    _arguments "1: :(up stop recreate test build rm)"
+}
+
+_db "$@"

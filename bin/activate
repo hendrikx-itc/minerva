@@ -1,0 +1,64 @@
+# vim: filetype=sh
+export PGHOST=localhost
+export PGPORT=16046
+export PGUSER=postgres
+export PGDATABASE=minerva
+
+function absolute_dir {
+    local old_pwd="$(pwd)"
+    cd "$1"
+    pwd
+    cd "$old_pwd"
+}
+
+SHELL_NAME="${SHELL##*/}"
+
+if [ $SHELL_NAME = "bash" ]; then
+    SCRIPT_PATH="${BASH_SOURCE[0]}"
+elif [ $SHELL_NAME = "zsh" ]; then
+    SCRIPT_PATH="${(%):-%x}"
+fi
+
+RELATIVE_SCRIPT_DIR=${SCRIPT_PATH%/*}
+
+SCRIPT_DIR=$(absolute_dir $RELATIVE_SCRIPT_DIR)
+
+echo $SCRIPT_DIR
+
+export MINERVA_ROOT=${SCRIPT_DIR%/*}
+
+export PATH=$MINERVA_ROOT/bin:$PATH
+
+
+
+if [ $SHELL_NAME = "bash" ]; then
+    _db ()   #  By convention, the function name
+    {                 #+ starts with an underscore.
+      local cur
+      # Pointer to current completion word.
+      # By convention, it's named "cur" but this isn't strictly necessary.
+
+      COMPREPLY=()   # Array variable storing the possible completions.
+      cur=${COMP_WORDS[COMP_CWORD]}
+
+      case "$cur" in
+        -*)
+        COMPREPLY=( $( compgen -W '-a -d -f -l -t -h --aoption --debug \
+                                   --file --log --test --help --' -- $cur ) );;
+    #   Generate the completion matches and load them into $COMPREPLY array.
+    #   xx) May add more cases here.
+    #   yy)
+    #   zz)
+      esac
+
+      return 0
+    }
+
+    complete -F _db -o filenames db
+#
+elif [ $SHELL_NAME = "zsh" ]; then
+    fpath+=$MINERVA_ROOT/bin
+    autoload -U compinit
+    compinit
+fi
+
