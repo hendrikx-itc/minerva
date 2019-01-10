@@ -2236,9 +2236,9 @@ objects:
 - function:
     name: create_alias
     schema: alias_directory
-    return_type: text
+    return_type: void
     language: plpgsql
-    volatility: stable
+    volatility: volatile
     strict: false
     secdef: false
     arguments:
@@ -2254,8 +2254,6 @@ objects:
               'INSERT INTO alias.%I(entity_id, %I) VALUES ($1, $2)',
               $2, $2
           ) USING $1, $3;
-
-          RETURN result;
       END;
 - function:
     name: define_alias_type
@@ -2289,6 +2287,29 @@ objects:
           );
     description: |-
       Define a new alias type and created the table for storing the aliases.
+- function:
+    name: get_entity_by_alias
+    schema: alias_directory
+    return_type: directory.entity
+    language: plpgsql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - name: alias_type
+      data_type: name
+    - name: name
+      data_type: name
+    source: |-
+        DECLARE
+            id integer;
+        BEGIN
+            EXECUTE format(
+                'SELECT id FROM alias.%I '
+                'WHERE %I = ''%s''',
+                $1, $1, $2) INTO id;
+            RETURN directory.get_entity_by_id(id);
+        END;
 - enum_type:
     schema: relation_directory
     name: type_cardinality_enum
