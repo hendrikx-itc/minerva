@@ -2230,30 +2230,7 @@ objects:
               'SELECT %I INTO result FROM alias.%I WHERE entity_id = %s',
               $2, $2, $1
           );
-
           RETURN result;
-      END;
-- function:
-    name: create_alias
-    schema: alias_directory
-    return_type: void
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: entity_id
-      data_type: integer
-    - name: alias_type_name
-      data_type: text
-    - name: alias
-      data_type: text
-    source: |-
-      BEGIN
-          EXECUTE format(
-              'INSERT INTO alias.%I(entity_id, %I) VALUES ($1, $2)',
-              $2, $2
-          ) USING $1, $3;
       END;
 - function:
     name: define_alias_type
@@ -2271,6 +2248,19 @@ objects:
     description: |-
       Define a new alias type, but do not create a table for it.
 - function:
+    name: get_alias_type
+    schema: alias_directory
+    return_type: alias_directory.alias_type
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - name: name
+      data_type: name
+    source: |-
+      SELECT alias_type FROM alias_directory.alias_type WHERE name = $1;
+- function:
     name: create_alias_type
     schema: alias_directory
     return_type: alias_directory.alias_type
@@ -2287,6 +2277,50 @@ objects:
           );
     description: |-
       Define a new alias type and created the table for storing the aliases.
+- function:
+    name: create_alias
+    schema: alias_directory
+    return_type: directory.entity
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: entity_id
+      data_type: integer
+    - name: alias_type_name
+      data_type: text
+    - name: alias
+      data_type: text
+    source: |-
+      BEGIN
+          PERFORM COALESCE(
+              alias_directory.get_alias_type(alias_type_name),
+              alias_directory.create_alias_type(alias_type_name)
+          );
+          EXECUTE format(
+              'INSERT INTO alias.%I(entity_id, %I) VALUES ($1, $2)',
+              $2, $2
+          ) USING $1, $3;
+          RETURN directory.get_entity_by_id(entity_id);
+      END;
+- function:
+    name: create_alias
+    schema: alias_directory
+    return_type: directory.entity
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: entity
+      data_type: directory.entity
+    - name: alias_type_name
+      data_type: text
+    - name: alias
+      data_type: text
+    source: |-
+      SELECT alias_directory.create_alias($1.id, $2, $3);
 - function:
     name: get_entity_by_alias
     schema: alias_directory
@@ -2967,6 +3001,30 @@ objects:
               )
               RETURNING entity;
 - function:
+    name: get_or_create_entity
+    schema: alias_directory
+    return_type: directory.entity
+    language: plpgsql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - name: alias_type
+      data_type: name
+    - name: name
+      data_type: name
+    source: |-
+      BEGIN
+        PERFORM COALESCE(
+            alias_directory.get_alias_type(alias_type),
+            alias_directory.create_alias_type(alias_type)
+        );
+        RETURN COALESCE(
+            alias_directory.get_entity_by_alias($1, $2),
+            alias_directory.create_alias(directory.create_entity(format('%s=%s', $1, $2)), $1, $2)
+        );
+      END;
+- function:
     name: dn_to_entity
     schema: directory
     return_type: directory.entity
@@ -2992,8 +3050,7 @@ objects:
       data_type: text
     source: |-
       SELECT alias_directory.create_alias($1.id, 'dn', $2);
-
-          SELECT $1;
+      SELECT $1;
 - function:
     name: create_entity_with_alias
     schema: directory
