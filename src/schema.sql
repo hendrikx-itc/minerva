@@ -2041,6 +2041,13 @@ SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
+CREATE FUNCTION "alias_directory"."aliases_to_entity_ids"("namespace" text, "name" text[])
+    RETURNS SETOF integer
+AS $$
+SELECT (alias_directory.get_or_create_entity($1::name, nm::name)).id FROM unnest($2) nm;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "directory"."tag_entity"("dn" text, "tag" text)
     RETURNS text
 AS $$

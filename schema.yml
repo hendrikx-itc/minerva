@@ -3078,6 +3078,22 @@ objects:
     source: |-
       SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
 - function:
+    name: aliases_to_entity_ids
+    schema: alias_directory
+    return_type: integer
+    returns_set: true
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: namespace
+      data_type: text
+    - name: name
+      data_type: text[]
+    source: |-
+      SELECT (alias_directory.get_or_create_entity($1::name, nm::name)).id FROM unnest($2) nm;
+- function:
     name: tag_entity
     schema: directory
     return_type: text
