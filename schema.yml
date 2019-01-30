@@ -2339,7 +2339,7 @@ objects:
             id integer;
         BEGIN
             EXECUTE format(
-                'SELECT id FROM alias.%I '
+                'SELECT entity_id FROM alias.%I '
                 'WHERE %I = ''%s''',
                 $1, $1, $2) INTO id;
             RETURN directory.get_entity_by_id(id);
@@ -3005,7 +3005,7 @@ objects:
     schema: alias_directory
     return_type: directory.entity
     language: plpgsql
-    volatility: stable
+    volatility: volatile
     strict: false
     secdef: false
     arguments:
