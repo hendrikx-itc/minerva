@@ -3,6 +3,7 @@ set -e
 set -o pipefail
 
 psql -d postgres -c "CREATE DATABASE $MINERVA_DB_NAME;"
+psql -c "CREATE EXTENSION postgis"
 psql -c "CREATE EXTENSION pgtap"
 
 find /db-deps/src/ -name '*.sql' | sort | while read filepath

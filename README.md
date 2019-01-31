@@ -2,11 +2,11 @@
 
 For development, the easiest way to get started is using a development Docker image. To build a development Docker image, execute from the root of the project:
 
-  $ docker build -t minerva46 -f develop.dockerfile .
+  $ source bin/activate
 
-This should result in an image tagged with the name minerva46. To run a docker container, we can start one using the previously built image and volume mount the source code. Run from the root of the project:
+Then to start a Docker container with PostgreSQL and an empty Minerva database:
 
-  $ docker run --name minerva46 -v $(pwd):/minerva minerva46
+  $ db up
 
 
 ## Dependencies and requirements
