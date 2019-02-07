@@ -2278,6 +2278,22 @@ objects:
     description: |-
       Define a new alias type and created the table for storing the aliases.
 - function:
+    name: get_or_create_alias_type
+    schema: alias_directory
+    return_type: alias_directory.alias_type
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: name
+      data_type: name
+    source: |-
+      SELECT COALESCE(
+        alias_directory.get_alias_type($1),
+        alias_directory.create_alias_type($1)
+      );
+- function:
     name: create_alias
     schema: alias_directory
     return_type: directory.entity
@@ -2991,20 +3007,38 @@ objects:
     strict: true
     secdef: false
     arguments:
-    - data_type: text
+    - name: name
+      data_type: text
+    - name: entity_type
+      data_type: directory.entity_type
     source: |-
       INSERT INTO directory.entity(created, name, entity_type_id)
               VALUES (
                   now(),
-                  (directory.last_dn_part(directory.explode_dn($1))).name,
-                  directory.entity_type_id(directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name))
+                  $1,
+                  $2.id
               )
               RETURNING entity;
+- function:
+    name: create_entity_from_dn
+    schema: directory
+    return_type: directory.entity
+    language: sql
+    volatility: volatile
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: text
+    source: |-
+      SELECT directory.create_entity(
+        (directory.last_dn_part(directory.explode_dn($1))).name,
+        directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)
+      );
 - function:
     name: get_or_create_entity
     schema: alias_directory
     return_type: directory.entity
-    language: plpgsql
+    language: sql
     volatility: volatile
     strict: false
     secdef: false
@@ -3013,17 +3047,13 @@ objects:
       data_type: name
     - name: name
       data_type: name
+    - name: entity_type
+      data_type: name
     source: |-
-      BEGIN
-        PERFORM COALESCE(
-            alias_directory.get_alias_type(alias_type),
-            alias_directory.create_alias_type(alias_type)
-        );
-        RETURN COALESCE(
+        SELECT COALESCE(
             alias_directory.get_entity_by_alias($1, $2),
-            alias_directory.create_alias(directory.create_entity(format('%s=%s', $1, $2)), $1, $2)
+            alias_directory.create_alias(directory.create_entity($2, directory.get_entity_type($3)), $1, $2)
         );
-      END;
 - function:
     name: dn_to_entity
     schema: directory
@@ -3035,35 +3065,7 @@ objects:
     arguments:
     - data_type: text
     source: |-
-      SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity($1));
-- function:
-    name: create_dn_alias
-    schema: directory
-    return_type: directory.entity
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: directory.entity
-    - name: dn
-      data_type: text
-    source: |-
-      SELECT alias_directory.create_alias($1.id, 'dn', $2);
-      SELECT $1;
-- function:
-    name: create_entity_with_alias
-    schema: directory
-    return_type: directory.entity
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      SELECT directory.create_dn_alias(new_entity, $1)
-          FROM directory.create_entity($1) new_entity;
+      SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity_from_dn($1));
 - function:
     name: dns_to_entity_ids
     schema: directory
@@ -3087,12 +3089,14 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: namespace
+    - name: alias_type
       data_type: text
-    - name: name
+    - name: alias
       data_type: text[]
+    - name: entity_type
+      data_type: text
     source: |-
-      SELECT (alias_directory.get_or_create_entity($1::name, nm::name)).id FROM unnest($2) nm;
+      SELECT (alias_directory.get_or_create_entity($1::name, nm::name, $3)).id FROM unnest($2) nm;
 - function:
     name: tag_entity
     schema: directory

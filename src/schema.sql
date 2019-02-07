@@ -395,9 +395,9 @@ CREATE TABLE "dimension"."month"
   PRIMARY KEY (timestamp)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."month" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."month" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."month" TO minerva_writer;
 
 
 
@@ -411,9 +411,9 @@ CREATE TABLE "dimension"."week"
   PRIMARY KEY (timestamp)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."week" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."week" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."week" TO minerva_writer;
 
 
 
@@ -425,9 +425,9 @@ CREATE TABLE "dimension"."day"
   PRIMARY KEY (timestamp)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."day" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."day" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."day" TO minerva_writer;
 
 
 
@@ -439,9 +439,9 @@ CREATE TABLE "dimension"."hour"
   PRIMARY KEY (timestamp)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."hour" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."hour" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."hour" TO minerva_writer;
 
 
 
@@ -453,9 +453,9 @@ CREATE TABLE "dimension"."quarter"
   PRIMARY KEY (timestamp)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."quarter" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."quarter" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."quarter" TO minerva_writer;
 
 
 
@@ -467,9 +467,9 @@ CREATE TABLE "dimension"."5m"
   PRIMARY KEY (timestamp)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."5m" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."5m" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."5m" TO minerva_writer;
 
 
 
@@ -481,9 +481,9 @@ CREATE TABLE "dimension"."four_consec_qtr"
   PRIMARY KEY (timestamp)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."four_consec_qtr" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."four_consec_qtr" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."four_consec_qtr" TO minerva_writer;
 
 
 
@@ -496,9 +496,9 @@ CREATE TABLE "dimension"."month_15m"
 
 CREATE INDEX "month_15m_timestamp_idx" ON "dimension"."month_15m" USING btree ("timestamp");
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."month_15m" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."month_15m" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."month_15m" TO minerva_writer;
 
 
 
@@ -511,9 +511,9 @@ CREATE TABLE "dimension"."week_15m"
 
 CREATE INDEX "week_15m_timestamp_idx" ON "dimension"."week_15m" USING btree ("timestamp");
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."week_15m" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."week_15m" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."week_15m" TO minerva_writer;
 
 
 
@@ -524,9 +524,9 @@ CREATE TABLE "dimension"."day_15m"
   PRIMARY KEY (timestamp_15m)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."day_15m" TO minerva_writer;
-
 GRANT SELECT ON TABLE "dimension"."day_15m" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "dimension"."day_15m" TO minerva_writer;
 
 
 
@@ -755,9 +755,9 @@ CREATE TABLE "system"."job_source"
 
 CREATE UNIQUE INDEX "ix_system_job_source_name" ON "system"."job_source" USING btree (name);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_source" TO minerva_writer;
-
 GRANT SELECT ON TABLE "system"."job_source" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_source" TO minerva_writer;
 
 
 
@@ -783,9 +783,9 @@ CREATE TABLE "system"."job"
   PRIMARY KEY (id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job" TO minerva_writer;
-
 GRANT SELECT ON TABLE "system"."job" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job" TO minerva_writer;
 
 
 
@@ -796,9 +796,9 @@ CREATE TABLE "system"."job_error_log"
   PRIMARY KEY (job_id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_error_log" TO minerva_writer;
-
 GRANT SELECT ON TABLE "system"."job_error_log" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_error_log" TO minerva_writer;
 
 
 
@@ -808,9 +808,9 @@ CREATE TABLE "system"."job_queue"
   PRIMARY KEY (job_id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_queue" TO minerva_writer;
-
 GRANT SELECT ON TABLE "system"."job_queue" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_queue" TO minerva_writer;
 
 
 
@@ -830,9 +830,9 @@ CREATE TABLE "system"."setting"
   PRIMARY KEY (id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."setting" TO minerva_writer;
-
 GRANT SELECT ON TABLE "system"."setting" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "system"."setting" TO minerva_writer;
 
 
 
@@ -1071,9 +1071,9 @@ COMMENT ON TABLE "directory"."data_source" IS 'Describes data_sources. A data_so
 
 CREATE UNIQUE INDEX "ix_directory_data_source_name" ON "directory"."data_source" USING btree (name);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."data_source" TO minerva_writer;
-
 GRANT SELECT ON TABLE "directory"."data_source" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."data_source" TO minerva_writer;
 
 
 
@@ -1097,9 +1097,9 @@ COMMENT ON TABLE "directory"."entity_type" IS 'Stores the entity types that exis
 
 CREATE UNIQUE INDEX "ix_directory_entity_type_name" ON "directory"."entity_type" USING btree (lower((name)::text));
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_type" TO minerva_writer;
-
 GRANT SELECT ON TABLE "directory"."entity_type" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_type" TO minerva_writer;
 
 
 
@@ -1126,9 +1126,9 @@ CREATE INDEX "ix_directory_entity_name" ON "directory"."entity" USING btree (nam
 
 CREATE INDEX "ix_directory_entity_entity_type_id" ON "directory"."entity" USING btree (entity_type_id);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity" TO minerva_writer;
-
 GRANT SELECT ON TABLE "directory"."entity" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity" TO minerva_writer;
 
 
 
@@ -1152,9 +1152,9 @@ COMMENT ON TABLE "directory"."tag_group" IS 'Stores groups that can be related t
 
 CREATE UNIQUE INDEX "ix_directory_tag_group_name" ON "directory"."tag_group" USING btree (lower((name)::text));
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag_group" TO minerva_writer;
-
 GRANT SELECT ON TABLE "directory"."tag_group" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag_group" TO minerva_writer;
 
 
 
@@ -1181,9 +1181,9 @@ CREATE UNIQUE INDEX "ix_directory_tag_name" ON "directory"."tag" USING btree (lo
 
 CREATE INDEX "tag_lower_id_idx" ON "directory"."tag" USING btree (lower((name)::text), id);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag" TO minerva_writer;
-
 GRANT SELECT ON TABLE "directory"."tag" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag" TO minerva_writer;
 
 
 
@@ -1196,9 +1196,9 @@ CREATE TABLE "directory"."entity_tag_link"
 
 CREATE INDEX "ix_directory_entity_tag_link_entity_id" ON "directory"."entity_tag_link" USING btree (entity_id);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_tag_link" TO minerva_writer;
-
 GRANT SELECT ON TABLE "directory"."entity_tag_link" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_tag_link" TO minerva_writer;
 
 
 
@@ -1214,9 +1214,9 @@ CREATE INDEX "entity_tag_link_denorm_tags_idx" ON "directory"."entity_tag_link_d
 
 CREATE INDEX "entity_tag_link_denorm_name_idx" ON "directory"."entity_tag_link_denorm" USING btree (name);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_tag_link_denorm" TO minerva_writer;
-
 GRANT SELECT ON TABLE "directory"."entity_tag_link_denorm" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_tag_link_denorm" TO minerva_writer;
 
 
 
@@ -1519,6 +1519,16 @@ $$ LANGUAGE sql VOLATILE;
 COMMENT ON FUNCTION "alias_directory"."create_alias_type"("name" name) IS 'Define a new alias type and created the table for storing the aliases.';
 
 
+CREATE FUNCTION "alias_directory"."get_or_create_alias_type"("name" name)
+    RETURNS alias_directory.alias_type
+AS $$
+SELECT COALESCE(
+  alias_directory.get_alias_type($1),
+  alias_directory.create_alias_type($1)
+);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "alias_directory"."create_alias"("entity_id" integer, "alias_type_name" text, "alias" text)
     RETURNS directory.entity
 AS $$
@@ -1584,9 +1594,9 @@ CREATE TABLE "relation_directory"."type"
 
 CREATE UNIQUE INDEX "type_name_key" ON "relation_directory"."type" USING btree (name);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "relation_directory"."type" TO minerva_writer;
-
 GRANT SELECT ON TABLE "relation_directory"."type" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "relation_directory"."type" TO minerva_writer;
 
 
 
@@ -1982,56 +1992,44 @@ SELECT $1[array_length($1, 1)];
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
-CREATE FUNCTION "directory"."create_entity"(text)
+CREATE FUNCTION "directory"."create_entity"("name" text, "entity_type" directory.entity_type)
     RETURNS directory.entity
 AS $$
 INSERT INTO directory.entity(created, name, entity_type_id)
         VALUES (
             now(),
-            (directory.last_dn_part(directory.explode_dn($1))).name,
-            directory.entity_type_id(directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name))
+            $1,
+            $2.id
         )
         RETURNING entity;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE FUNCTION "alias_directory"."get_or_create_entity"("alias_type" name, "name" name)
+CREATE FUNCTION "directory"."create_entity_from_dn"(text)
     RETURNS directory.entity
 AS $$
-BEGIN
-  PERFORM COALESCE(
-      alias_directory.get_alias_type(alias_type),
-      alias_directory.create_alias_type(alias_type)
-  );
-  RETURN COALESCE(
-      alias_directory.get_entity_by_alias($1, $2),
-      alias_directory.create_alias(directory.create_entity(format('%s=%s', $1, $2)), $1, $2)
-  );
-END;
-$$ LANGUAGE plpgsql VOLATILE;
+SELECT directory.create_entity(
+  (directory.last_dn_part(directory.explode_dn($1))).name,
+  directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)
+);
+$$ LANGUAGE sql VOLATILE STRICT;
+
+
+CREATE FUNCTION "alias_directory"."get_or_create_entity"("alias_type" name, "name" name, "entity_type" name)
+    RETURNS directory.entity
+AS $$
+SELECT COALESCE(
+    alias_directory.get_entity_by_alias($1, $2),
+    alias_directory.create_alias(directory.create_entity($2, directory.get_entity_type($3)), $1, $2)
+);
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "directory"."dn_to_entity"(text)
     RETURNS directory.entity
 AS $$
-SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity($1));
+SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity_from_dn($1));
 $$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "directory"."create_dn_alias"(directory.entity, "dn" text)
-    RETURNS directory.entity
-AS $$
-SELECT alias_directory.create_alias($1.id, 'dn', $2);
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "directory"."create_entity_with_alias"(text)
-    RETURNS directory.entity
-AS $$
-SELECT directory.create_dn_alias(new_entity, $1)
-    FROM directory.create_entity($1) new_entity;
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "directory"."dns_to_entity_ids"(text[])
@@ -2041,10 +2039,10 @@ SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE FUNCTION "alias_directory"."aliases_to_entity_ids"("namespace" text, "name" text[])
+CREATE FUNCTION "alias_directory"."aliases_to_entity_ids"("alias_type" text, "alias" text[], "entity_type" text)
     RETURNS SETOF integer
 AS $$
-SELECT (alias_directory.get_or_create_entity($1::name, nm::name)).id FROM unnest($2) nm;
+SELECT (alias_directory.get_or_create_entity($1::name, nm::name, $3)).id FROM unnest($2) nm;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2227,9 +2225,9 @@ CREATE TABLE "trend_directory"."modified"
   PRIMARY KEY (table_trend_store_part_id, timestamp)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."modified" TO minerva_writer;
-
 GRANT SELECT ON TABLE "trend_directory"."modified" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."modified" TO minerva_writer;
 
 
 
@@ -2269,9 +2267,9 @@ COMMENT ON COLUMN "trend_directory"."materialization"."enabled" IS 'Indicates if
 
 CREATE UNIQUE INDEX "ix_trend_materialization_uniqueness" ON "trend_directory"."materialization" USING btree (dst_trend_store_id);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization" TO minerva_writer;
-
 GRANT SELECT ON TABLE "trend_directory"."materialization" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization" TO minerva_writer;
 
 
 
@@ -2331,9 +2329,9 @@ COMMENT ON COLUMN "trend_directory"."state"."processed_states" IS 'Array contain
 
 COMMENT ON COLUMN "trend_directory"."state"."job_id" IS 'ID of the most recent job for this materialization';
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."state" TO minerva_writer;
-
 GRANT SELECT ON TABLE "trend_directory"."state" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."state" TO minerva_writer;
 
 
 
@@ -2347,9 +2345,9 @@ CREATE TABLE "trend_directory"."materialization_tag_link"
 COMMENT ON TABLE "trend_directory"."materialization_tag_link" IS 'Links tags to materializations. Examples of tags to link to a materialization
 might be: online, offline, aggregation, kpi, etc.';
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization_tag_link" TO minerva_writer;
-
 GRANT SELECT ON TABLE "trend_directory"."materialization_tag_link" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization_tag_link" TO minerva_writer;
 
 
 
@@ -2360,9 +2358,9 @@ CREATE TABLE "trend_directory"."group_priority"
   PRIMARY KEY (tag_id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."group_priority" TO minerva_writer;
-
 GRANT SELECT ON TABLE "trend_directory"."group_priority" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."group_priority" TO minerva_writer;
 
 
 
@@ -4056,9 +4054,9 @@ CREATE TABLE "attribute_directory"."attribute_store"
 
 CREATE UNIQUE INDEX "attribute_store_uniqueness" ON "attribute_directory"."attribute_store" USING btree (data_source_id, entity_type_id);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store" TO minerva_writer;
-
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store" TO minerva_writer;
 
 
 
@@ -4090,9 +4088,9 @@ CREATE TABLE "attribute_directory"."attribute"
 
 CREATE UNIQUE INDEX "attribute_uniqueness" ON "attribute_directory"."attribute" USING btree (attribute_store_id, name);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute" TO minerva_writer;
-
 GRANT SELECT ON TABLE "attribute_directory"."attribute" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute" TO minerva_writer;
 
 
 
@@ -4103,9 +4101,9 @@ CREATE TABLE "attribute_directory"."attribute_tag_link"
   PRIMARY KEY (attribute_id, tag_id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_tag_link" TO minerva_writer;
-
 GRANT SELECT ON TABLE "attribute_directory"."attribute_tag_link" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_tag_link" TO minerva_writer;
 
 
 
@@ -4116,9 +4114,9 @@ CREATE TABLE "attribute_directory"."attribute_store_modified"
   PRIMARY KEY (attribute_store_id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_modified" TO minerva_writer;
-
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store_modified" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_modified" TO minerva_writer;
 
 
 
@@ -4129,9 +4127,9 @@ CREATE TABLE "attribute_directory"."attribute_store_curr_materialized"
   PRIMARY KEY (attribute_store_id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_curr_materialized" TO minerva_writer;
-
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store_curr_materialized" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_curr_materialized" TO minerva_writer;
 
 
 
@@ -4142,9 +4140,9 @@ CREATE TABLE "attribute_directory"."attribute_store_compacted"
   PRIMARY KEY (attribute_store_id)
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva_writer;
-
 GRANT SELECT ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva_writer;
 
 
 
@@ -5888,9 +5886,9 @@ COMMENT ON TABLE "notification_directory"."notification_store" IS 'Describes not
 
 CREATE UNIQUE INDEX "uniqueness" ON "notification_directory"."notification_store" USING btree (data_source_id);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."notification_store" TO minerva_writer;
-
 GRANT SELECT ON TABLE "notification_directory"."notification_store" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."notification_store" TO minerva_writer;
 
 
 
@@ -5914,9 +5912,9 @@ CREATE TABLE "notification_directory"."attribute"
 
 COMMENT ON TABLE "notification_directory"."attribute" IS 'Describes attributes of notification stores. An attribute of a notification store is an attribute that each notification stored in that notification store has. An attribute corresponds directly to a column in the main notification store table';
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."attribute" TO minerva_writer;
-
 GRANT SELECT ON TABLE "notification_directory"."attribute" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."attribute" TO minerva_writer;
 
 
 
@@ -5938,9 +5936,9 @@ CREATE TABLE "notification_directory"."notification_set_store"
 
 COMMENT ON TABLE "notification_directory"."notification_set_store" IS 'Describes notification_set_stores. A notification_set_store can hold information over sets of notifications that are related to each other.';
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."notification_set_store" TO minerva_writer;
-
 GRANT SELECT ON TABLE "notification_directory"."notification_set_store" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."notification_set_store" TO minerva_writer;
 
 
 
@@ -5964,9 +5962,9 @@ CREATE TABLE "notification_directory"."set_attribute"
 
 COMMENT ON TABLE "notification_directory"."set_attribute" IS 'Describes attributes of notification_set_stores. A set_attribute of a notification_set_store is an attribute that each notification set has. A set_attribute corresponds directly to a column in the main notification_set_store table.';
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."set_attribute" TO minerva_writer;
-
 GRANT SELECT ON TABLE "notification_directory"."set_attribute" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."set_attribute" TO minerva_writer;
 
 
 
@@ -6446,9 +6444,9 @@ CREATE UNLOGGED TABLE "entity_tag"."entity_tag_link_staging"
   "tag_group_id" integer NOT NULL
 );
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "entity_tag"."entity_tag_link_staging" TO minerva_writer;
-
 GRANT SELECT ON TABLE "entity_tag"."entity_tag_link_staging" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "entity_tag"."entity_tag_link_staging" TO minerva_writer;
 
 
 
@@ -6655,9 +6653,9 @@ CREATE TABLE "trigger"."rule"
 
 CREATE UNIQUE INDEX "rule_name_key" ON "trigger"."rule" USING btree (name);
 
-GRANT UPDATE ON TABLE "trigger"."rule" TO minerva_writer;
-
 GRANT SELECT ON TABLE "trigger"."rule" TO minerva;
+
+GRANT UPDATE ON TABLE "trigger"."rule" TO minerva_writer;
 
 
 
@@ -6678,9 +6676,9 @@ CREATE TABLE "trigger"."exception_base"
   "created" timestamp with time zone DEFAULT now()
 );
 
-GRANT UPDATE ON TABLE "trigger"."exception_base" TO minerva_writer;
-
 GRANT SELECT ON TABLE "trigger"."exception_base" TO minerva;
+
+GRANT UPDATE ON TABLE "trigger"."exception_base" TO minerva_writer;
 
 
 
@@ -6691,9 +6689,9 @@ CREATE TABLE "trigger"."rule_tag_link"
   PRIMARY KEY (rule_id, tag_id)
 );
 
-GRANT UPDATE ON TABLE "trigger"."rule_tag_link" TO minerva_writer;
-
 GRANT SELECT ON TABLE "trigger"."rule_tag_link" TO minerva;
+
+GRANT UPDATE ON TABLE "trigger"."rule_tag_link" TO minerva_writer;
 
 
 
@@ -7735,9 +7733,9 @@ CREATE TABLE "relation"."parent"
 
 CREATE INDEX "ix_parent_target_id" ON "relation"."parent" USING btree (target_id);
 
-GRANT INSERT,UPDATE,DELETE ON TABLE "relation"."parent" TO minerva_writer;
-
 GRANT SELECT ON TABLE "relation"."parent" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "relation"."parent" TO minerva_writer;
 
 
 
