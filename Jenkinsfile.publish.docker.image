@@ -3,13 +3,12 @@ node ('git') {
         checkout scm
     }
     stage ('Build') {
-        sh 'docker build -f "production.dockerfile" -t "hendrikxitc/minerva:5.0" -t "hendrikxitc/minerva:latest" -t "hendrikxitc/minerva:develop" .'
+        sh 'docker build -f "production.dockerfile" -t "hendrikxitc/minerva:5.0" -t "hendrikxitc/minerva:latest" .'
     }
     stage ('Publish') {
         withDockerRegistry([ credentialsId: "703cc1fc-2e19-4645-b4c1-457a7ddd89c6", url: "" ]) {
           sh 'docker push hendrikxitc/minerva:5.0'
           sh 'docker push hendrikxitc/minerva:latest'
-          sh 'docker push hendrikxitc/minerva:develop'
         }
     }
 }
