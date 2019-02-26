@@ -1,4 +1,4 @@
-node ('minerva46_build') {
+node ('git') {
     stage ('checkout') {
         checkout scm
     }
