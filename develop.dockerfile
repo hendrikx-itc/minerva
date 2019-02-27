@@ -1,12 +1,11 @@
-FROM postgres:9.4
+FROM postgres:9.6
 MAINTAINER Hendrikx ITC
 
 RUN apt-get update && apt-get install -y \
     make \
     patch \
     libpq-dev \
-    postgresql-server-dev-9.4 \
-    postgresql-9.4-postgis-2.5 \
+    postgresql-server-dev-9.6 \
     perl-modules
 
 ADD https://github.com/hendrikx-itc/db-deps/archive/v0.8.0.tar.gz /db-deps.tar.gz

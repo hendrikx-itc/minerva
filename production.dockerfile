@@ -1,4 +1,4 @@
-FROM postgres:9.4
+FROM postgres:9.6
 MAINTAINER Hendrikx ITC
 
 RUN apt-get update
