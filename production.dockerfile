@@ -17,11 +17,9 @@ RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
 COPY docker-resources/create-minerva-database /usr/bin/
 COPY docker-resources/drop-minerva-database /usr/bin/
 COPY docker-resources/recreate-minerva-database /usr/bin/
-COPY src /minerva/src
+COPY src /minerva
+
+VOLUME /custom_scripts
 
 ADD init-minerva-db.sh /docker-entrypoint-initdb.d/
 
-RUN echo 'minerva.trigger_mark_modified = on' >> /var/lib/postgresql/data/postgresql.conf
-RUN echo "minerva.trigger_entity_tag_denorm_update = on" >> /var/lib/postgresql/data/postgresql.conf
-
-VOLUME /scripts
