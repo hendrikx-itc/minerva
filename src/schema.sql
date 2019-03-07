@@ -55,6 +55,11 @@ COMMENT ON SCHEMA "directory" IS 'Stores contextual information for the data. Th
 GRANT USAGE ON SCHEMA "directory" TO "minerva";
 
 
+CREATE SCHEMA IF NOT EXISTS "entity";
+GRANT USAGE,CREATE ON SCHEMA "entity" TO "minerva_writer";
+GRANT USAGE ON SCHEMA "entity" TO "minerva";
+
+
 CREATE SCHEMA IF NOT EXISTS "alias";
 
 
@@ -1116,15 +1121,10 @@ CREATE TABLE "directory"."entity"
   "created" timestamp with time zone NOT NULL,
   "name" varchar NOT NULL,
   "entity_type_id" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('directory.entity_id_seq'::regclass),
-  PRIMARY KEY (id)
-);
+  "id" integer NOT NULL DEFAULT nextval('directory.entity_id_seq'::regclass)
+)PARTITION BY LIST (entity_type_id);
 
 COMMENT ON TABLE "directory"."entity" IS 'Describes entities. An entity is the base object for which the database can hold further information such as attributes, trends and notifications. All data must have a reference to an entity.';
-
-CREATE INDEX "ix_directory_entity_name" ON "directory"."entity" USING btree (name);
-
-CREATE INDEX "ix_directory_entity_entity_type_id" ON "directory"."entity" USING btree (entity_type_id);
 
 GRANT SELECT ON TABLE "directory"."entity" TO minerva;
 
@@ -1264,6 +1264,28 @@ INSERT INTO directory.entity_type(name, description) VALUES ($1, '') RETURNING e
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
+CREATE FUNCTION "entity"."create_entity_table_sql"(directory.entity_type)
+    RETURNS text[]
+AS $$
+SELECT ARRAY[
+  'INSERT INTO directory.tag (name, tag_group_id) VALUES ( ''test1'', 1 );',
+  format(
+    'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
+    $1.name,
+    $1.id
+  ),
+  'INSERT INTO directory.tag (name, tag_group_id) VALUES ( ''test2'', 1 );'
+];
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "entity"."create_entity_table"(directory.entity_type)
+    RETURNS directory.entity_type
+AS $$
+SELECT public.action($1, entity.create_entity_table_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "directory"."create_or_replace_entity_type"(text)
     RETURNS directory.entity_type
 AS $$
@@ -1327,7 +1349,7 @@ FROM directory.entity
 JOIN directory.entity_tag_link etl ON etl.entity_id = entity.id
 JOIN directory.tag ON tag.id = etl.tag_id
 WHERE entity.id = $1
-GROUP BY entity.id
+GROUP BY (entity.id, entity.name)
 RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
@@ -1343,6 +1365,52 @@ BEGIN
     END;
 
     RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "entity"."create_entity_table"()
+    RETURNS trigger
+AS $$
+BEGIN
+    INSERT INTO directory.tag (name, tag_group_id) SELECT NEW.name, id FROM directory.tag_group WHERE directory.tag_group.name = 'entity_type';
+    EXECUTE format(
+        'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
+        NEW.name,
+        NEW.id
+   );
+   EXECUTE format(
+       'CREATE UNIQUE INDEX ix_directory_entity_%s_id ON entity.%I (id);',
+       NEW.name,
+       NEW.name
+   );
+   EXECUTE format(
+       'CREATE INDEX ix_directory_entity_%s_entity_type ON entity.%I (entity_type_id);',
+       NEW.name,
+       NEW.name
+   );
+   EXECUTE format(
+       'CREATE INDEX ix_directory_entity_%s_name ON entity.%I (name);',
+       NEW.name,
+       NEW.name
+   );
+   EXECUTE format(
+       'GRANT SELECT ON TABLE entity.%I TO minerva;',
+       NEW.name
+   );
+   EXECUTE format(
+       'GRANT INSERT,UPDATE,DELETE ON TABLE entity.%I TO minerva_writer;',
+       NEW.name
+   );
+   EXECUTE format(
+       'CREATE TRIGGER create_entity_tag_link_for_new_%s_entity'
+       '  AFTER INSERT ON entity.%I'
+       '  FOR EACH ROW'
+       '  EXECUTE PROCEDURE directory.create_entity_tag_link();',
+       NEW.name,
+       NEW.name
+   );
+   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
@@ -1384,16 +1452,16 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE TRIGGER create_entity_tag_link_for_new_entity
-  AFTER INSERT ON "directory"."entity"
-  FOR EACH ROW
-  EXECUTE PROCEDURE "directory"."create_entity_tag_link"();
-
-
 CREATE TRIGGER create_tag_for_new_entity_types
   AFTER INSERT ON "directory"."entity_type"
   FOR EACH ROW
   EXECUTE PROCEDURE "directory"."create_entity_type_tag"();
+
+
+CREATE TRIGGER create_entity_table_for_new_entity_types
+  AFTER INSERT ON "directory"."entity_type"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "entity"."create_entity_table"();
 
 
 CREATE TRIGGER update_denormalized_tags_on_link_insert
@@ -1442,7 +1510,7 @@ SELECT ARRAY[
             'CREATE TABLE %I.%I ('
             '  id serial PRIMARY KEY,'
             '  %I text UNIQUE NOT NULL,'
-            '  entity_id integer REFERENCES directory.entity(id)'
+            '  entity_id integer'
             ');',
             alias_directory.alias_schema(),
             $1.name, $1.name
@@ -7751,11 +7819,6 @@ INSERT INTO "relation_directory"."type" (name, cardinality, id) VALUES ('parent'
 INSERT INTO "alias_directory"."alias_type" (name, id) VALUES ('dn', 1);
 
 
-ALTER TABLE "alias"."dn"
-  ADD CONSTRAINT "dn_entity_id_fkey"
-  FOREIGN KEY (entity_id)
-  REFERENCES "directory"."entity" (id);
-
 ALTER TABLE "attribute_directory"."attribute_store"
   ADD CONSTRAINT "attribute_attribute_store_entity_type_id_fkey"
   FOREIGN KEY (entity_type_id)
@@ -7796,20 +7859,10 @@ ALTER TABLE "attribute_directory"."attribute_store_compacted"
   FOREIGN KEY (attribute_store_id)
   REFERENCES "attribute_directory"."attribute_store" (id) ON DELETE CASCADE;
 
-ALTER TABLE "directory"."entity"
-  ADD CONSTRAINT "entity_entity_type_id_fkey"
-  FOREIGN KEY (entity_type_id)
-  REFERENCES "directory"."entity_type" (id) ON DELETE CASCADE;
-
 ALTER TABLE "directory"."tag"
   ADD CONSTRAINT "tag_tag_group_id_fkey"
   FOREIGN KEY (tag_group_id)
   REFERENCES "directory"."tag_group" (id) ON DELETE CASCADE;
-
-ALTER TABLE "directory"."entity_tag_link"
-  ADD CONSTRAINT "entity_tag_link_entity_id_fkey"
-  FOREIGN KEY (entity_id)
-  REFERENCES "directory"."entity" (id) ON DELETE CASCADE;
 
 ALTER TABLE "directory"."entity_tag_link"
   ADD CONSTRAINT "entity_tag_link_tag_id_fkey"
@@ -7940,11 +7993,6 @@ ALTER TABLE "trigger"."rule"
   ADD CONSTRAINT "rule_notification_store_id_fkey"
   FOREIGN KEY (notification_store_id)
   REFERENCES "notification_directory"."notification_store" (id);
-
-ALTER TABLE "trigger"."exception_base"
-  ADD CONSTRAINT "exception_base_entity_id_fkey"
-  FOREIGN KEY (entity_id)
-  REFERENCES "directory"."entity" (id);
 
 ALTER TABLE "trigger"."rule_tag_link"
   ADD CONSTRAINT "rule_tag_link_rule_id_fkey"
