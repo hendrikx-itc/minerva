@@ -1227,6 +1227,25 @@ SELECT * FROM directory.entity WHERE id = $1;
 $$ LANGUAGE sql STABLE;
 
 
+CREATE FUNCTION "directory"."get_entity_type_name"(integer)
+    RETURNS text
+AS $$
+SELECT name FROM directory.entity_type WHERE id = $1;
+$$ LANGUAGE sql STABLE STRICT;
+
+
+CREATE FUNCTION "directory"."get_entity_by_type_and_id"("entity_type" text, "entity_id" integer)
+    RETURNS directory.entity
+AS $$
+DECLARE
+  result directory.entity;
+BEGIN
+  EXECUTE format('SELECT * from entity.%I WHERE id = %s;', $1, $2) into result;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+
 CREATE FUNCTION "directory"."get_entity_type"(text)
     RETURNS directory.entity_type
 AS $$
@@ -1268,13 +1287,11 @@ CREATE FUNCTION "entity"."create_entity_table_sql"(directory.entity_type)
     RETURNS text[]
 AS $$
 SELECT ARRAY[
-  'INSERT INTO directory.tag (name, tag_group_id) VALUES ( ''test1'', 1 );',
   format(
     'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
     $1.name,
     $1.id
-  ),
-  'INSERT INTO directory.tag (name, tag_group_id) VALUES ( ''test2'', 1 );'
+  )
 ];
 $$ LANGUAGE sql STABLE;
 
@@ -1552,9 +1569,9 @@ DECLARE
     result text;
 BEGIN
     EXECUTE format(
-        'SELECT %I INTO result FROM alias.%I WHERE entity_id = %s',
+        'SELECT %I FROM alias.%I WHERE entity_id = %s',
         $2, $2, $1
-    );
+    ) INTO result;
     RETURN result;
 END;
 $$ LANGUAGE plpgsql STABLE;

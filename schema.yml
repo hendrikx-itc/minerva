@@ -1808,6 +1808,38 @@ objects:
     source: |-
       SELECT * FROM directory.entity WHERE id = $1;
 - function:
+    name: get_entity_type_name
+    schema: directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: integer
+    source: |-
+      SELECT name FROM directory.entity_type WHERE id = $1;
+- function:
+    name: get_entity_by_type_and_id
+    schema: directory
+    return_type: directory.entity
+    language: plpgsql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - name: entity_type
+      data_type: text
+    - name: entity_id
+      data_type: integer
+    source: |-
+      DECLARE
+        result directory.entity;
+      BEGIN
+        EXECUTE format('SELECT * from entity.%I WHERE id = %s;', $1, $2) into result;
+        RETURN result;
+      END;
+- function:
     name: get_entity_type
     schema: directory
     return_type: directory.entity_type
@@ -1881,13 +1913,11 @@ objects:
     - data_type: directory.entity_type
     source: |-
       SELECT ARRAY[
-        'INSERT INTO directory.tag (name, tag_group_id) VALUES ( ''test1'', 1 );',
         format(
           'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
           $1.name,
           $1.id
-        ),
-        'INSERT INTO directory.tag (name, tag_group_id) VALUES ( ''test2'', 1 );'
+        )
       ];
 - function:
     name: create_entity_table
@@ -2288,9 +2318,9 @@ objects:
           result text;
       BEGIN
           EXECUTE format(
-              'SELECT %I INTO result FROM alias.%I WHERE entity_id = %s',
+              'SELECT %I FROM alias.%I WHERE entity_id = %s',
               $2, $2, $1
-          );
+          ) INTO result;
           RETURN result;
       END;
 - function:
