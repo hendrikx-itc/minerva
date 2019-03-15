@@ -1234,6 +1234,13 @@ SELECT name FROM directory.entity_type WHERE id = $1;
 $$ LANGUAGE sql STABLE STRICT;
 
 
+CREATE FUNCTION "directory"."get_entity_by_type_and_id"("entity_type" integer, "entity_id" integer)
+    RETURNS directory.entity
+AS $$
+SELECT * from directory.entity WHERE entity_type_id = $1 AND id = $2;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION "directory"."get_entity_by_type_and_id"("entity_type" text, "entity_id" integer)
     RETURNS directory.entity
 AS $$
@@ -1527,10 +1534,21 @@ SELECT ARRAY[
             'CREATE TABLE %I.%I ('
             '  id serial PRIMARY KEY,'
             '  %I text UNIQUE NOT NULL,'
-            '  entity_id integer'
+            '  entity_id integer,'
+            '  entity_type_id integer'
             ');',
             alias_directory.alias_schema(),
             $1.name, $1.name
+        ),
+        format(
+            'CREATE INDEX ON %I.%I USING btree(entity_id);',
+            alias_directory.alias_schema(),
+            $1.name
+        ),
+        format(
+            'CREATE INDEX ON %I.%I USING btree(entity_type_id);',
+            alias_directory.alias_schema(),
+            $1.name
         )
     ];
 $$ LANGUAGE sql STABLE;
@@ -1614,19 +1632,15 @@ SELECT COALESCE(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "alias_directory"."create_alias"("entity_id" integer, "alias_type_name" text, "alias" text)
+CREATE FUNCTION "alias_directory"."create_alias"("entity_id" integer, "entity_type_id" integer, "alias_type_name" text, "alias" text)
     RETURNS directory.entity
 AS $$
 BEGIN
-    PERFORM COALESCE(
-        alias_directory.get_alias_type(alias_type_name),
-        alias_directory.create_alias_type(alias_type_name)
-    );
     EXECUTE format(
-        'INSERT INTO alias.%I(entity_id, %I) VALUES ($1, $2)',
-        $2, $2
-    ) USING $1, $3;
-    RETURN directory.get_entity_by_id(entity_id);
+        'INSERT INTO alias.%I (entity_id, entity_type_id, %I) VALUES ($1, $2, $3)',
+        $3, $3
+    ) USING $1, $2, $4;
+    RETURN directory.get_entity_by_type_and_id(entity_type_id, entity_id);
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
@@ -1634,21 +1648,32 @@ $$ LANGUAGE plpgsql VOLATILE;
 CREATE FUNCTION "alias_directory"."create_alias"("entity" directory.entity, "alias_type_name" text, "alias" text)
     RETURNS directory.entity
 AS $$
-SELECT alias_directory.create_alias($1.id, $2, $3);
+SELECT alias_directory.create_alias($1.id, $1.entity_type_id, $2, $3);
 $$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "alias_directory"."get_entity_by_alias_sql"("alias_type" name, "name" name)
+    RETURNS text
+AS $$
+SELECT format(
+          'SELECT (directory.get_entity_by_type_and_id(d.entity_type_id, d.entity_id)).* FROM alias.%I d '
+          'WHERE %I = ''%s'';',
+          $1, $1, $2)
+$$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "alias_directory"."get_entity_by_alias"("alias_type" name, "name" name)
     RETURNS directory.entity
 AS $$
 DECLARE
-    id integer;
+     result directory.entity;
 BEGIN
-    EXECUTE format(
-        'SELECT entity_id FROM alias.%I '
-        'WHERE %I = ''%s''',
-        $1, $1, $2) INTO id;
-    RETURN directory.get_entity_by_id(id);
+     EXECUTE alias_directory.get_entity_by_alias_sql($1, $2) INTO result;
+     IF result IS NOT NULL THEN
+         RETURN result;
+     ELSE
+         RETURN NULL;
+     END IF;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
@@ -1974,7 +1999,8 @@ CREATE SEQUENCE alias.dn_id_seq
 CREATE TABLE "alias"."dn"
 (
   "dn" text NOT NULL,
-  "entity_id" integer,
+  "entity_id" integer NOT NULL,
+  "entity_type_id" integer NOT NULL,
   "id" integer NOT NULL DEFAULT nextval('alias.dn_id_seq'::regclass),
   PRIMARY KEY (id)
 );
@@ -1986,10 +2012,7 @@ CREATE UNIQUE INDEX "dn_dn_key" ON "alias"."dn" USING btree (dn);
 CREATE FUNCTION "directory"."get_entity_by_dn"(text)
     RETURNS directory.entity
 AS $$
-SELECT entity
-    FROM directory.entity
-    JOIN alias.dn ON dn.entity_id = entity.id
-    WHERE dn.dn = $1;
+SELECT alias_directory.get_entity_by_alias('dn', $1);
 $$ LANGUAGE sql STABLE;
 
 
