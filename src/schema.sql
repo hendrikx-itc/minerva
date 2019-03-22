@@ -2610,6 +2610,11 @@ SELECT ARRAY[
         )
     ),
     format(
+        'ALTER TABLE %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
+        trend_directory.base_table_schema(),
+        name
+    ),
+    format(
         'GRANT SELECT ON TABLE %I.%I TO minerva;',
         trend_directory.base_table_schema(),
         name
@@ -3469,12 +3474,6 @@ SELECT ARRAY[
             trend_directory.base_table_name(trend_directory.table_trend_store_part($1)),
             trend_directory.data_start($1),
             trend_directory.data_end($1)
-        ),
-        format(
-            'ALTER TABLE ONLY %I.%I '
-            'ADD PRIMARY KEY (entity_id, "timestamp");',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1)
         ),
         format(
             'CREATE INDEX ON %I.%I USING btree (modified);',
