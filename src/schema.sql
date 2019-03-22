@@ -1121,10 +1121,13 @@ CREATE TABLE "directory"."entity"
   "created" timestamp with time zone NOT NULL,
   "name" varchar NOT NULL,
   "entity_type_id" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('directory.entity_id_seq'::regclass)
+  "id" integer NOT NULL DEFAULT nextval('directory.entity_id_seq'::regclass),
+  PRIMARY KEY (entity_type_id, id)
 )PARTITION BY LIST (entity_type_id);
 
 COMMENT ON TABLE "directory"."entity" IS 'Describes entities. An entity is the base object for which the database can hold further information such as attributes, trends and notifications. All data must have a reference to an entity.';
+
+CREATE INDEX "ix_directory_entity_entity_type" ON "directory"."entity" USING btree (entity_type_id);
 
 GRANT SELECT ON TABLE "directory"."entity" TO minerva;
 
@@ -1402,16 +1405,6 @@ BEGIN
         'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
         NEW.name,
         NEW.id
-   );
-   EXECUTE format(
-       'CREATE UNIQUE INDEX ix_directory_entity_%s_id ON entity.%I (id);',
-       NEW.name,
-       NEW.name
-   );
-   EXECUTE format(
-       'CREATE INDEX ix_directory_entity_%s_entity_type ON entity.%I (entity_type_id);',
-       NEW.name,
-       NEW.name
    );
    EXECUTE format(
        'CREATE INDEX ix_directory_entity_%s_name ON entity.%I (name);',
@@ -2615,6 +2608,16 @@ SELECT ARRAY[
         name
     ),
     format(
+        'CREATE INDEX ON %I.%I USING btree (modified);',
+        trend_directory.base_table_schema(),
+        name
+    ),
+    format(
+        'CREATE INDEX ON %I.%I USING btree (timestamp);',
+        trend_directory.base_table_schema(),
+        name
+    ),
+    format(
         'GRANT SELECT ON TABLE %I.%I TO minerva;',
         trend_directory.base_table_schema(),
         name
@@ -3474,16 +3477,6 @@ SELECT ARRAY[
             trend_directory.base_table_name(trend_directory.table_trend_store_part($1)),
             trend_directory.data_start($1),
             trend_directory.data_end($1)
-        ),
-        format(
-            'CREATE INDEX ON %I.%I USING btree (modified);',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1)
-        ),
-        format(
-            'CREATE INDEX ON %I.%I USING btree (timestamp);',
-            trend_directory.partition_table_schema(),
-            trend_directory.table_name($1)
         ),
         format(
             'GRANT SELECT ON TABLE %I.%I TO minerva;',
