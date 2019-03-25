@@ -14,5 +14,5 @@ COPY src /minerva
 
 VOLUME /custom_scripts
 
-ADD init-minerva-db-prod.sh /docker-entrypoint-initdb.d/
+ADD init-minerva-db.sh /docker-entrypoint-initdb.d/
 
