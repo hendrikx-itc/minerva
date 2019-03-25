@@ -21,3 +21,5 @@ RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
 
 COPY docker-resources/ /
 COPY /src /minerva
+
+VOLUME /custom
