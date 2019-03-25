@@ -9,7 +9,7 @@ node('git'){
 
     def img = docker.build("database_unittest", "-f test.dockerfile .")
     img.withRun("-v ${WORKSPACE}/test_results:/test_results -v ${WORKSPACE}/tests:/tests") {
-        /* do nothning */
+        /* do nothing */
     }
 
     archiveArtifacts("test_results/*.tap")
@@ -18,7 +18,6 @@ node('git'){
 
   stage('Build documentation') {
     sh 'chmod 777 doc/*'
-    sh 'rm -r doc/_build'
 
     def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
     img.inside(){
