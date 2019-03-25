@@ -15,5 +15,8 @@ RUN tar -xzvf /pgtap.tar.gz -C /pgtap --strip-components=1
 RUN cd /pgtap && make && make install
 RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
 
-COPY docker-resources/ /
+COPY docker-resources/usr/* /usr/
+COPY docker-resources/init-minerva-db-production.sh /docker-entrypoint-initdb.d/
 COPY src /src
+
+VOLUME /custom
