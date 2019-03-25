@@ -7,19 +7,12 @@ ADD https://github.com/hendrikx-itc/db-deps/archive/v0.8.0.tar.gz /db-deps.tar.g
 RUN mkdir /db-deps
 RUN tar -xzvf /db-deps.tar.gz -C /db-deps --strip-components=1
 
-ADD https://github.com/theory/pgtap/archive/master.tar.gz /pgtap.tar.gz
-RUN mkdir /pgtap
-RUN tar -xzvf /pgtap.tar.gz -C /pgtap --strip-components=1
-
-RUN cd /pgtap && make && make install
-RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
-
-COPY docker-resources/create-minerva-database /usr/bin/
+COPY docker-resources/create-minerva-prod-database /usr/bin/create-minerva-database
 COPY docker-resources/drop-minerva-database /usr/bin/
 COPY docker-resources/recreate-minerva-database /usr/bin/
 COPY src /minerva
 
 VOLUME /custom_scripts
 
-ADD init-minerva-db.sh /docker-entrypoint-initdb.d/
+ADD init-minerva-db-prod.sh /docker-entrypoint-initdb.d/
 

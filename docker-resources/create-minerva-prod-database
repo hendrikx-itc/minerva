@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+set -o pipefail
+
+psql -d postgres -c "CREATE DATABASE $MINERVA_DB_NAME;"
+psql -c "CREATE EXTENSION postgis"
+
+find /db-deps/src/ -name '*.sql' | sort | while read filepath
+do
+    echo '#####################################'
+    echo $filepath
+    echo '#####################################'
+    psql -v ON_ERROR_STOP=1 -f $filepath
+done
+
+find /minerva -name '*.sql' | sort | while read filepath
+do
+    echo '#####################################'
+    echo $filepath
+    echo '#####################################'
+    psql -v ON_ERROR_STOP=1 -f $filepath
+done
+
+find /custom -name '*.sql' | sort | while read filepath
+do
+    echo '#####################################'
+    echo $filepath
+    echo '#####################################'
+    psql -v ON_ERROR_STOP=1 -f $filepath
+done
+
