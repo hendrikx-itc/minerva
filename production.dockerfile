@@ -13,7 +13,7 @@ RUN mkdir /db-deps
 RUN tar -xzvf /db-deps.tar.gz -C /db-deps --strip-components=1
 
 COPY docker-resources/usr/* /usr/
-COPY docker-resources/init-minerva-db-production.sh /docker-entrypoint-initdb.d/
+COPY docker-resources/init-minerva-db-production.sh /docker-entrypoint-initdb.d/docker-resources/init-minerva-db.sh
 COPY /src /minerva
 
 VOLUME /custom
