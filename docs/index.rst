@@ -10,6 +10,7 @@ Welcome to Minerva's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   schema/index
 
 
 Indices and tables
