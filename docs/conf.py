@@ -24,9 +24,9 @@ copyright = '2019, Hendrikx ITC'
 author = 'Hendrikx ITC'
 
 # The short X.Y version
-version = ''
+version = '5.0'
 # The full version, including alpha/beta/rc tags
-release = '5.0.0'
+release = '5.0.0alpha1'
 
 
 # -- General configuration ---------------------------------------------------
