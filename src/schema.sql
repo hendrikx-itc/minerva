@@ -2592,6 +2592,7 @@ SELECT ARRAY[
         'CREATE TABLE %I.%I ('
         'entity_id integer NOT NULL, '
         '"timestamp" timestamp with time zone NOT NULL, '
+        'created timestamp with time zone NOT NULL, '
         'modified timestamp with time zone NOT NULL '
         '%s'
         ') PARTITION BY RANGE ("timestamp");',
@@ -2604,6 +2605,11 @@ SELECT ARRAY[
     ),
     format(
         'ALTER TABLE %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
+        trend_directory.base_table_schema(),
+        name
+    ),
+    format(
+        'CREATE INDEX ON %I.%I USING btree (created);',
         trend_directory.base_table_schema(),
         name
     ),
@@ -2841,7 +2847,7 @@ SELECT
             vt.description
         )
     FROM trend_directory.get_view_trends(trend_directory.view_name($1)) vt
-    WHERE vt.name NOT IN ('entity_id', 'timestamp', 'modified');
+    WHERE vt.name NOT IN ('entity_id', 'timestamp', 'created', 'modified');
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -3813,7 +3819,7 @@ BEGIN
     SELECT
         array_to_string(array_agg(quote_ident(trend_name)), ',') INTO columns_part
     FROM unnest(
-        ARRAY['entity_id', 'timestamp', 'modified'] || trend_names
+        ARRAY['entity_id', 'timestamp', 'created', 'modified'] || trend_names
     ) AS trend_name;
 
     dst_partition = trend_directory.attributes_to_partition(target, timestamp);
