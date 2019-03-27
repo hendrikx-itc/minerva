@@ -5631,19 +5631,16 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."create_dependees"(attribute_directory.attribute_store)
     RETURNS attribute_directory.attribute_store
 AS $$
-SELECT
-        attribute_directory.create_compacted_view(
-            attribute_directory.create_curr_view(
-                attribute_directory.create_curr_ptr_view(
-                    attribute_directory.create_staging_modified_view(
-                        attribute_directory.create_staging_new_view(
-                            attribute_directory.create_hash_function($1)
-                        )
-                    )
-                )
-            )
-        );
-$$ LANGUAGE sql VOLATILE;
+BEGIN
+  PERFORM attribute_directory.create_hash_function($1);
+  PERFORM attribute_directory.create_staging_new_view($1);
+  PERFORM attribute_directory.create_staging_modified_view($1);
+  PERFORM attribute_directory.create_curr_ptr_view($1);
+  PERFORM attribute_directory.create_curr_view($1);
+  PERFORM attribute_directory.create_compacted_view($1);
+  RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."drop_dependees"(attribute_directory.attribute_store)
@@ -5859,6 +5856,40 @@ AS $$
     SELECT attribute_directory.create_run_length_view($1);
 
     SELECT attribute_directory.create_dependees($1);
+
+    SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."init2"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+-- Base/parent table
+    SELECT attribute_directory.create_base_table($1);
+
+    -- Inherited table definitions
+    SELECT attribute_directory.create_history_table($1);
+    SELECT attribute_directory.create_staging_table($1);
+    SELECT attribute_directory.create_compacted_tmp_table($1);
+
+    -- Separate table
+    SELECT attribute_directory.create_curr_ptr_table($1);
+
+    -- Other
+    SELECT attribute_directory.create_at_func_ptr($1);
+    SELECT attribute_directory.create_at_func($1);
+
+    SELECT attribute_directory.create_entity_at_func_ptr($1);
+    SELECT attribute_directory.create_entity_at_func($1);
+
+    SELECT attribute_directory.create_hash_triggers($1);
+
+    SELECT attribute_directory.create_modified_trigger_function($1);
+    SELECT attribute_directory.create_modified_triggers($1);
+
+    SELECT attribute_directory.create_changes_view($1);
+
+    SELECT attribute_directory.create_run_length_view($1);
 
     SELECT $1;
 $$ LANGUAGE sql VOLATILE;

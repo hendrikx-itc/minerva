@@ -8726,25 +8726,22 @@ objects:
     name: create_dependees
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT
-              attribute_directory.create_compacted_view(
-                  attribute_directory.create_curr_view(
-                      attribute_directory.create_curr_ptr_view(
-                          attribute_directory.create_staging_modified_view(
-                              attribute_directory.create_staging_new_view(
-                                  attribute_directory.create_hash_function($1)
-                              )
-                          )
-                      )
-                  )
-              );
+      BEGIN
+        PERFORM attribute_directory.create_hash_function($1);
+        PERFORM attribute_directory.create_staging_new_view($1);
+        PERFORM attribute_directory.create_staging_modified_view($1);
+        PERFORM attribute_directory.create_curr_ptr_view($1);
+        PERFORM attribute_directory.create_curr_view($1);
+        PERFORM attribute_directory.create_compacted_view($1);
+        RETURN $1;
+      END;
 - function:
     name: drop_dependees
     schema: attribute_directory
