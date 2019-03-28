@@ -9071,7 +9071,7 @@ objects:
     name: create_attribute_store
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -9081,12 +9081,18 @@ objects:
     - name: entity_type_name
       data_type: text
     source: |-
-      SELECT attribute_directory.init(attribute_directory.define_attribute_store($1, $2));
+      DECLARE
+        store attribute_directory.attribute_store;
+      BEGIN
+        SELECT * FROM attribute_directory.define_attribute_store($1, $2) INTO store;
+        PERFORM attribute_directory.init(store);
+        RETURN store;
+      END;
 - function:
     name: create_attribute_store
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -9098,9 +9104,14 @@ objects:
     - name: attributes
       data_type: attribute_directory.attribute_descr[]
     source: |-
-      SELECT attribute_directory.init(
-          attribute_directory.add_attributes(attribute_directory.define_attribute_store($1, $2), $3)
-          );
+      DECLARE
+        store attribute_directory.attribute_store;
+      BEGIN
+        SELECT * FROM attribute_directory.define_attribute_store($1, $2) INTO store;
+        PERFORM attribute_directory.add_attributes(store, $3);
+        PERFORM attribute_directory.init(store);
+        RETURN store;
+      END;
 - function:
     name: create_attribute_store
     schema: attribute_directory

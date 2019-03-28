@@ -5861,40 +5861,6 @@ AS $$
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."init2"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
--- Base/parent table
-    SELECT attribute_directory.create_base_table($1);
-
-    -- Inherited table definitions
-    SELECT attribute_directory.create_history_table($1);
-    SELECT attribute_directory.create_staging_table($1);
-    SELECT attribute_directory.create_compacted_tmp_table($1);
-
-    -- Separate table
-    SELECT attribute_directory.create_curr_ptr_table($1);
-
-    -- Other
-    SELECT attribute_directory.create_at_func_ptr($1);
-    SELECT attribute_directory.create_at_func($1);
-
-    SELECT attribute_directory.create_entity_at_func_ptr($1);
-    SELECT attribute_directory.create_entity_at_func($1);
-
-    SELECT attribute_directory.create_hash_triggers($1);
-
-    SELECT attribute_directory.create_modified_trigger_function($1);
-    SELECT attribute_directory.create_modified_triggers($1);
-
-    SELECT attribute_directory.create_changes_view($1);
-
-    SELECT attribute_directory.create_run_length_view($1);
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "attribute_directory"."to_attribute"(attribute_directory.attribute_store, "name" name, "data_type" text, "description" text)
     RETURNS attribute_directory.attribute
 AS $$
@@ -5919,17 +5885,28 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text)
     RETURNS attribute_directory.attribute_store
 AS $$
-SELECT attribute_directory.init(attribute_directory.define_attribute_store($1, $2));
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  store attribute_directory.attribute_store;
+BEGIN
+  SELECT * FROM attribute_directory.define_attribute_store($1, $2) INTO store;
+  PERFORM attribute_directory.init(store);
+  RETURN store;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text, "attributes" attribute_directory.attribute_descr[])
     RETURNS attribute_directory.attribute_store
 AS $$
-SELECT attribute_directory.init(
-    attribute_directory.add_attributes(attribute_directory.define_attribute_store($1, $2), $3)
-    );
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  store attribute_directory.attribute_store;
+BEGIN
+  SELECT * FROM attribute_directory.define_attribute_store($1, $2) INTO store;
+  PERFORM attribute_directory.add_attributes(store, $3);
+  PERFORM attribute_directory.init(store);
+  RETURN store;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_id" integer, "entity_type_id" integer, "attributes" attribute_directory.attribute_descr[])
