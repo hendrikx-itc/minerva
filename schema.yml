@@ -3146,17 +3146,22 @@ objects:
     name: create_entity_from_dn
     schema: directory
     return_type: directory.entity
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: true
     secdef: false
     arguments:
     - data_type: text
     source: |-
-      SELECT directory.create_entity(
-        (directory.last_dn_part(directory.explode_dn($1))).name,
-        directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)
-      );
+        DECLARE entity directory.entity;
+        BEGIN
+            SELECT * FROM directory.create_entity(
+                (directory.last_dn_part(directory.explode_dn($1))).name,
+                directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)
+            ) INTO entity;
+            PERFORM alias_directory.create_alias(entity, 'dn', $1);
+            RETURN entity;
+        END;
 - function:
     name: get_or_create_entity
     schema: alias_directory

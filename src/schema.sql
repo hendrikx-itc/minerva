@@ -2109,11 +2109,16 @@ $$ LANGUAGE sql VOLATILE STRICT;
 CREATE FUNCTION "directory"."create_entity_from_dn"(text)
     RETURNS directory.entity
 AS $$
-SELECT directory.create_entity(
-  (directory.last_dn_part(directory.explode_dn($1))).name,
-  directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)
-);
-$$ LANGUAGE sql VOLATILE STRICT;
+DECLARE entity directory.entity;
+BEGIN
+    SELECT * FROM directory.create_entity(
+        (directory.last_dn_part(directory.explode_dn($1))).name,
+        directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)
+    ) INTO entity;
+    PERFORM alias_directory.create_alias(entity, 'dn', $1);
+    RETURN entity;
+END;
+$$ LANGUAGE plpgsql VOLATILE STRICT;
 
 
 CREATE FUNCTION "alias_directory"."get_or_create_entity"("alias_type" name, "name" name, "entity_type" name)
