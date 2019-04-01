@@ -12109,3 +12109,6 @@ objects:
       value: dn
     - column: id
       value: 1
+- setting:
+    name: minerva.trigger_mark_modified
+    value: 'on'

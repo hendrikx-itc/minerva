@@ -7865,6 +7865,13 @@ INSERT INTO "relation_directory"."type" (name, cardinality, id) VALUES ('parent'
 INSERT INTO "alias_directory"."alias_type" (name, id) VALUES ('dn', 1);
 
 
+DO $$ BEGIN
+EXECUTE 'ALTER DATABASE ' || current_database() || ' SET minerva.trigger_mark_modified TO on';
+END; $$;
+
+SET minerva.trigger_mark_modified TO on;
+
+
 ALTER TABLE "attribute_directory"."attribute_store"
   ADD CONSTRAINT "attribute_attribute_store_entity_type_id_fkey"
   FOREIGN KEY (entity_type_id)
