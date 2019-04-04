@@ -2,7 +2,7 @@ BEGIN;
 
 SELECT plan(3);
 
-SELECT relation_directory.define('A->B');
+SELECT relation_directory.create_type('A->B');
 
 SELECT throws_like(
     'SELECT source_id, target_id FROM relation_def."A->B"',
