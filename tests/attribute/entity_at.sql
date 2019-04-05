@@ -39,7 +39,7 @@ SELECT is(
 );
 
 SELECT
-    is(entity.dn, 'Network=A,Node=001', 'at-function should be usable in a where-clause')
+    is(entity.name, '001', 'at-function should be usable in a where-clause')
 FROM
     directory.entity
 WHERE (attribute_history."test_Node_at"(entity.id, '2015-01-02 10:01')).x = 42;

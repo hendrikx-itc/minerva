@@ -45,6 +45,7 @@ SELECT columns_are(
     ARRAY[
         'entity_id',
         'timestamp',
+	'created',
         'modified',
         'x'
     ]

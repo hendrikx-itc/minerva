@@ -4,31 +4,33 @@ SELECT plan(3);
 
 
 SELECT trend_directory.create_table_trend_store(
-    'test-trend-store',
     'test-data',
     'Node',
-    '900',
+    '900'::interval,
     86400,
     ARRAY[
-        ('x', 'integer', 'some column with integer values')
-    ]::trend_directory.trend_descr[]
+        ('test-trend-store-main', ARRAY [
+	     ('x', 'integer', 'some column with integer values')
+        ]::trend_directory.trend_descr[] )
+    ]::trend_directory.table_trend_store_part_descr[]
 );
 
 
-INSERT INTO trend."test-trend-store"(
+INSERT INTO trend."test-trend-store-main"(
     entity_id,
     timestamp,
     modified,
+    created,
     x
 )
 VALUES
-    (id(directory.dn_to_entity('Network=G01,Node=A001')), '2015-01-21 15:00+00', now(), 42),
-    (id(directory.dn_to_entity('Network=G01,Node=A002')), '2015-01-21 15:00+00', now(), 43);
+    (id(directory.dn_to_entity('Network=G01,Node=A001')), '2015-01-21 15:00+00', now(), now(), 42),
+    (id(directory.dn_to_entity('Network=G01,Node=A002')), '2015-01-21 15:00+00', now(), now(), 43);
 
 
 SELECT trend_directory.transfer_staged(table_trend_store)
 FROM trend_directory.table_trend_store
-WHERE table_trend_store::text = 'test-trend-store';
+WHERE table_trend_store::text = 'test-trend-store-main';
 
 
 SELECT trend_directory.define_materialization(

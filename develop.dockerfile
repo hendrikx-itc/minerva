@@ -1,4 +1,4 @@
-FROM postgres:11.0
+FROM postgres:11
 MAINTAINER Hendrikx ITC
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \

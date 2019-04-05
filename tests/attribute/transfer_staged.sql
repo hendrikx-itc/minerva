@@ -30,7 +30,7 @@ SELECT is(
 )
 FROM attribute_history."some_data_source_name_some_entity_type_name" a
 JOIN directory.entity ON entity.id = a.entity_id
-WHERE entity.dn = 'Node=001';
+WHERE entity.name = '001';
 
 -- Alter attribute table
 
@@ -65,7 +65,7 @@ SELECT is(
 )
 FROM attribute_history."some_data_source_name_some_entity_type_name" a
 JOIN directory.entity ON entity.id = a.entity_id
-WHERE entity.dn = 'Node=001';
+WHERE entity.name = '001';
 
 SELECT * FROM finish();
 ROLLBACK;
