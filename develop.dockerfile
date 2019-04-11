@@ -6,7 +6,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
   make \
   patch \
   perl \
-  postgresql-server-dev-11
+  postgresql-server-dev-11 \
+  python3-pip
+RUN pip3 install minerva-etl
 
 ADD https://github.com/theory/pgtap/archive/master.tar.gz /pgtap.tar.gz
 RUN mkdir /pgtap

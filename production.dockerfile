@@ -8,5 +8,4 @@ COPY docker-resources/usr/bin/* /usr/bin/
 COPY docker-resources/init-minerva-db-production.sh /docker-entrypoint-initdb.d/init-minerva-db.sh
 COPY /src /minerva
 
-VOLUME /setup
 VOLUME /custom

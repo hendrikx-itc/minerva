@@ -2,10 +2,16 @@
 set -e
 set -o pipefail
 
+export ADD_PGTAP_EXTENSION=${ADD_PGTAP_EXTENSION:=false}
+
 psql -d postgres -c "CREATE DATABASE $MINERVA_DB_NAME;"
 
-psql -c "CREATE EXTENSION pgtap;"
+if [ ${ADD_PGTAP_EXTENSION} = true ]; then
+    psql -c "CREATE EXTENSION pgtap;"
+fi
 
+echo '#####################################'
+echo 'Creating Minerva database...'
 find /minerva -name '*.sql' | sort | while read filepath
 do
     echo '#####################################'
@@ -14,6 +20,8 @@ do
     psql -v ON_ERROR_STOP=1 -f $filepath
 done
 
+echo '#####################################'
+echo 'Loading custom scripts...'
 find /custom -name '*.sql' | sort | while read filepath
 do
     echo '#####################################'
