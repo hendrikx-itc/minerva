@@ -1,3 +1,7 @@
+CREATE EXTENSION timescaledb;
+
+CREATE EXTENSION pgtap;
+
 
 
 DO

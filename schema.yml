@@ -1,3 +1,6 @@
+extensions:
+- timescaledb
+- pgtap
 objects:
 - role:
     name: minerva
