@@ -182,6 +182,11 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+- schema:
+    name: logging
+    privileges:
+    - role: minerva
+      privilege: USAGE
 - function:
     name: integer_to_array
     schema: public
@@ -3254,6 +3259,56 @@ objects:
           WHERE entity_tag_link.entity_id IS NULL;
 
           SELECT $1;
+- sequence:
+    name: job_id_seq
+    schema: logging
+    startvalue: 1
+    increment: 1
+- table:
+    name: job
+    schema: logging
+    columns:
+    - name: id
+      data_type: integer
+      nullable: false
+      default: nextval('logging.job_id_seq'::regclass)
+    - name: action
+      data_type: text
+      nullable: false
+      default: ''
+    - name: started
+      data_type: timestamp with time zone
+      nullable: false
+    - name: finished
+      data_type: timestamp with time zone
+      nullable: true
+- function:
+    name: start_job
+    schema: logging
+    return_type: integer
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: actiondata
+      data_type: text
+    source: |-
+      INSERT INTO logging.job(action, started) VALUES ($1, NOW())
+      RETURNING job.id;
+- function:
+    name: end_job
+    schema: logging
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: job_id
+      data_type: integer
+    source: |-
+      UPDATE logging.job SET finished=NOW() WHERE id=$1;
 - composite_type:
     name: trend_descr
     schema: trend_directory
@@ -4198,18 +4253,24 @@ objects:
               'entity_id integer NOT NULL, '
               '"timestamp" timestamp with time zone NOT NULL, '
               'created timestamp with time zone NOT NULL, '
-              'modified timestamp with time zone NOT NULL '
+              'modified timestamp with time zone NOT NULL, '
+              'job_id integer NOT NULL'
               '%s'
               ') PARTITION BY RANGE ("timestamp");',
               trend_directory.base_table_schema(),
               name,
               (
-                  SELECT string_agg(format(',%I %s', t.name, t.data_type), ' ')
+                  SELECT string_agg(format(', %I %s', t.name, t.data_type), ' ')
                   FROM unnest($2) t
               )
           ),
           format(
               'ALTER TABLE %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
+              trend_directory.base_table_schema(),
+              name
+          ),
+          format(
+              'CREATE INDEX ON %I.%I USING btree (job_id)',
               trend_directory.base_table_schema(),
               name
           ),
