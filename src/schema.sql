@@ -168,6 +168,10 @@ GRANT USAGE,CREATE ON SCHEMA "trigger_rule" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "trigger_rule" TO "minerva";
 
 
+CREATE SCHEMA IF NOT EXISTS "logging";
+GRANT USAGE ON SCHEMA "logging" TO "minerva";
+
+
 CREATE FUNCTION "public"."integer_to_array"("value" integer)
     RETURNS integer[]
 AS $$
@@ -2177,6 +2181,39 @@ INSERT INTO directory.entity_tag_link(tag_id, entity_id)
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE SEQUENCE logging.job_id_seq
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1;
+
+
+CREATE TABLE "logging"."job"
+(
+  "id" integer NOT NULL DEFAULT nextval('logging.job_id_seq'::regclass),
+  "action" text NOT NULL,
+  "started" timestamp with time zone NOT NULL,
+  "finished" timestamp with time zone
+);
+
+
+
+CREATE FUNCTION "logging"."start_job"("actiondata" text)
+    RETURNS integer
+AS $$
+INSERT INTO logging.job(action, started) VALUES ($1, NOW())
+RETURNING job.id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "logging"."end_job"("job_id" integer)
+    RETURNS void
+AS $$
+UPDATE logging.job SET finished=NOW() WHERE id=$1;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE TYPE "trend_directory"."trend_descr" AS (
   "name" name,
   "data_type" text,
@@ -2602,18 +2639,24 @@ SELECT ARRAY[
         'entity_id integer NOT NULL, '
         '"timestamp" timestamp with time zone NOT NULL, '
         'created timestamp with time zone NOT NULL, '
-        'modified timestamp with time zone NOT NULL '
+        'modified timestamp with time zone NOT NULL, '
+        'job_id integer NOT NULL'
         '%s'
         ') PARTITION BY RANGE ("timestamp");',
         trend_directory.base_table_schema(),
         name,
         (
-            SELECT string_agg(format(',%I %s', t.name, t.data_type), ' ')
+            SELECT string_agg(format(', %I %s', t.name, t.data_type), ' ')
             FROM unnest($2) t
         )
     ),
     format(
         'ALTER TABLE %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
+        trend_directory.base_table_schema(),
+        name
+    ),
+    format(
+        'CREATE INDEX ON %I.%I USING btree (job_id)',
         trend_directory.base_table_schema(),
         name
     ),
@@ -3698,6 +3741,29 @@ SELECT count(*) = 1
     FROM trend_directory.partition
     WHERE table_trend_store_part_id = $1.id AND index = $2;
 $$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."create_partitions"(trend_directory.table_trend_store, timestamp with time zone)
+    RETURNS void
+AS $$
+SELECT trend_directory.attributes_to_partition(tp, $2)
+    FROM trend_directory.table_trend_store_part tp
+    WHERE tp.trend_store_id = $1.id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."create_partitions"("data_source" name, "entity_type" name, "granularity" interval, timestamp with time zone)
+    RETURNS void
+AS $$
+SELECT trend_directory.create_partitions(ts, $4)
+    FROM trend_directory.table_trend_store ts
+    INNER JOIN directory.data_source ds ON ts.data_source_id = ds.id
+    INNER JOIN directory.entity_type et ON ts.entity_type_id = et.id
+    WHERE ds.name = $1
+        AND et.name = $2
+        AND ts.granularity = $3
+;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."get_trend_store"("id" integer)
