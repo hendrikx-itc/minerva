@@ -5864,6 +5864,46 @@ objects:
           FROM trend_directory.partition
           WHERE table_trend_store_part_id = $1.id AND index = $2;
 - function:
+    name: create_partitions
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.table_trend_store
+    - data_type: timestamp with time zone
+    source: |-
+      SELECT trend_directory.attributes_to_partition(tp, $2)
+          FROM trend_directory.table_trend_store_part tp
+          WHERE tp.trend_store_id = $1.id;
+- function:
+    name: create_partitions
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: data_source
+      data_type: name
+    - name: entity_type
+      data_type: name
+    - name: granularity
+      data_type: interval
+    - data_type: timestamp with time zone
+    source: |-
+      SELECT trend_directory.create_partitions(ts, $4)
+          FROM trend_directory.table_trend_store ts
+          INNER JOIN directory.data_source ds ON ts.data_source_id = ds.id
+          INNER JOIN directory.entity_type et ON ts.entity_type_id = et.id
+          WHERE ds.name = $1
+              AND et.name = $2
+              AND ts.granularity = $3
+      ;
+- function:
     name: get_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store

@@ -3696,6 +3696,29 @@ SELECT count(*) = 1
 $$ LANGUAGE sql STABLE;
 
 
+CREATE FUNCTION "trend_directory"."create_partitions"(trend_directory.table_trend_store, timestamp with time zone)
+    RETURNS void
+AS $$
+SELECT trend_directory.attributes_to_partition(tp, $2)
+    FROM trend_directory.table_trend_store_part tp
+    WHERE tp.trend_store_id = $1.id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."create_partitions"("data_source" name, "entity_type" name, "granularity" interval, timestamp with time zone)
+    RETURNS void
+AS $$
+SELECT trend_directory.create_partitions(ts, $4)
+    FROM trend_directory.table_trend_store ts
+    INNER JOIN directory.data_source ds ON ts.data_source_id = ds.id
+    INNER JOIN directory.entity_type et ON ts.entity_type_id = et.id
+    WHERE ds.name = $1
+        AND et.name = $2
+        AND ts.granularity = $3
+;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."get_trend_store"("id" integer)
     RETURNS trend_directory.trend_store
 AS $$
