@@ -1,6 +1,3 @@
-extensions:
-- timescaledb
-- pgtap
 objects:
 - role:
     name: minerva
@@ -88,14 +85,6 @@ objects:
       privilege: USAGE
 - schema:
     name: trend_directory
-- schema:
-    name: trend_partition
-    comment: Stores information with fixed interval and format, like periodic measurements.
-    privileges:
-    - role: minerva_writer
-      privilege: USAGE,CREATE
-    - role: minerva
-      privilege: USAGE
 - schema:
     name: attribute
     privileges:
@@ -3297,7 +3286,7 @@ objects:
     - name: actiondata
       data_type: text
     source: |-
-      INSERT INTO logging.job(action, started) VALUES ($1, NOW())
+      INSERT INTO logging.job(action, started) VALUES ($1, clock_timestamp())
       RETURNING job.id;
 - function:
     name: end_job
@@ -3311,7 +3300,7 @@ objects:
     - name: job_id
       data_type: integer
     source: |-
-      UPDATE logging.job SET finished=NOW() WHERE id=$1;
+      UPDATE logging.job SET finished=clock_timestamp() WHERE id=$1;
 - composite_type:
     name: trend_descr
     schema: trend_directory
@@ -3644,32 +3633,6 @@ objects:
       references:
         table:
           name: view_trend_store_part
-          schema: trend_directory
-        columns:
-        - id
-      on_delete: cascade
-- table:
-    name: partition
-    schema: trend_directory
-    columns:
-    - name: table_trend_store_part_id
-      data_type: integer
-      nullable: false
-    - name: index
-      data_type: integer
-      nullable: false
-    primary_key:
-      name: partition_pkey
-      columns:
-      - table_trend_store_part_id
-      - index
-    foreign_keys:
-    - name: partition_table_trend_store_part_id_fkey
-      columns:
-      - table_trend_store_part_id
-      references:
-        table:
-          name: table_trend_store_part
           schema: trend_directory
         columns:
         - id
@@ -4083,17 +4046,6 @@ objects:
     source: |-
       SELECT 'trend'::name;
 - function:
-    name: partition_table_schema
-    schema: trend_directory
-    return_type: name
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      SELECT 'trend_partition'::name;
-- function:
     name: staging_table_schema
     schema: trend_directory
     return_type: name
@@ -4259,7 +4211,7 @@ objects:
               'modified timestamp with time zone NOT NULL, '
               'job_id integer NOT NULL'
               '%s'
-              ') PARTITION BY RANGE ("timestamp");',
+              ');',
               trend_directory.base_table_schema(),
               name,
               (
@@ -4299,6 +4251,11 @@ objects:
           ),
           format(
               'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
+              trend_directory.base_table_schema(),
+              name
+          ),
+          format(
+              'SELECT create_hypertable(''%I.%I'', ''timestamp'', chunk_time_interval => interval ''1 day'');',
               trend_directory.base_table_schema(),
               name
           )
@@ -4702,95 +4659,6 @@ objects:
 
           SELECT $1;
 - function:
-    name: partition_name
-    schema: trend_directory
-    return_type: name
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - name: base_table_name
-      data_type: name
-    - name: index
-      data_type: integer
-    source: |-
-      SELECT ($1 || '_' || $2)::name;
-- function:
-    name: partition_name
-    schema: trend_directory
-    return_type: name
-    language: sql
-    volatility: stable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: trend_directory.table_trend_store_part
-    - name: index
-      data_type: integer
-    source: |-
-      SELECT trend_directory.partition_name(trend_directory.base_table_name($1), $2);
-- function:
-    name: timestamp_to_index
-    schema: trend_directory
-    return_type: integer
-    language: plpgsql
-    volatility: immutable
-    strict: true
-    secdef: false
-    arguments:
-    - name: partition_size
-      data_type: integer
-    - name: timestamp
-      data_type: timestamp with time zone
-    source: |-
-      DECLARE
-          unix_timestamp integer;
-          div integer;
-          modulo integer;
-      BEGIN
-          unix_timestamp = extract(EPOCH FROM "timestamp")::integer;
-          div = unix_timestamp / partition_size;
-          modulo = mod(unix_timestamp, partition_size);
-
-          IF modulo > 0 THEN
-              return div;
-          ELSE
-              return div - 1;
-          END IF;
-      END;
-- function:
-    name: partition_name
-    schema: trend_directory
-    return_type: name
-    language: sql
-    volatility: stable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: trend_directory.table_trend_store_part
-    - data_type: timestamp with time zone
-    source: |-
-      SELECT trend_directory.partition_name(
-              $1, trend_directory.timestamp_to_index(table_trend_store.partition_size, $2)
-          )
-          FROm trend_directory.table_trend_store
-          WHERE id = $1.trend_store_id;
-- function:
-    name: table_name
-    schema: trend_directory
-    return_type: name
-    language: sql
-    volatility: stable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: trend_directory.partition
-    source: |-
-      SELECT trend_directory.partition_name(table_trend_store_part, $1.index)
-          FROM trend_directory.table_trend_store_part
-          WHERE id = $1.table_trend_store_part_id;
-- function:
     name: rename_table_trend_store_part
     schema: trend_directory
     return_type: trend_directory.table_trend_store_part
@@ -4811,18 +4679,6 @@ objects:
                   $2
               )
           );
-
-          SELECT public.action(
-              $1,
-              format(
-                  'ALTER TABLE %I.%I RENAME TO %I',
-                  trend_directory.partition_table_schema(),
-                  trend_directory.table_name(partition),
-                  trend_directory.partition_name($2, partition.index)
-              )
-          )
-          FROM trend_directory.partition
-          WHERE table_trend_store_part_id = $1.id;
 
           UPDATE trend_directory.table_trend_store_part
           SET name = $2
@@ -4936,19 +4792,6 @@ objects:
       data_type: name
     source: |-
       DELETE FROM trend_directory.table_trend_store WHERE name = $1;
-- function:
-    name: table_trend_store_part
-    schema: trend_directory
-    return_type: trend_directory.table_trend_store_part
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.partition
-    source: |-
-      SELECT * FROM trend_directory.table_trend_store_part
-          WHERE id = $1.table_trend_store_part_id;
 - function:
     name: initialize_table_trend_store
     schema: trend_directory
@@ -5102,11 +4945,8 @@ objects:
       BEGIN
           EXECUTE format(
               'INSERT INTO %I.%I SELECT * FROM %I.%I WHERE timestamp = $1',
-              trend_directory.partition_table_schema(),
-              trend_directory.table_name(trend_directory.attributes_to_partition(
-                  trend_store_part,
-                  trend_directory.timestamp_to_index(trend_store.partition_size, timestamp)
-              )),
+              trend_directory.base_table_schema(),
+              trend_directory.base_table_name(trend_store_part),
               trend_directory.staging_table_schema(),
               trend_directory.staging_table_name(trend_store_part)
           ) USING timestamp;
@@ -5138,40 +4978,6 @@ objects:
                   trend_directory.staging_table_schema(),
                   trend_directory.staging_table_name(trend_store_part)
               )
-          );
-- function:
-    name: cluster_partition_table_on_timestamp_sql
-    schema: trend_directory
-    return_type: text
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: name
-      data_type: text
-    source: |-
-      SELECT format(
-              'CLUSTER %I.%I USING %I',
-              trend_directory.partition_table_schema(),
-              $1,
-              trend_directory.get_index_on($1, 'timestamp')
-          );
-- function:
-    name: cluster_partition_table_on_timestamp
-    schema: trend_directory
-    return_type: text
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: name
-      data_type: text
-    source: |-
-      SELECT public.action(
-              $1,
-              trend_directory.cluster_partition_table_on_timestamp_sql($1)
           );
 - function:
     name: alter_trend_name
@@ -5570,82 +5376,6 @@ objects:
     source: |-
       SELECT to_timestamp($1 * $2 + 1);
 - function:
-    name: data_start
-    schema: trend_directory
-    return_type: timestamp with time zone
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.partition
-    source: |-
-      SELECT trend_directory.index_to_timestamp(
-              (trend_directory.table_trend_store(trend_directory.table_trend_store_part($1))).partition_size, $1.index
-          );
-- function:
-    name: data_end
-    schema: trend_directory
-    return_type: timestamp with time zone
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.partition
-    source: |-
-      SELECT trend_directory.index_to_timestamp(
-              (trend_directory.table_trend_store(trend_directory.table_trend_store_part($1))).partition_size, $1.index + 1
-          );
-- function:
-    name: create_partition_table_sql
-    schema: trend_directory
-    return_type: text[]
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.partition
-    source: |-
-      SELECT ARRAY[
-              format(
-                  'CREATE TABLE %I.%I PARTITION OF trend.%I '
-                  'FOR VALUES FROM (%L) TO (%L);',
-                  trend_directory.partition_table_schema(),
-                  trend_directory.table_name($1),
-                  trend_directory.base_table_name(trend_directory.table_trend_store_part($1)),
-                  trend_directory.data_start($1),
-                  trend_directory.data_end($1)
-              ),
-              format(
-                  'GRANT SELECT ON TABLE %I.%I TO minerva;',
-                  trend_directory.partition_table_schema(),
-                  trend_directory.table_name($1)
-              ),
-              format(
-                  'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
-                  trend_directory.partition_table_schema(),
-                  trend_directory.table_name($1)
-              ),
-              format(
-                  'SELECT trend_directory.cluster_partition_table_on_timestamp(%L)',
-                  trend_directory.table_name($1)
-              )
-          ];
-- function:
-    name: create_partition_table
-    schema: trend_directory
-    return_type: trend_directory.partition
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: true
-    arguments:
-    - data_type: trend_directory.partition
-    source: |-
-      SELECT public.action($1, trend_directory.create_partition_table_sql($1));
-- function:
     name: get_table_trend
     schema: trend_directory
     return_type: trend_directory.table_trend
@@ -5807,167 +5537,6 @@ objects:
       data_type: integer
       nullable: false
 - function:
-    name: get_partition
-    schema: trend_directory
-    return_type: trend_directory.partition
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - name: trend_store_part
-      data_type: trend_directory.table_trend_store_part
-    - name: index
-      data_type: integer
-    source: |-
-      SELECT partition
-          FROM trend_directory.partition
-          WHERE table_trend_store_part_id = $1.id AND index = $2;
-- function:
-    name: define_partition
-    schema: trend_directory
-    return_type: trend_directory.partition
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: trend_store_part
-      data_type: trend_directory.table_trend_store_part
-    - name: index
-      data_type: integer
-    source: |-
-      INSERT INTO trend_directory.partition(
-              table_trend_store_part_id,
-              index
-          )
-          VALUES (
-              $1.id,
-              $2
-          )
-          RETURNING partition;
-- function:
-    name: create_partition
-    schema: trend_directory
-    return_type: trend_directory.partition
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: trend_store_part
-      data_type: trend_directory.table_trend_store_part
-    - name: index
-      data_type: integer
-    source: |-
-      SELECT trend_directory.create_partition_table(
-              trend_directory.define_partition($1, $2)
-          );
-- function:
-    name: attributes_to_partition
-    schema: trend_directory
-    return_type: trend_directory.partition
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.table_trend_store_part
-    - name: index
-      data_type: integer
-    source: |-
-      SELECT COALESCE(
-              trend_directory.get_partition($1, $2),
-              trend_directory.create_partition($1, $2)
-          );
-- function:
-    name: attributes_to_partition
-    schema: trend_directory
-    return_type: trend_directory.partition
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.table_trend_store_part
-    - data_type: timestamp with time zone
-    source: |-
-      SELECT trend_directory.attributes_to_partition(
-              $1,
-              trend_directory.timestamp_to_index(table_trend_store.partition_size, $2)
-          )
-          FROM trend_directory.table_trend_store WHERE id = $1.trend_store_id;
-- function:
-    name: partition_exists
-    schema: trend_directory
-    return_type: bool
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.partition
-    source: |-
-      SELECT public.table_exists(
-              trend_directory.partition_table_schema(),
-              trend_directory.table_name($1)
-          );
-- function:
-    name: partition_exists
-    schema: trend_directory
-    return_type: bool
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.table_trend_store_part
-    - data_type: integer
-    source: |-
-      SELECT count(*) = 1
-          FROM trend_directory.partition
-          WHERE table_trend_store_part_id = $1.id AND index = $2;
-- function:
-    name: create_partitions
-    schema: trend_directory
-    return_type: void
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.table_trend_store
-    - data_type: timestamp with time zone
-    source: |-
-      SELECT trend_directory.attributes_to_partition(tp, $2)
-          FROM trend_directory.table_trend_store_part tp
-          WHERE tp.trend_store_id = $1.id;
-- function:
-    name: create_partitions
-    schema: trend_directory
-    return_type: void
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: data_source
-      data_type: name
-    - name: entity_type
-      data_type: name
-    - name: granularity
-      data_type: interval
-    - data_type: timestamp with time zone
-    source: |-
-      SELECT trend_directory.create_partitions(ts, $4)
-          FROM trend_directory.table_trend_store ts
-          INNER JOIN directory.data_source ds ON ts.data_source_id = ds.id
-          INNER JOIN directory.entity_type et ON ts.entity_type_id = et.id
-          WHERE ds.name = $1
-              AND et.name = $2
-              AND ts.granularity = $3
-      ;
-- function:
     name: get_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store
@@ -6081,78 +5650,6 @@ objects:
               trend_directory.update_modified($1, $2, now()),
               trend_directory.store_modified($1, $2, now())
           );
-- function:
-    name: populate_modified
-    schema: trend_directory
-    return_type: trend_directory.modified
-    returns_set: true
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: partition
-      data_type: trend_directory.partition
-    description: 'Populate trend_directory.modified table with modified records from
-      one
-
-      partition. This function should only be used in recovery scenarios where the
-
-      trend_directory.modified table has become corrupt or records are missing for
-
-      some reason.'
-    source: |-
-      BEGIN
-          RETURN QUERY EXECUTE format(
-              'SELECT (trend_directory.mark_modified($1, "timestamp", max(modified))).* '
-              'FROM trend_directory.%I GROUP BY timestamp',
-              partition.trend_store_id, partition.table_name
-          );
-      END;
-- function:
-    name: populate_modified
-    schema: trend_directory
-    return_type: trend_directory.modified
-    returns_set: true
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.table_trend_store_part
-    description: 'Populate trend_directory.modified table with modified records from
-      a whole
-
-      trend store. This function should only be used in recovery scenarios where the
-
-      trend_directory.modified table has become corrupt or records are missing for
-
-      some reason.'
-    source: |-
-      SELECT
-              trend_directory.populate_modified(partition)
-          FROM trend_directory.partition
-          WHERE table_trend_store_part_id = $1.id;
-- function:
-    name: available_timestamps
-    schema: trend_directory
-    return_type: timestamp with time zone
-    returns_set: true
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: partition
-      data_type: trend_directory.partition
-    source: |-
-      BEGIN
-          RETURN QUERY EXECUTE format(
-              'SELECT timestamp FROM %I.%I GROUP BY timestamp',
-              trend_directory.partition_table_schema(),
-              trend_directory.table_name(partition)
-          );
-      END;
 - composite_type:
     name: transfer_result
     schema: trend_directory
@@ -6183,7 +5680,6 @@ objects:
     source: |-
       DECLARE
           columns_part text;
-          dst_partition trend_directory.partition;
           result trend_directory.transfer_result;
       BEGIN
           SELECT
@@ -6192,11 +5688,9 @@ objects:
               ARRAY['entity_id', 'timestamp', 'created', 'modified'] || trend_names
           ) AS trend_name;
 
-          dst_partition = trend_directory.attributes_to_partition(target, timestamp);
-
           EXECUTE format(
-              'INSERT INTO trend_directory.%I (%s) SELECT %s FROM trend_directory.%I WHERE timestamp = $1',
-              dst_partition.table_name,
+              'INSERT INTO trend.%I (%s) SELECT %s FROM trend.%I WHERE timestamp = $1',
+              trend_directory.base_table_name(target),
               columns_part,
               columns_part,
               trend_directory.base_table_name(source)
@@ -6445,26 +5939,6 @@ objects:
       name: to_char
     implicit: false
 - function:
-    name: changes_on_data_source_update
-    schema: trend_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          IF NEW.name <> OLD.name THEN
-              UPDATE trend_directory.partition SET
-                  table_name = trend_directory.to_table_name(partition)
-              FROM trend_directory.trend_store ts
-              WHERE ts.data_source_id = NEW.id AND ts.id = partition.trend_store_id;
-          END IF;
-
-          RETURN NEW;
-      END;
-- function:
     name: cleanup_on_data_source_delete
     schema: trend_directory
     return_type: trigger
@@ -6504,37 +5978,6 @@ objects:
           END IF;
 
           RETURN NEW;
-      END;
-- function:
-    name: drop_partition_table_on_delete
-    schema: trend_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      DECLARE
-          kind CHAR;
-      BEGIN
-          SELECT INTO kind relkind
-          FROM pg_class
-          WHERE relname = trend_directory.table_name(OLD);
-
-          IF kind = 'r' THEN
-              EXECUTE format(
-                  'DROP TABLE IF EXISTS trend_directory.%I CASCADE',
-                  trend_directory.table_name(OLD)
-              );
-          ELSIF kind = 'v' THEN
-              EXECUTE format(
-                  'DROP VIEW trend_directory.%I',
-                  trend_directory.table_name(OLD)
-              );
-          END IF;
-
-          RETURN OLD;
       END;
 - function:
     name: update_modified_column
@@ -6589,18 +6032,6 @@ objects:
       END;
 - trigger:
     table:
-      schema: directory
-      name: data_source
-    name: propagate_changes_on_update_to_trend
-    function:
-      schema: trend_directory
-      name: changes_on_data_source_update
-    when: after
-    events:
-    - update
-    affecteach: row
-- trigger:
-    table:
       schema: trend_directory
       name: trend
     name: propagate_changes_on_trend_update
@@ -6610,18 +6041,6 @@ objects:
     when: after
     events:
     - update
-    affecteach: row
-- trigger:
-    table:
-      schema: trend_directory
-      name: partition
-    name: drop_table_on_delete
-    function:
-      schema: trend_directory
-      name: drop_partition_table_on_delete
-    when: after
-    events:
-    - delete
     affecteach: row
 - trigger:
     table:

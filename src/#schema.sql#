@@ -1,5 +1,3 @@
-
-
 DO
 $$
 BEGIN
@@ -2192,7 +2190,7 @@ CREATE TABLE "logging"."job"
 CREATE FUNCTION "logging"."start_job"("actiondata" text)
     RETURNS integer
 AS $$
-INSERT INTO logging.job(action, started) VALUES ($1, clock_timestamp())
+INSERT INTO logging.job(action, started) VALUES ($1, NOW())
 RETURNING job.id;
 $$ LANGUAGE sql VOLATILE;
 
@@ -2200,7 +2198,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "logging"."end_job"("job_id" integer)
     RETURNS void
 AS $$
-UPDATE logging.job SET finished=clock_timestamp() WHERE id=$1;
+UPDATE logging.job SET finished=NOW() WHERE id=$1;
 $$ LANGUAGE sql VOLATILE;
 
 
