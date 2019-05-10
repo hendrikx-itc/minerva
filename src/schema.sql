@@ -1398,7 +1398,6 @@ CREATE FUNCTION "entity"."create_entity_table"()
     RETURNS trigger
 AS $$
 BEGIN
-    INSERT INTO directory.tag (name, tag_group_id) SELECT NEW.name, id FROM directory.tag_group WHERE directory.tag_group.name = 'entity_type';
     EXECUTE format(
         'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
         NEW.name,
@@ -1415,14 +1414,6 @@ BEGIN
    );
    EXECUTE format(
        'GRANT INSERT,UPDATE,DELETE ON TABLE entity.%I TO minerva_writer;',
-       NEW.name
-   );
-   EXECUTE format(
-       'CREATE TRIGGER "create_entity_tag_link_for_new_%s_entity"'
-       '  AFTER INSERT ON entity.%I'
-       '  FOR EACH ROW'
-       '  EXECUTE PROCEDURE directory.create_entity_tag_link();',
-       NEW.name,
        NEW.name
    );
    RETURN NEW;
