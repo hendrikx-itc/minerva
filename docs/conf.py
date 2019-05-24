@@ -158,10 +158,5 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 
-def builder_inited_handler(app):
-    import subprocess
-    subprocess.run(['db-schema', 'doc', 'generate', '../schema.yml', './'])
-
-def setup(app):
-    app.connect('builder-inited', builder_inited_handler)
-
+import subprocess
+subprocess.run(['db-schema', 'doc', 'generate', '../schema.yml', './'])
