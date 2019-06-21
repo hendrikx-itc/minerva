@@ -85,40 +85,40 @@ FROM pg_stat_replication;';
 
 
 CREATE OR REPLACE FUNCTION public.safe_division(numerator anyelement, denominator anyelement)
-	RETURNS anyelement
+    RETURNS anyelement
 AS $$
 SELECT CASE
-	WHEN $2 = 0 THEN
-		NULL
-	ELSE
-		$1 / $2
-	END;
+    WHEN $2 = 0 THEN
+        NULL
+    ELSE
+        $1 / $2
+    END;
 $$ LANGUAGE SQL IMMUTABLE;
 
 ALTER FUNCTION safe_division(anyelement, anyelement)
-	OWNER TO postgres;
+    OWNER TO postgres;
 
 
 CREATE OR REPLACE FUNCTION public.safe_division(numerator anyelement, denominator anyelement, division_by_zero_indicator anyelement)
-	RETURNS anyelement
+    RETURNS anyelement
 AS $$
 SELECT CASE
-	WHEN $2 = 0 THEN
-		$3
-	ELSE
-		$1 / $2
-	END;
+    WHEN $2 = 0 THEN
+        $3
+    ELSE
+        $1 / $2
+    END;
 $$ LANGUAGE SQL IMMUTABLE;
 
-ALTER FUNCTION safe_division(anyelement, anyelement)
-	OWNER TO postgres;
+ALTER FUNCTION safe_division(anyelement, anyelement, anyelement)
+    OWNER TO postgres;
 
 
 CREATE OR REPLACE FUNCTION public.add_array(anyarray, anyarray) RETURNS anyarray
 AS $$
 SELECT array_agg(v1 + v2) FROM
 (
-	SELECT
+    SELECT
     unnest($1) AS v1,
     unnest($2) AS v2
 ) AS foo;
@@ -127,15 +127,15 @@ $$ LANGUAGE SQL STABLE STRICT;
 
 CREATE AGGREGATE sum_array(anyarray)
 (
-	sfunc = public.add_array,
-	stype = anyarray
+    sfunc = public.add_array,
+    stype = anyarray
 );
 
 CREATE OR REPLACE FUNCTION public.add_array_null_as_zero(anyarray, anyarray) RETURNS anyarray
 AS $$
 SELECT array_agg(coalesce(v1 + v2, v1, v2)) FROM
 (
-	SELECT
+    SELECT
     unnest($1) AS v1,
     unnest($2) AS v2
 ) AS foo;
@@ -215,9 +215,9 @@ $$ LANGUAGE SQL IMMUTABLE STRICT;
 
 
 CREATE OR REPLACE FUNCTION public.to_pdf(text)
-	RETURNS int[]
+    RETURNS int[]
 AS $$
-	SELECT array_agg(nullif(x, '')::int)
+    SELECT array_agg(nullif(x, '')::int)
     FROM unnest(string_to_array($1, ',')) AS x;
 $$ LANGUAGE SQL STABLE STRICT;
 
