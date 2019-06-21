@@ -114,6 +114,22 @@ ALTER FUNCTION safe_division(anyelement, anyelement, anyelement)
     OWNER TO postgres;
 
 
+CREATE FUNCTION public.ratio(numerator anyelement, denominator anyelement, division_by_zero_value anyelement = NULL::numeric)
+    RETURNS numeric
+AS $$
+SELECT CASE
+    WHEN $2 = 0 THEN
+        $3::numeric
+    ELSE
+        $1::numeric / $2::numeric
+    END;
+$$ LANGUAGE SQL IMMUTABLE;
+
+ALTER FUNCTION public.ratio(anyelement, anyelement, anyelement) OWNER TO postgres;
+
+COMMENT ON FUNCTION public.ratio(anyelement, anyelement, anyelement) IS 
+'Create ratios based on numerator and denominator. In case of division by zero division_by_zero_value is returned (default NULL)';
+
 CREATE OR REPLACE FUNCTION public.add_array(anyarray, anyarray) RETURNS anyarray
 AS $$
 SELECT array_agg(v1 + v2) FROM
