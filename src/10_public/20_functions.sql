@@ -130,6 +130,27 @@ ALTER FUNCTION public.ratio(anyelement, anyelement, anyelement) OWNER TO postgre
 COMMENT ON FUNCTION public.ratio(anyelement, anyelement, anyelement) IS 
 'Create ratios based on numerator and denominator. In case of division by zero division_by_zero_value is returned (default NULL)';
 
+
+CREATE OR REPLACE FUNCTION public.rssi_change(rssi_ch numeric)
+RETURNS numeric AS
+$body$
+DECLARE
+  ch_rssi numeric := $1;
+  ret_rssi numeric;
+BEGIN
+  IF ch_rssi = 0 OR ch_rssi IS NULL THEN
+    ret_rssi = -112;
+    RETURN ret_rssi;
+  ELSE
+    RETURN ch_rssi;
+  END IF;
+END;
+$body$ LANGUAGE plpgsql;
+
+
+ALTER FUNCTION public.rssi_change(numeric) OWNER TO postgres;
+
+
 CREATE OR REPLACE FUNCTION public.add_array(anyarray, anyarray) RETURNS anyarray
 AS $$
 SELECT array_agg(v1 + v2) FROM
