@@ -7,16 +7,13 @@ SELECT
 	ds.name AS datasource_name,
 	et.name AS entitytype_name,
 	ts.granularity,
-	CASE
-		WHEN m.src_trendstore_id IS NULL THEN false
-		ELSE true
-	END AS materialized
+	m.dst_trendstore_id IS MOT NULL AS materialized
 	FROM trend.trend t
 	JOIN trend.trendstore_trend_link ttl ON ttl.trend_id = t.id
 	JOIN trend.trendstore ts ON ts.id = ttl.trendstore_id
 	JOIN directory.datasource ds ON ds.id = ts.datasource_id
 	JOIN directory.entitytype et ON et.id = ts.entitytype_id
-	LEFT JOIN materialization.type m ON m.src_trendstore_id = ts.id;
+	LEFT JOIN materialization.type m ON m.dst_trendstore_id = ts.id;
 
 COMMENT ON VIEW materialization.trend_ext IS
 'Convenience view for easy lookup of trends';
