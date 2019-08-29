@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+CONTROL_FILE=${1:-control}
+
+DISTRIBUTION='bionic'
+
+VERSION=`git describe --tags | sed 's/-\(rc[0-9]*\)/~\1/'`
+CHANGELOG_TIMESTAMP=`git log -1 --format=%cD`
+PACKAGE_NAME=$(sed -n 's/^Package: //p' "${CONTROL_FILE}")
+DEBFULLNAME='Hendrikx ITC'
+DEBEMAIL='info@hendrikx-itc.nl'
+
+cat << EOF
+$PACKAGE_NAME (${VERSION:1}) $DISTRIBUTION; urgency=low
+
+  * Scripted package build
+
+ -- $DEBFULLNAME <$DEBEMAIL>  $CHANGELOG_TIMESTAMP
+EOF
+

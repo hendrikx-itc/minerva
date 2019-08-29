@@ -1,0 +1,17 @@
+FROM ubuntu:18.04
+
+RUN apt-get update && apt-get install -y \
+    dpkg-dev \
+    debhelper \
+    devscripts \
+    equivs
+
+COPY build-package /usr/bin/
+
+RUN mkdir /package && chmod 777 /package
+
+VOLUME ["/package/source", "/package/build"]
+
+WORKDIR /package/source
+
+CMD ["build-package"]

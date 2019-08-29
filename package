@@ -1,0 +1,14 @@
+#!/bin/bash
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+DISTRIBUTION=${1-1804}
+PKG_DIR="$SCRIPT_DIR/pkg-build/${DISTRIBUTION}"
+
+# Make sure the package target directory exists
+mkdir -p "$PKG_DIR"
+
+"$SCRIPT_DIR/debian/make-changelog" "$SCRIPT_DIR/debian/control" > "$SCRIPT_DIR/debian/changelog"
+
+docker build -t package -f "$SCRIPT_DIR/Dockerfile.${DISTRIBUTION}.package" "$SCRIPT_DIR/docker-context"
+
+docker run --rm -v "$SCRIPT_DIR:/package/source" -v "$PKG_DIR:/package/build" package build-package
