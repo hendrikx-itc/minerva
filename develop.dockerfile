@@ -1,21 +1,5 @@
-FROM postgres:11
+FROM timescale/timescaledb:1.3.0-pg11
 MAINTAINER Hendrikx ITC
-
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  libpq-dev \
-  make \
-  patch \
-  perl \
-  postgresql-server-dev-11 \
-  python3-pip
-RUN pip3 install minerva-etl
-
-ADD https://github.com/theory/pgtap/archive/master.tar.gz /pgtap.tar.gz
-RUN mkdir /pgtap
-RUN tar -xzvf /pgtap.tar.gz -C /pgtap --strip-components=1
-
-RUN cd /pgtap && make && make install
-RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
 
 COPY docker-resources/usr/bin/* /usr/bin/
 COPY docker-resources/init-minerva-db-develop.sh /docker-entrypoint-initdb.d/
