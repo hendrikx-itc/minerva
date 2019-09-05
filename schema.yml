@@ -115,9 +115,9 @@ objects:
       privilege: USAGE
 - schema:
     name: notification
-    comment: "Stores information of events that can occur at irregular intervals,\
-      \ but\r\nstill have a fixed, known format.\r\n\r\nThis schema is dynamically\
-      \ populated."
+    comment: |-
+      Stores information of events that can occur at irregular intervals,
+      but still have a fixed, known format. This schema is dynamically populated.
     privileges:
     - role: minerva_writer
       privilege: USAGE,CREATE
@@ -172,6 +172,7 @@ objects:
     privileges:
     - role: minerva
       privilege: USAGE
+
 - function:
     name: integer_to_array
     schema: public
@@ -187,6 +188,7 @@ objects:
       BEGIN
           RETURN ARRAY[value];
       END;
+
 - function:
     name: smallint_to_array
     schema: public
@@ -202,6 +204,7 @@ objects:
       BEGIN
           RETURN ARRAY[value];
       END;
+
 - function:
     name: smallint_to_timestamp_without_time_zone
     schema: public
@@ -216,6 +219,7 @@ objects:
       BEGIN
           RETURN NULL;
       END;
+
 - function:
     name: smallint_to_timestamp_with_time_zone
     schema: public
@@ -230,6 +234,7 @@ objects:
       BEGIN
           RETURN NULL;
       END;
+
 - function:
     name: column_names
     schema: public
@@ -246,14 +251,15 @@ objects:
       data_type: name
     source: |-
       SELECT a.attname
-          FROM pg_catalog.pg_class c
-          JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
-          JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
-          WHERE
-              n.nspname = $1 AND
-              c.relname = $2 AND
-              a.attisdropped = false AND
-              a.attnum > 0;
+      FROM pg_catalog.pg_class c
+      JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+      JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+      WHERE
+          n.nspname = $1 AND
+          c.relname = $2 AND
+          a.attisdropped = false AND
+          a.attnum > 0;
+
 - function:
     name: fst
     schema: public
@@ -2982,7 +2988,9 @@ objects:
       name: trend_store
       schema: trend_directory
     description: |-
-      Table based trend stores describing the common properties of all its partitions like entity type, data granularity, etc.
+      Table based trend stores describing the common properties of all its
+      partitions like entity type, data granularity, etc.
+
 - table:
     name: table_trend_store_part
     schema: trend_directory
@@ -3651,6 +3659,7 @@ objects:
     - data_type: trend_directory.trend_store_part
     source: |-
       SELECT $1.name;
+
 - function:
     name: base_table_name
     schema: trend_directory
@@ -3663,6 +3672,7 @@ objects:
     - data_type: trend_directory.table_trend_store_part
     source: |-
       SELECT trend_directory.base_object_name($1);
+
 - function:
     name: view_name
     schema: trend_directory
@@ -3687,6 +3697,7 @@ objects:
     - data_type: trend_directory.trend_store_part
     source: |-
       SELECT $1.name::text;
+
 - function:
     name: to_char
     schema: trend_directory
@@ -3699,6 +3710,7 @@ objects:
     - data_type: trend_directory.table_trend_store_part
     source: |-
       SELECT $1.name::text;
+
 - function:
     name: to_char
     schema: trend_directory
@@ -3834,6 +3846,7 @@ objects:
     source: |-
       SELECT trend_directory.create_base_table(trend_directory.base_table_name($1), $2);
           SELECT $1;
+
 - function:
     name: get_trend_store_part_trends
     schema: trend_directory
@@ -3861,9 +3874,40 @@ objects:
     - data_type: trend_directory.table_trend_store_part
     source: |-
       SELECT trend_directory.create_base_table(
-              $1,
-              trend_directory.get_trend_store_part_trends($1)
-          );
+          $1,
+          trend_directory.get_trend_store_part_trends($1)
+      );
+
+- function:
+    name: drop_base_table_sql
+    schema: trend_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: trend_directory.table_trend_store_part
+    source: |-
+      SELECT format(
+          'DROP TABLE %I.%I',
+          trend_directory.base_table_schema(),
+          trend_directory.base_table_name($1)
+      );
+
+- function:
+    name: drop_base_table
+    schema: trend_directory
+    return_type: trend_directory.table_trend_store_part
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.table_trend_store_part
+    source: |-
+      SELECT public.action($1, trend_directory.drop_base_table_sql($1))
+
 - function:
     name: staging_table_name
     schema: trend_directory
@@ -3876,6 +3920,7 @@ objects:
     - data_type: trend_directory.table_trend_store_part
     source: |-
       SELECT (trend_directory.base_table_name($1) || '_staging')::name;
+
 - function:
     name: create_staging_table_sql
     schema: trend_directory
@@ -3911,6 +3956,7 @@ objects:
               trend_directory.staging_table_name($1)
           )
       ];
+
 - function:
     name: create_staging_table
     schema: trend_directory
@@ -3923,6 +3969,37 @@ objects:
     - data_type: trend_directory.table_trend_store_part
     source: |-
       SELECT public.action($1, trend_directory.create_staging_table_sql($1));
+
+- function:
+    name: drop_staging_table_sql
+    schema: trend_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.table_trend_store_part
+    source: |-
+      SELECT format(
+          'DROP TABLE %I.%I',
+          trend_directory.staging_table_schema(),
+          trend_directory.staging_table_name($1)
+      );
+
+- function:
+    name: drop_staging_table
+    schema: trend_directory
+    return_type: trend_directory.table_trend_store_part
+    language: sql
+    volatility: volatile
+    strict: true
+    secdef: true
+    arguments:
+    - data_type: trend_directory.table_trend_store_part
+    source: |-
+      SELECT public.action($1, trend_directory.drop_staging_table_sql($1));
+
 - function:
     name: initialize_table_trend_store_part
     schema: trend_directory
@@ -3939,9 +4016,26 @@ objects:
       and capable of storing data.'
     source: |-
       SELECT trend_directory.create_base_table($1);
-          SELECT trend_directory.create_staging_table($1);
+      SELECT trend_directory.create_staging_table($1);
 
-          SELECT $1;
+      SELECT $1;
+
+- function:
+    name: deinitialize_table_trend_store_part
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.table_trend_store_part
+    description: |-
+      Remove all database objects related to the table trend store part
+    source: |-
+      SELECT trend_directory.drop_base_table($1);
+      SELECT trend_directory.drop_staging_table($1);
+
 - function:
     name: create_view
     schema: trend_directory
@@ -4326,6 +4420,7 @@ objects:
               $3,
               $4
           ) RETURNING *;
+
 - function:
     name: delete_table_trend_store
     schema: trend_directory
@@ -4335,10 +4430,14 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: name
-      data_type: name
+    - data_type: integer
     source: |-
-      DELETE FROM trend_directory.table_trend_store WHERE name = $1;
+      SELECT trend_directory.deinitialize_table_trend_store_part(part)
+      FROM trend_directory.table_trend_store_part AS part
+      WHERE trend_store_id = $1;
+
+      DELETE FROM trend_directory.table_trend_store WHERE id = $1;
+
 - function:
     name: initialize_table_trend_store
     schema: trend_directory
@@ -4351,9 +4450,10 @@ objects:
     - data_type: trend_directory.table_trend_store
     source: |-
       SELECT trend_directory.initialize_table_trend_store_part(table_trend_store_part)
-          FROM trend_directory.table_trend_store_part WHERE trend_store_id = $1.id;
+      FROM trend_directory.table_trend_store_part WHERE trend_store_id = $1.id;
 
-          SELECT $1;
+      SELECT $1;
+
 - function:
     name: define_table_trend_store_part
     schema: trend_directory
@@ -4371,6 +4471,7 @@ objects:
       INSERT INTO trend_directory.table_trend_store_part (trend_store_id, name)
           VALUES ($1, $2)
           RETURNING *;
+
 - function:
     name: define_table_trend_store_part
     schema: trend_directory
@@ -4391,6 +4492,7 @@ objects:
               trend_directory.define_table_trend_store_part($1, $2),
               $3
           );
+
 - function:
     name: define_table_trend_store
     schema: trend_directory
@@ -4403,9 +4505,11 @@ objects:
     - data_type: trend_directory.table_trend_store
     - data_type: trend_directory.table_trend_store_part_descr[]
     source: |-
-      SELECT trend_directory.define_table_trend_store_part($1.id, name, trends) FROM unnest($2);
+      SELECT trend_directory.define_table_trend_store_part($1.id, name, trends)
+      FROM unnest($2);
 
-          SELECT $1;
+      SELECT $1;
+
 - function:
     name: define_table_trend_store
     schema: trend_directory
@@ -4427,9 +4531,10 @@ objects:
       data_type: trend_directory.table_trend_store_part_descr[]
     source: |-
       SELECT trend_directory.define_table_trend_store(
-              trend_directory.define_table_trend_store($1, $2, $3, $4),
-              $5
-          );
+          trend_directory.define_table_trend_store($1, $2, $3, $4),
+          $5
+      );
+
 - function:
     name: create_table_trend_store
     schema: trend_directory
@@ -4451,8 +4556,9 @@ objects:
       data_type: trend_directory.table_trend_store_part_descr[]
     source: |-
       SELECT trend_directory.initialize_table_trend_store(
-              trend_directory.define_table_trend_store($1, $2, $3, $4, $5)
-          );
+          trend_directory.define_table_trend_store($1, $2, $3, $4, $5)
+      );
+
 - function:
     name: staged_timestamps
     schema: trend_directory
@@ -4473,6 +4579,7 @@ objects:
               trend_directory.staging_table_name(trend_store_part)
           );
       END;
+
 - function:
     name: transfer_staged
     schema: trend_directory
@@ -4502,6 +4609,7 @@ objects:
 
           RETURN row_count;
       END;
+
 - function:
     name: transfer_staged
     schema: trend_directory
@@ -4515,17 +4623,18 @@ objects:
       data_type: trend_directory.table_trend_store_part
     source: |-
       SELECT
-              trend_directory.transfer_staged(trend_store_part, timestamp)
-          FROM trend_directory.staged_timestamps(trend_store_part) timestamp;
+          trend_directory.transfer_staged(trend_store_part, timestamp)
+      FROM trend_directory.staged_timestamps(trend_store_part) timestamp;
 
-          SELECT public.action(
-              $1,
-              format(
-                  'TRUNCATE %I.%I',
-                  trend_directory.staging_table_schema(),
-                  trend_directory.staging_table_name(trend_store_part)
-              )
-          );
+      SELECT public.action(
+          $1,
+          format(
+              'TRUNCATE %I.%I',
+              trend_directory.staging_table_schema(),
+              trend_directory.staging_table_name(trend_store_part)
+          )
+      );
+
 - function:
     name: alter_trend_name
     schema: trend_directory
@@ -4542,19 +4651,20 @@ objects:
       data_type: name
     source: |-
       UPDATE trend_directory.table_trend
-          SET name = $3
-          WHERE trend_store_part_id = $1.id AND name = $2;
+      SET name = $3
+      WHERE trend_store_part_id = $1.id AND name = $2;
 
-          SELECT public.action(
-              $1,
-              format(
-                  'ALTER TABLE %I.%I RENAME %I TO %I',
-                  trend_directory.base_table_schema(),
-                  trend_directory.base_table_name($1),
-                  $2,
-                  $3
-              )
-          );
+      SELECT public.action(
+          $1,
+          format(
+              'ALTER TABLE %I.%I RENAME %I TO %I',
+              trend_directory.base_table_schema(),
+              trend_directory.base_table_name($1),
+              $2,
+              $3
+          )
+      );
+
 - composite_type:
     name: column_info
     schema: trend_directory
@@ -4565,6 +4675,7 @@ objects:
     - name: data_type
       data_type: text
       nullable: false
+
 - function:
     name: table_columns
     schema: trend_directory
@@ -4594,6 +4705,7 @@ objects:
               c.relname = $2 AND
               a.attisdropped = false AND
               a.attnum > 0;
+
 - function:
     name: table_columns
     schema: trend_directory
@@ -4617,6 +4729,7 @@ objects:
               c.oid = $1 AND
               a.attisdropped = false AND
               a.attnum > 0;
+
 - function:
     name: drop_view_sql
     schema: trend_directory
@@ -4629,10 +4742,11 @@ objects:
     - data_type: trend_directory.view_trend_store_part
     source: |-
       SELECT format(
-              'DROP VIEW IF EXISTS %I.%I',
-              trend_directory.view_schema(),
-              trend_directory.view_name($1)
-          );
+          'DROP VIEW IF EXISTS %I.%I',
+          trend_directory.view_schema(),
+          trend_directory.view_name($1)
+      );
+
 - function:
     name: delete_view_trends
     schema: trend_directory
@@ -4645,9 +4759,10 @@ objects:
     - data_type: trend_directory.view_trend_store_part
     source: |-
       DELETE FROM trend_directory.trend
-          WHERE trend_store_part_id = $1.id;
+      WHERE trend_store_part_id = $1.id;
 
-          SELECT $1;
+      SELECT $1;
+
 - function:
     name: drop_view
     schema: trend_directory
@@ -4661,9 +4776,10 @@ objects:
     source: |-
       SELECT public.action($1, trend_directory.drop_view_sql($1));
 
-          SELECT trend_directory.delete_view_trends($1);
+      SELECT trend_directory.delete_view_trends($1);
 
-          SELECT $1;
+      SELECT $1;
+
 - function:
     name: add_trend_to_trend_store
     schema: trend_directory
@@ -4677,16 +4793,17 @@ objects:
     - data_type: trend_directory.table_trend
     source: |-
       SELECT public.action($2,
-              ARRAY[
-                  format(
-                      'ALTER TABLE %I.%I ADD COLUMN %I %s;',
-                      trend_directory.base_table_schema(),
-                      trend_directory.base_table_name($1),
-                      $2.name,
-                      $2.data_type
-                  )
-              ]
-          );
+          ARRAY[
+              format(
+                  'ALTER TABLE %I.%I ADD COLUMN %I %s;',
+                  trend_directory.base_table_schema(),
+                  trend_directory.base_table_name($1),
+                  $2.name,
+                  $2.data_type
+              )
+          ]
+      );
+
 - function:
     name: add_trend_to_trend_store
     schema: trend_directory
@@ -4704,9 +4821,10 @@ objects:
       data_type: text
     source: |-
       SELECT trend_directory.add_trend_to_trend_store(
-              $1,
-              trend_directory.define_table_trend($1.id, $2, $3, $4)
-          )
+          $1,
+          trend_directory.define_table_trend($1.id, $2, $3, $4)
+      )
+
 - function:
     name: create_table_trend
     schema: trend_directory
@@ -4720,6 +4838,7 @@ objects:
     - data_type: trend_directory.trend_descr
     source: |-
       SELECT trend_directory.add_trend_to_trend_store($1, $2.name, $2.data_type, $2.description);
+
 - function:
     name: create_table_trends
     schema: trend_directory
@@ -4734,7 +4853,8 @@ objects:
     - data_type: trend_directory.trend_descr[]
     source: |-
       SELECT trend_directory.create_table_trend($1, descr)
-          FROM unnest($2) descr;
+      FROM unnest($2) descr;
+
 - function:
     name: missing_table_trends
     schema: trend_directory
@@ -4750,9 +4870,10 @@ objects:
       data_type: trend_directory.trend_descr[]
     source: |-
       SELECT required
-          FROM unnest($2) required
-          LEFT JOIN trend_directory.table_trend ON table_trend.name = required.name AND table_trend.trend_store_part_id = $1.id
-          WHERE table_trend.id IS NULL;
+      FROM unnest($2) required
+      LEFT JOIN trend_directory.table_trend ON table_trend.name = required.name AND table_trend.trend_store_part_id = $1.id
+      WHERE table_trend.id IS NULL;
+
 - function:
     name: assure_table_trends_exist
     schema: trend_directory
@@ -4766,9 +4887,10 @@ objects:
     - data_type: trend_directory.trend_descr[]
     source: |-
       SELECT trend_directory.create_table_trend($1, t)
-          FROM trend_directory.missing_table_trends($1, $2) t;
+      FROM trend_directory.missing_table_trends($1, $2) t;
 
-          SELECT $1;
+      SELECT $1;
+
 - function:
     name: get_most_recent_timestamp
     schema: trend_directory
@@ -4802,6 +4924,7 @@ objects:
               RAISE EXCEPTION 'Invalid granularity: %', dest_granularity;
           END IF;
       END;
+
 - function:
     name: is_integer
     schema: trend_directory
@@ -4814,6 +4937,7 @@ objects:
     - data_type: varchar
     source: |-
       SELECT $1 ~ '^[1-9][0-9]*$'
+
 - function:
     name: get_most_recent_timestamp
     schema: trend_directory
@@ -4845,6 +4969,7 @@ objects:
 
           return seconds;
       END;
+
 - function:
     name: get_timestamp_for
     schema: trend_directory
@@ -4874,6 +4999,7 @@ objects:
               return most_recent_timestamp;
           END IF;
       END;
+
 - function:
     name: get_timestamp_for
     schema: trend_directory
@@ -4907,6 +5033,7 @@ objects:
               return most_recent_timestamp;
           END IF;
       END;
+
 - function:
     name: index_to_timestamp
     schema: trend_directory
@@ -4922,6 +5049,7 @@ objects:
       data_type: integer
     source: |-
       SELECT to_timestamp($1 * $2 + 1);
+
 - function:
     name: get_table_trend
     schema: trend_directory
@@ -4935,8 +5063,9 @@ objects:
     - data_type: name
     source: |-
       SELECT table_trend
-          FROM trend_directory.table_trend
-          WHERE trend_store_part_id = $1.id AND name = $2;
+      FROM trend_directory.table_trend
+      WHERE trend_store_part_id = $1.id AND name = $2;
+
 - function:
     name: get_trends_for_trend_store_part
     schema: trend_directory
@@ -4951,6 +5080,7 @@ objects:
       data_type: integer
     source: |-
       SELECT * FROM trend_directory.trend WHERE trend.trend_store_part_id = $1;
+
 - function:
     name: get_trends_for_trend_store_part
     schema: trend_directory
@@ -4964,6 +5094,7 @@ objects:
     - data_type: trend_directory.trend_store_part
     source: |-
       SELECT trend_directory.get_trends_for_trend_store_part($1.id);
+
 - function:
     name: trend_store_part_has_trend_with_name
     schema: trend_directory
@@ -4979,10 +5110,11 @@ objects:
       data_type: name
     source: |-
       SELECT exists(
-              SELECT 1
-              FROM trend_directory.trend
-              WHERE trend_store_part_id = $1.id AND name = $2
-          );
+          SELECT 1
+          FROM trend_directory.trend
+          WHERE trend_store_part_id = $1.id AND name = $2
+      );
+
 - function:
     name: column_exists
     schema: trend_directory
@@ -4998,12 +5130,13 @@ objects:
       data_type: name
     source: |-
       SELECT EXISTS(
-              SELECT 1
-              FROM pg_attribute a
-              JOIN pg_class c ON c.oid = a.attrelid
-              JOIN pg_namespace n ON c.relnamespace = n.oid
-              WHERE c.relname = table_name AND a.attname = column_name AND n.nspname = 'trend'
-          );
+          SELECT 1
+          FROM pg_attribute a
+          JOIN pg_class c ON c.oid = a.attrelid
+          JOIN pg_namespace n ON c.relnamespace = n.oid
+          WHERE c.relname = table_name AND a.attname = column_name AND n.nspname = 'trend'
+      );
+
 - function:
     name: data_type_order
     schema: trend_directory
@@ -5046,6 +5179,7 @@ objects:
                   RAISE EXCEPTION 'Unsupported data type: %', data_type;
           END CASE;
       END;
+
 - function:
     name: greatest_data_type
     schema: trend_directory
@@ -5061,11 +5195,12 @@ objects:
       data_type: text
     source: |-
       SELECT
-              CASE WHEN trend_directory.data_type_order($2) > trend_directory.data_type_order($1) THEN
-                  $2
-              ELSE
-                  $1
-              END;
+          CASE WHEN trend_directory.data_type_order($2) > trend_directory.data_type_order($1) THEN
+              $2
+          ELSE
+              $1
+          END;
+
 - aggregate:
     name: max_data_type
     schema: trend_directory
@@ -5073,6 +5208,7 @@ objects:
     stype: text
     arguments:
     - data_type: text
+
 - composite_type:
     name: upgrade_record
     schema: trend_directory
@@ -5083,6 +5219,7 @@ objects:
     - name: number_of_rows
       data_type: integer
       nullable: false
+
 - function:
     name: get_trend_store
     schema: trend_directory
@@ -5096,6 +5233,7 @@ objects:
       data_type: integer
     source: |-
       SELECT * FROM trend_directory.trend_store WHERE id = $1
+
 - function:
     name: get_max_modified
     schema: trend_directory
@@ -5118,6 +5256,7 @@ objects:
 
           RETURN max_modified;
       END;
+
 - function:
     name: update_modified
     schema: trend_directory
@@ -5135,9 +5274,10 @@ objects:
       data_type: timestamp with time zone
     source: |-
       UPDATE trend_directory.modified
-          SET "end" = greatest("end", $3)
-          WHERE "timestamp" = $2 AND table_trend_store_part_id = $1
-          RETURNING modified;
+      SET "end" = greatest("end", $3)
+      WHERE "timestamp" = $2 AND table_trend_store_part_id = $1
+      RETURNING modified;
+
 - function:
     name: store_modified
     schema: trend_directory
@@ -5155,10 +5295,11 @@ objects:
       data_type: timestamp with time zone
     source: |-
       INSERT INTO trend_directory.modified(
-              table_trend_store_part_id, "timestamp", start, "end"
-          ) VALUES (
-              $1, $2, $3, $3
-          ) RETURNING modified;
+          table_trend_store_part_id, "timestamp", start, "end"
+      ) VALUES (
+          $1, $2, $3, $3
+      ) RETURNING modified;
+
 - function:
     name: mark_modified
     schema: trend_directory
@@ -5176,9 +5317,10 @@ objects:
       data_type: timestamp with time zone
     source: |-
       SELECT COALESCE(
-              trend_directory.update_modified($1, $2, $3),
-              trend_directory.store_modified($1, $2, $3)
-          );
+          trend_directory.update_modified($1, $2, $3),
+          trend_directory.store_modified($1, $2, $3)
+      );
+
 - function:
     name: mark_modified
     schema: trend_directory
@@ -11622,6 +11764,7 @@ objects:
               trigger.truncate(now(), $1.granularity) - $1.default_interval,
               - $1.granularity
           );
+
 - function:
     name: cleanup_on_rule_delete
     schema: trigger
@@ -11632,6 +11775,7 @@ objects:
     secdef: false
     arguments: []
     source: "BEGIN\n\tPERFORM trigger.cleanup_rule(OLD);\n\n\tRETURN OLD;\nEND;"
+
 - trigger:
     table:
       schema: trigger
@@ -11644,6 +11788,7 @@ objects:
     events:
     - delete
     affecteach: row
+
 - table:
     name: parent
     schema: relation
@@ -11671,6 +11816,7 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
 - row:
     table:
       schema: directory
@@ -11713,6 +11859,7 @@ objects:
       value: dn
     - column: id
       value: 1
+
 - setting:
     name: minerva.trigger_mark_modified
     value: 'on'

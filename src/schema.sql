@@ -112,10 +112,8 @@ GRANT USAGE ON SCHEMA "attribute_staging" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "notification";
-COMMENT ON SCHEMA "notification" IS 'Stores information of events that can occur at irregular intervals, but
-still have a fixed, known format.
-
-This schema is dynamically populated.';
+COMMENT ON SCHEMA "notification" IS 'Stores information of events that can occur at irregular intervals,
+but still have a fixed, known format. This schema is dynamically populated.';
 GRANT USAGE,CREATE ON SCHEMA "notification" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "notification" TO "minerva";
 
@@ -197,14 +195,14 @@ CREATE FUNCTION "public"."column_names"("namespace" name, "table" name)
     RETURNS SETOF name
 AS $$
 SELECT a.attname
-    FROM pg_catalog.pg_class c
-    JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
-    JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
-    WHERE
-        n.nspname = $1 AND
-        c.relname = $2 AND
-        a.attisdropped = false AND
-        a.attnum > 0;
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+WHERE
+    n.nspname = $1 AND
+    c.relname = $2 AND
+    a.attisdropped = false AND
+    a.attnum > 0;
 $$ LANGUAGE sql STABLE;
 
 
@@ -1918,7 +1916,8 @@ CREATE TABLE "trend_directory"."table_trend_store"
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend_store");
 
-COMMENT ON TABLE "trend_directory"."table_trend_store" IS 'Table based trend stores describing the common properties of all its partitions like entity type, data granularity, etc.';
+COMMENT ON TABLE "trend_directory"."table_trend_store" IS 'Table based trend stores describing the common properties of all its
+partitions like entity type, data granularity, etc.';
 
 
 
@@ -2342,9 +2341,27 @@ CREATE FUNCTION "trend_directory"."create_base_table"(trend_directory.table_tren
     RETURNS trend_directory.table_trend_store_part
 AS $$
 SELECT trend_directory.create_base_table(
-        $1,
-        trend_directory.get_trend_store_part_trends($1)
-    );
+    $1,
+    trend_directory.get_trend_store_part_trends($1)
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."drop_base_table_sql"(trend_directory.table_trend_store_part)
+    RETURNS text
+AS $$
+SELECT format(
+    'DROP TABLE %I.%I',
+    trend_directory.base_table_schema(),
+    trend_directory.base_table_name($1)
+);
+$$ LANGUAGE sql STABLE STRICT;
+
+
+CREATE FUNCTION "trend_directory"."drop_base_table"(trend_directory.table_trend_store_part)
+    RETURNS trend_directory.table_trend_store_part
+AS $$
+SELECT public.action($1, trend_directory.drop_base_table_sql($1))
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2392,17 +2409,45 @@ SELECT public.action($1, trend_directory.create_staging_table_sql($1));
 $$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
 
 
+CREATE FUNCTION "trend_directory"."drop_staging_table_sql"(trend_directory.table_trend_store_part)
+    RETURNS text
+AS $$
+SELECT format(
+    'DROP TABLE %I.%I',
+    trend_directory.staging_table_schema(),
+    trend_directory.staging_table_name($1)
+);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."drop_staging_table"(trend_directory.table_trend_store_part)
+    RETURNS trend_directory.table_trend_store_part
+AS $$
+SELECT public.action($1, trend_directory.drop_staging_table_sql($1));
+$$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
+
+
 CREATE FUNCTION "trend_directory"."initialize_table_trend_store_part"(trend_directory.table_trend_store_part)
     RETURNS trend_directory.table_trend_store_part
 AS $$
 SELECT trend_directory.create_base_table($1);
-    SELECT trend_directory.create_staging_table($1);
+SELECT trend_directory.create_staging_table($1);
 
-    SELECT $1;
+SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."initialize_table_trend_store_part"(trend_directory.table_trend_store_part) IS 'Create all database objects required for the trend store part to be fully functional
 and capable of storing data.';
+
+
+CREATE FUNCTION "trend_directory"."deinitialize_table_trend_store_part"(trend_directory.table_trend_store_part)
+    RETURNS void
+AS $$
+SELECT trend_directory.drop_base_table($1);
+SELECT trend_directory.drop_staging_table($1);
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."deinitialize_table_trend_store_part"(trend_directory.table_trend_store_part) IS 'Remove all database objects related to the table trend store part';
 
 
 CREATE FUNCTION "trend_directory"."create_view"(trend_directory.trend_store_part, name)
@@ -2648,10 +2693,14 @@ INSERT INTO trend_directory.table_trend_store (
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."delete_table_trend_store"("name" name)
+CREATE FUNCTION "trend_directory"."delete_table_trend_store"(integer)
     RETURNS void
 AS $$
-DELETE FROM trend_directory.table_trend_store WHERE name = $1;
+SELECT trend_directory.deinitialize_table_trend_store_part(part)
+FROM trend_directory.table_trend_store_part AS part
+WHERE trend_store_id = $1;
+
+DELETE FROM trend_directory.table_trend_store WHERE id = $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2659,9 +2708,9 @@ CREATE FUNCTION "trend_directory"."initialize_table_trend_store"(trend_directory
     RETURNS trend_directory.table_trend_store
 AS $$
 SELECT trend_directory.initialize_table_trend_store_part(table_trend_store_part)
-    FROM trend_directory.table_trend_store_part WHERE trend_store_id = $1.id;
+FROM trend_directory.table_trend_store_part WHERE trend_store_id = $1.id;
 
-    SELECT $1;
+SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2687,9 +2736,10 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."define_table_trend_store"(trend_directory.table_trend_store, trend_directory.table_trend_store_part_descr[])
     RETURNS trend_directory.table_trend_store
 AS $$
-SELECT trend_directory.define_table_trend_store_part($1.id, name, trends) FROM unnest($2);
+SELECT trend_directory.define_table_trend_store_part($1.id, name, trends)
+FROM unnest($2);
 
-    SELECT $1;
+SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2697,9 +2747,9 @@ CREATE FUNCTION "trend_directory"."define_table_trend_store"("data_source_name" 
     RETURNS trend_directory.table_trend_store
 AS $$
 SELECT trend_directory.define_table_trend_store(
-        trend_directory.define_table_trend_store($1, $2, $3, $4),
-        $5
-    );
+    trend_directory.define_table_trend_store($1, $2, $3, $4),
+    $5
+);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2707,8 +2757,8 @@ CREATE FUNCTION "trend_directory"."create_table_trend_store"("data_source_name" 
     RETURNS trend_directory.table_trend_store
 AS $$
 SELECT trend_directory.initialize_table_trend_store(
-        trend_directory.define_table_trend_store($1, $2, $3, $4, $5)
-    );
+    trend_directory.define_table_trend_store($1, $2, $3, $4, $5)
+);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2750,17 +2800,17 @@ CREATE FUNCTION "trend_directory"."transfer_staged"("trend_store_part" trend_dir
     RETURNS trend_directory.table_trend_store_part
 AS $$
 SELECT
-        trend_directory.transfer_staged(trend_store_part, timestamp)
-    FROM trend_directory.staged_timestamps(trend_store_part) timestamp;
+    trend_directory.transfer_staged(trend_store_part, timestamp)
+FROM trend_directory.staged_timestamps(trend_store_part) timestamp;
 
-    SELECT public.action(
-        $1,
-        format(
-            'TRUNCATE %I.%I',
-            trend_directory.staging_table_schema(),
-            trend_directory.staging_table_name(trend_store_part)
-        )
-    );
+SELECT public.action(
+    $1,
+    format(
+        'TRUNCATE %I.%I',
+        trend_directory.staging_table_schema(),
+        trend_directory.staging_table_name(trend_store_part)
+    )
+);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2768,19 +2818,19 @@ CREATE FUNCTION "trend_directory"."alter_trend_name"(trend_directory.table_trend
     RETURNS trend_directory.table_trend_store_part
 AS $$
 UPDATE trend_directory.table_trend
-    SET name = $3
-    WHERE trend_store_part_id = $1.id AND name = $2;
+SET name = $3
+WHERE trend_store_part_id = $1.id AND name = $2;
 
-    SELECT public.action(
-        $1,
-        format(
-            'ALTER TABLE %I.%I RENAME %I TO %I',
-            trend_directory.base_table_schema(),
-            trend_directory.base_table_name($1),
-            $2,
-            $3
-        )
-    );
+SELECT public.action(
+    $1,
+    format(
+        'ALTER TABLE %I.%I RENAME %I TO %I',
+        trend_directory.base_table_schema(),
+        trend_directory.base_table_name($1),
+        $2,
+        $3
+    )
+);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2832,10 +2882,10 @@ CREATE FUNCTION "trend_directory"."drop_view_sql"(trend_directory.view_trend_sto
     RETURNS text
 AS $$
 SELECT format(
-        'DROP VIEW IF EXISTS %I.%I',
-        trend_directory.view_schema(),
-        trend_directory.view_name($1)
-    );
+    'DROP VIEW IF EXISTS %I.%I',
+    trend_directory.view_schema(),
+    trend_directory.view_name($1)
+);
 $$ LANGUAGE sql STABLE;
 
 
@@ -2843,9 +2893,9 @@ CREATE FUNCTION "trend_directory"."delete_view_trends"(trend_directory.view_tren
     RETURNS trend_directory.view_trend_store_part
 AS $$
 DELETE FROM trend_directory.trend
-    WHERE trend_store_part_id = $1.id;
+WHERE trend_store_part_id = $1.id;
 
-    SELECT $1;
+SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2854,9 +2904,9 @@ CREATE FUNCTION "trend_directory"."drop_view"(trend_directory.view_trend_store_p
 AS $$
 SELECT public.action($1, trend_directory.drop_view_sql($1));
 
-    SELECT trend_directory.delete_view_trends($1);
+SELECT trend_directory.delete_view_trends($1);
 
-    SELECT $1;
+SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2864,16 +2914,16 @@ CREATE FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.tab
     RETURNS trend_directory.table_trend
 AS $$
 SELECT public.action($2,
-        ARRAY[
-            format(
-                'ALTER TABLE %I.%I ADD COLUMN %I %s;',
-                trend_directory.base_table_schema(),
-                trend_directory.base_table_name($1),
-                $2.name,
-                $2.data_type
-            )
-        ]
-    );
+    ARRAY[
+        format(
+            'ALTER TABLE %I.%I ADD COLUMN %I %s;',
+            trend_directory.base_table_schema(),
+            trend_directory.base_table_name($1),
+            $2.name,
+            $2.data_type
+        )
+    ]
+);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2881,9 +2931,9 @@ CREATE FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.tab
     RETURNS trend_directory.table_trend
 AS $$
 SELECT trend_directory.add_trend_to_trend_store(
-        $1,
-        trend_directory.define_table_trend($1.id, $2, $3, $4)
-    )
+    $1,
+    trend_directory.define_table_trend($1.id, $2, $3, $4)
+)
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2898,7 +2948,7 @@ CREATE FUNCTION "trend_directory"."create_table_trends"(trend_directory.table_tr
     RETURNS SETOF trend_directory.table_trend
 AS $$
 SELECT trend_directory.create_table_trend($1, descr)
-    FROM unnest($2) descr;
+FROM unnest($2) descr;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2906,9 +2956,9 @@ CREATE FUNCTION "trend_directory"."missing_table_trends"(trend_directory.table_t
     RETURNS SETOF trend_directory.trend_descr
 AS $$
 SELECT required
-    FROM unnest($2) required
-    LEFT JOIN trend_directory.table_trend ON table_trend.name = required.name AND table_trend.trend_store_part_id = $1.id
-    WHERE table_trend.id IS NULL;
+FROM unnest($2) required
+LEFT JOIN trend_directory.table_trend ON table_trend.name = required.name AND table_trend.trend_store_part_id = $1.id
+WHERE table_trend.id IS NULL;
 $$ LANGUAGE sql STABLE;
 
 
@@ -2916,9 +2966,9 @@ CREATE FUNCTION "trend_directory"."assure_table_trends_exist"(trend_directory.ta
     RETURNS trend_directory.table_trend_store_part
 AS $$
 SELECT trend_directory.create_table_trend($1, t)
-    FROM trend_directory.missing_table_trends($1, $2) t;
+FROM trend_directory.missing_table_trends($1, $2) t;
 
-    SELECT $1;
+SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -3034,8 +3084,8 @@ CREATE FUNCTION "trend_directory"."get_table_trend"(trend_directory.table_trend_
     RETURNS trend_directory.table_trend
 AS $$
 SELECT table_trend
-    FROM trend_directory.table_trend
-    WHERE trend_store_part_id = $1.id AND name = $2;
+FROM trend_directory.table_trend
+WHERE trend_store_part_id = $1.id AND name = $2;
 $$ LANGUAGE sql STABLE;
 
 
@@ -3057,10 +3107,10 @@ CREATE FUNCTION "trend_directory"."trend_store_part_has_trend_with_name"("trend_
     RETURNS bool
 AS $$
 SELECT exists(
-        SELECT 1
-        FROM trend_directory.trend
-        WHERE trend_store_part_id = $1.id AND name = $2
-    );
+    SELECT 1
+    FROM trend_directory.trend
+    WHERE trend_store_part_id = $1.id AND name = $2
+);
 $$ LANGUAGE sql STABLE;
 
 
@@ -3068,12 +3118,12 @@ CREATE FUNCTION "trend_directory"."column_exists"("table_name" name, "column_nam
     RETURNS bool
 AS $$
 SELECT EXISTS(
-        SELECT 1
-        FROM pg_attribute a
-        JOIN pg_class c ON c.oid = a.attrelid
-        JOIN pg_namespace n ON c.relnamespace = n.oid
-        WHERE c.relname = table_name AND a.attname = column_name AND n.nspname = 'trend'
-    );
+    SELECT 1
+    FROM pg_attribute a
+    JOIN pg_class c ON c.oid = a.attrelid
+    JOIN pg_namespace n ON c.relnamespace = n.oid
+    WHERE c.relname = table_name AND a.attname = column_name AND n.nspname = 'trend'
+);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -3117,11 +3167,11 @@ CREATE FUNCTION "trend_directory"."greatest_data_type"("data_type_a" text, "data
     RETURNS text
 AS $$
 SELECT
-        CASE WHEN trend_directory.data_type_order($2) > trend_directory.data_type_order($1) THEN
-            $2
-        ELSE
-            $1
-        END;
+    CASE WHEN trend_directory.data_type_order($2) > trend_directory.data_type_order($1) THEN
+        $2
+    ELSE
+        $1
+    END;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -3166,9 +3216,9 @@ CREATE FUNCTION "trend_directory"."update_modified"("table_trend_store_part_id" 
     RETURNS trend_directory.modified
 AS $$
 UPDATE trend_directory.modified
-    SET "end" = greatest("end", $3)
-    WHERE "timestamp" = $2 AND table_trend_store_part_id = $1
-    RETURNING modified;
+SET "end" = greatest("end", $3)
+WHERE "timestamp" = $2 AND table_trend_store_part_id = $1
+RETURNING modified;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -3176,10 +3226,10 @@ CREATE FUNCTION "trend_directory"."store_modified"("table_trend_store_part_id" i
     RETURNS trend_directory.modified
 AS $$
 INSERT INTO trend_directory.modified(
-        table_trend_store_part_id, "timestamp", start, "end"
-    ) VALUES (
-        $1, $2, $3, $3
-    ) RETURNING modified;
+    table_trend_store_part_id, "timestamp", start, "end"
+) VALUES (
+    $1, $2, $3, $3
+) RETURNING modified;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -3187,9 +3237,9 @@ CREATE FUNCTION "trend_directory"."mark_modified"("table_trend_store_part_id" in
     RETURNS trend_directory.modified
 AS $$
 SELECT COALESCE(
-        trend_directory.update_modified($1, $2, $3),
-        trend_directory.store_modified($1, $2, $3)
-    );
+    trend_directory.update_modified($1, $2, $3),
+    trend_directory.store_modified($1, $2, $3)
+);
 $$ LANGUAGE sql VOLATILE;
 
 
