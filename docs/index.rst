@@ -11,6 +11,7 @@ Welcome to Minerva's documentation!
    :caption: Contents:
 
    schema/index
+   entities.rst
 
 
 Indices and tables
