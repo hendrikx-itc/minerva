@@ -56,9 +56,13 @@ GRANT USAGE ON SCHEMA "entity" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "alias";
+GRANT USAGE,CREATE ON SCHEMA "alias" TO "minerva_writer";
+GRANT USAGE ON SCHEMA "alias" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "alias_directory";
+GRANT USAGE,CREATE ON SCHEMA "alias_directory" TO "minerva_writer";
+GRANT USAGE ON SCHEMA "alias_directory" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "relation";
@@ -84,6 +88,8 @@ GRANT USAGE ON SCHEMA "trend" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "trend_directory";
+GRANT USAGE ON SCHEMA "trend_directory" TO "minerva_writer";
+GRANT USAGE ON SCHEMA "trend_directory" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute";
@@ -733,19 +739,11 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."data_source" TO minerva_writer;
 
 
 
-CREATE SEQUENCE directory.entity_type_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
 CREATE TABLE "directory"."entity_type"
 (
+  "id" serial NOT NULL,
   "name" varchar NOT NULL,
   "description" varchar NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('directory.entity_type_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
@@ -759,46 +757,11 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_type" TO minerva_writer;
 
 
 
-CREATE SEQUENCE directory.entity_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
-CREATE TABLE "directory"."entity"
-(
-  "created" timestamp with time zone NOT NULL,
-  "name" varchar NOT NULL,
-  "entity_type_id" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('directory.entity_id_seq'::regclass),
-  PRIMARY KEY (entity_type_id, id)
-)PARTITION BY LIST (entity_type_id);
-
-COMMENT ON TABLE "directory"."entity" IS 'Describes entities. An entity is the base object for which the database can hold further information such as attributes, trends and notifications. All data must have a reference to an entity.';
-
-CREATE INDEX "ix_directory_entity_entity_type" ON "directory"."entity" USING btree (entity_type_id);
-
-GRANT SELECT ON TABLE "directory"."entity" TO minerva;
-
-GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity" TO minerva_writer;
-
-
-
-CREATE SEQUENCE directory.tag_group_id_seq
-  START WITH 3
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
 CREATE TABLE "directory"."tag_group"
 (
+  "id" serial NOT NULL,
   "name" varchar NOT NULL,
   "complementary" bool NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('directory.tag_group_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
@@ -812,20 +775,12 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag_group" TO minerva_writer;
 
 
 
-CREATE SEQUENCE directory.tag_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
 CREATE TABLE "directory"."tag"
 (
+  "id" serial NOT NULL,
   "name" varchar NOT NULL,
   "tag_group_id" integer NOT NULL,
   "description" varchar,
-  "id" integer NOT NULL DEFAULT nextval('directory.tag_id_seq'::regclass),
   PRIMARY KEY (id)
 );
 
@@ -874,37 +829,11 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_tag_link_denorm" TO mine
 
 
 
-CREATE FUNCTION "directory"."get_entity_by_id"(integer)
-    RETURNS directory.entity
-AS $$
-SELECT * FROM directory.entity WHERE id = $1;
-$$ LANGUAGE sql STABLE;
-
-
 CREATE FUNCTION "directory"."get_entity_type_name"(integer)
     RETURNS text
 AS $$
 SELECT name FROM directory.entity_type WHERE id = $1;
 $$ LANGUAGE sql STABLE STRICT;
-
-
-CREATE FUNCTION "directory"."get_entity_by_type_and_id"("entity_type" integer, "entity_id" integer)
-    RETURNS directory.entity
-AS $$
-SELECT * from directory.entity WHERE entity_type_id = $1 AND id = $2;
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "directory"."get_entity_by_type_and_id"("entity_type" text, "entity_id" integer)
-    RETURNS directory.entity
-AS $$
-DECLARE
-  result directory.entity;
-BEGIN
-  EXECUTE format('SELECT * from entity.%I WHERE id = %s;', $1, $2) into result;
-  RETURN result;
-END;
-$$ LANGUAGE plpgsql STABLE;
 
 
 CREATE FUNCTION "directory"."get_entity_type"(text)
@@ -937,24 +866,28 @@ DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
-CREATE FUNCTION "directory"."create_entity_type"(text)
-    RETURNS directory.entity_type
-AS $$
-INSERT INTO directory.entity_type(name, description) VALUES ($1, '') RETURNING entity_type;
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
 CREATE FUNCTION "entity"."create_entity_table_sql"(directory.entity_type)
     RETURNS text[]
 AS $$
-SELECT ARRAY[
-  format(
-    'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
-    $1.name,
-    $1.id
-  )
+SELECT ARRAY[ 
+    format(
+      'CREATE TABLE IF NOT EXISTS entity.%I('
+      'id serial primary key,'
+      'name text UNIQUE,'
+      'created timestamp with time zone default now()'
+      ');',
+      $1.name
+    ),
+    format(
+       'GRANT SELECT ON TABLE entity.%I TO minerva;',
+       $1.name
+    ),
+    format(
+       'GRANT INSERT,UPDATE,DELETE ON TABLE entity.%I TO minerva_writer;',
+       $1.name
+    )
 ];
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "entity"."create_entity_table"(directory.entity_type)
@@ -964,33 +897,27 @@ SELECT public.action($1, entity.create_entity_table_sql($1));
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "directory"."create_or_replace_entity_type"(text)
+CREATE FUNCTION "directory"."define_entity_type"(text)
     RETURNS directory.entity_type
 AS $$
-INSERT INTO directory.entity_type(name, description) VALUES ($1, '')
-    ON CONFLICT DO NOTHING
-    RETURNING entity_type;
+INSERT INTO directory.entity_type(name, description)
+VALUES ($1, '')
+ON CONFLICT DO NOTHING
+RETURNING entity_type;
+$$ LANGUAGE sql VOLATILE STRICT;
+
+
+CREATE FUNCTION "directory"."create_entity_type"(text)
+    RETURNS directory.entity_type
+AS $$
+SELECT entity.create_entity_table(directory.define_entity_type($1));
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
 CREATE FUNCTION "directory"."name_to_entity_type"(text)
     RETURNS directory.entity_type
 AS $$
-SELECT COALESCE(directory.get_entity_type($1), directory.create_or_replace_entity_type($1));
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "directory"."entity_type_id"(directory.entity_type)
-    RETURNS integer
-AS $$
-SELECT $1.id;
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "directory"."entity_id"(directory.entity)
-    RETURNS integer
-AS $$
-SELECT $1.id;
+SELECT COALESCE(directory.get_entity_type($1), directory.create_entity_type($1));
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
@@ -1014,24 +941,6 @@ INSERT INTO directory.entity_tag_link(tag_id, entity_id)
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "directory"."update_denormalized_entity_tags"("entity_id" integer)
-    RETURNS directory.entity_tag_link_denorm
-AS $$
-DELETE FROM directory.entity_tag_link_denorm WHERE entity_id = $1;
-INSERT INTO directory.entity_tag_link_denorm
-SELECT
-    entity.id,
-    array_agg(lower(tag.name)),
-    lower(entity.name)
-FROM directory.entity
-JOIN directory.entity_tag_link etl ON etl.entity_id = entity.id
-JOIN directory.tag ON tag.id = etl.tag_id
-WHERE entity.id = $1
-GROUP BY (entity.id, entity.name)
-RETURNING *;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "directory"."create_entity_type_tag"()
     RETURNS trigger
 AS $$
@@ -1043,33 +952,6 @@ BEGIN
     END;
 
     RETURN NEW;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "entity"."create_entity_table"()
-    RETURNS trigger
-AS $$
-BEGIN
-    EXECUTE format(
-        'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
-        NEW.name,
-        NEW.id
-   );
-   EXECUTE format(
-       'CREATE INDEX "ix_directory_entity_%s_name" ON entity.%I (name);',
-       NEW.name,
-       NEW.name
-   );
-   EXECUTE format(
-       'GRANT SELECT ON TABLE entity.%I TO minerva;',
-       NEW.name
-   );
-   EXECUTE format(
-       'GRANT INSERT,UPDATE,DELETE ON TABLE entity.%I TO minerva_writer;',
-       NEW.name
-   );
-   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
@@ -1117,12 +999,6 @@ CREATE TRIGGER create_tag_for_new_entity_types
   EXECUTE PROCEDURE "directory"."create_entity_type_tag"();
 
 
-CREATE TRIGGER create_entity_table_for_new_entity_types
-  AFTER INSERT ON "directory"."entity_type"
-  FOR EACH ROW
-  EXECUTE PROCEDURE "entity"."create_entity_table"();
-
-
 CREATE TRIGGER update_denormalized_tags_on_link_insert
   AFTER INSERT ON "directory"."entity_tag_link"
   FOR EACH ROW
@@ -1165,27 +1041,37 @@ CREATE FUNCTION "alias_directory"."initialize_alias_type_sql"(alias_directory.al
     RETURNS text[]
 AS $$
 SELECT ARRAY[
-        format(
-            'CREATE TABLE %I.%I ('
-            '  id serial PRIMARY KEY,'
-            '  %I text UNIQUE NOT NULL,'
-            '  entity_id integer,'
-            '  entity_type_id integer'
-            ');',
-            alias_directory.alias_schema(),
-            $1.name, $1.name
-        ),
-        format(
-            'CREATE INDEX ON %I.%I USING btree(entity_id);',
-            alias_directory.alias_schema(),
-            $1.name
-        ),
-        format(
-            'CREATE INDEX ON %I.%I USING btree(entity_type_id);',
-            alias_directory.alias_schema(),
-            $1.name
-        )
-    ];
+    format(
+        'CREATE TABLE %I.%I ('
+        '  id serial PRIMARY KEY,'
+        '  %I text UNIQUE NOT NULL,'
+        '  entity_id integer,'
+        '  entity_type_id integer'
+        ');',
+        alias_directory.alias_schema(),
+        $1.name, $1.name
+    ),
+    format(
+        'CREATE INDEX ON %I.%I USING btree(entity_id);',
+        alias_directory.alias_schema(),
+        $1.name
+    ),
+    format(
+        'CREATE INDEX ON %I.%I USING btree(entity_type_id);',
+        alias_directory.alias_schema(),
+        $1.name
+    ),
+    format(
+        'GRANT SELECT ON %I.%I TO minerva;',
+        alias_directory.alias_schema(),
+        $1.name
+    ),
+    format(
+        'GRANT INSERT,UPDATE,DELETE ON %I.%I TO minerva_writer;',
+        alias_directory.alias_schema(),
+        $1.name
+    )
+];
 $$ LANGUAGE sql STABLE;
 
 
@@ -1250,8 +1136,8 @@ CREATE FUNCTION "alias_directory"."create_alias_type"("name" name)
     RETURNS alias_directory.alias_type
 AS $$
 SELECT alias_directory.initialize_alias_type(
-        alias_directory.define_alias_type($1)
-    );
+    alias_directory.define_alias_type($1)
+);
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "alias_directory"."create_alias_type"("name" name) IS 'Define a new alias type and created the table for storing the aliases.';
@@ -1265,52 +1151,6 @@ SELECT COALESCE(
   alias_directory.create_alias_type($1)
 );
 $$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "alias_directory"."create_alias"("entity_id" integer, "entity_type_id" integer, "alias_type_name" text, "alias" text)
-    RETURNS directory.entity
-AS $$
-BEGIN
-    EXECUTE format(
-        'INSERT INTO alias.%I (entity_id, entity_type_id, %I) VALUES ($1, $2, $3)',
-        $3, $3
-    ) USING $1, $2, $4;
-    RETURN directory.get_entity_by_type_and_id(entity_type_id, entity_id);
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "alias_directory"."create_alias"("entity" directory.entity, "alias_type_name" text, "alias" text)
-    RETURNS directory.entity
-AS $$
-SELECT alias_directory.create_alias($1.id, $1.entity_type_id, $2, $3);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "alias_directory"."get_entity_by_alias_sql"("alias_type" name, "name" name)
-    RETURNS text
-AS $$
-SELECT format(
-          'SELECT (directory.get_entity_by_type_and_id(d.entity_type_id, d.entity_id)).* FROM alias.%I d '
-          'WHERE %I = ''%s'';',
-          $1, $1, $2)
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "alias_directory"."get_entity_by_alias"("alias_type" name, "name" name)
-    RETURNS directory.entity
-AS $$
-DECLARE
-     result directory.entity;
-BEGIN
-     EXECUTE alias_directory.get_entity_by_alias_sql($1, $2) INTO result;
-     IF result IS NOT NULL THEN
-         RETURN result;
-     ELSE
-         RETURN NULL;
-     END IF;
-END;
-$$ LANGUAGE plpgsql STABLE;
 
 
 CREATE TYPE "relation_directory"."type_cardinality_enum" AS ENUM (
@@ -1623,213 +1463,17 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE SEQUENCE alias.dn_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
-CREATE TABLE "alias"."dn"
-(
-  "dn" text NOT NULL,
-  "entity_id" integer NOT NULL,
-  "entity_type_id" integer NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('alias.dn_id_seq'::regclass),
-  PRIMARY KEY (id)
-);
-
-CREATE UNIQUE INDEX "dn_dn_key" ON "alias"."dn" USING btree (dn);
-
-
-
-CREATE FUNCTION "directory"."get_entity_by_dn"(text)
-    RETURNS directory.entity
-AS $$
-SELECT alias_directory.get_entity_by_alias('dn', $1);
-$$ LANGUAGE sql STABLE;
-
-
-CREATE TYPE "directory"."dn_part" AS (
-  "type_name" text,
-  "name" text
-);
-
-
-
-CREATE FUNCTION "directory"."dn_part_to_string"(directory.dn_part)
-    RETURNS text
-AS $$
-SELECT $1.type_name || '=' || $1.name;
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE CAST (directory.dn_part AS text)
-  WITH FUNCTION "directory"."dn_part_to_string"(directory.dn_part);
-
-
-CREATE FUNCTION "directory"."array_to_dn_part"(text[])
-    RETURNS directory.dn_part
-AS $$
-SELECT CAST(ROW($1[1], $1[2]) AS directory.dn_part);
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE CAST (text[] AS directory.dn_part)
-  WITH FUNCTION "directory"."array_to_dn_part"(text[]);
-
-
-CREATE FUNCTION "directory"."split_raw_part"(text)
-    RETURNS directory.dn_part
-AS $$
-SELECT directory.array_to_dn_part(string_to_array($1, '='));
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION "directory"."explode_dn"(text)
-    RETURNS directory.dn_part[]
-AS $$
-SELECT array_agg(directory.split_raw_part(raw_part)) FROM unnest(string_to_array($1, ',')) AS raw_part;
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION "directory"."glue_dn"(directory.dn_part[])
-    RETURNS text
-AS $$
-SELECT
-        array_to_string(b.part_arr, ',')
-    FROM (
-        SELECT array_agg(parts.p) part_arr
-        FROM (
-            SELECT directory.dn_part_to_string(part) p FROM unnest($1) part
-        ) parts
-    ) b;
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION "directory"."parent_dn_parts"(directory.dn_part[])
-    RETURNS directory.dn_part[]
-AS $$
-SELECT
-        CASE
-            WHEN array_length($1, 1) > 1 THEN
-                $1[1:array_length($1, 1) - 1]
-            ELSE
-                NULL
-        END;
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION "directory"."parent_dn"(text)
-    RETURNS text
-AS $$
-SELECT directory.glue_dn(directory.parent_dn_parts(directory.explode_dn($1)));
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION "directory"."last_dn_part"(directory.dn_part[])
-    RETURNS directory.dn_part
-AS $$
-SELECT $1[array_length($1, 1)];
-$$ LANGUAGE sql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION "directory"."create_entity"("name" text, "entity_type" directory.entity_type)
-    RETURNS directory.entity
-AS $$
-INSERT INTO directory.entity(created, name, entity_type_id)
-        VALUES (
-            now(),
-            $1,
-            $2.id
-        )
-        RETURNING entity;
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "directory"."create_entity_from_dn"(text)
-    RETURNS directory.entity
-AS $$
-DECLARE entity directory.entity;
-BEGIN
-    SELECT * FROM directory.create_entity(
-        (directory.last_dn_part(directory.explode_dn($1))).name,
-        directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)
-    ) INTO entity;
-    PERFORM alias_directory.create_alias(entity, 'dn', $1);
-    RETURN entity;
-END;
-$$ LANGUAGE plpgsql VOLATILE STRICT;
-
-
-CREATE FUNCTION "alias_directory"."get_or_create_entity"("alias_type" name, "name" name, "entity_type" name)
-    RETURNS directory.entity
-AS $$
-SELECT COALESCE(
-    alias_directory.get_entity_by_alias($1, $2),
-    alias_directory.create_alias(directory.create_entity($2, directory.get_entity_type($3)), $1, $2)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "directory"."dn_to_entity"(text)
-    RETURNS directory.entity
-AS $$
-SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity_from_dn($1));
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "directory"."dns_to_entity_ids"(text[])
-    RETURNS SETOF integer
-AS $$
-SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
-$$ LANGUAGE sql VOLATILE STRICT;
-
-
-CREATE FUNCTION "alias_directory"."aliases_to_entity_ids"("alias_type" text, "alias" text[], "entity_type" text)
-    RETURNS SETOF integer
-AS $$
-SELECT (alias_directory.get_or_create_entity($1::name, nm::name, $3)).id FROM unnest($2) nm;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "directory"."tag_entity"("dn" text, "tag" text)
-    RETURNS text
-AS $$
-INSERT INTO directory.entity_tag_link(tag_id, entity_id)
-    SELECT
-        f.tag_id,
-        f.entity_id
-    FROM (
-        SELECT
-            tag.id AS tag_id,
-            dn.entity_id
-        FROM directory.tag, alias.dn
-        WHERE tag.name = $2 AND dn.dn = $1
-    ) f
-    LEFT JOIN directory.entity_tag_link ON entity_tag_link.tag_id = f.tag_id AND entity_tag_link.entity_id = f.entity_id
-    WHERE entity_tag_link.entity_id IS NULL;
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE SEQUENCE logging.job_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
 CREATE TABLE "logging"."job"
 (
-  "id" integer NOT NULL DEFAULT nextval('logging.job_id_seq'::regclass),
+  "id" serial NOT NULL,
   "action" text NOT NULL,
   "started" timestamp with time zone NOT NULL,
   "finished" timestamp with time zone
 );
+
+GRANT SELECT ON TABLE "logging"."job" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "logging"."job" TO minerva_writer;
 
 
 
@@ -1919,6 +1563,10 @@ CREATE TABLE "trend_directory"."table_trend_store"
 COMMENT ON TABLE "trend_directory"."table_trend_store" IS 'Table based trend stores describing the common properties of all its
 partitions like entity type, data granularity, etc.';
 
+GRANT SELECT ON TABLE "trend_directory"."table_trend_store" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."table_trend_store" TO minerva_writer;
+
 
 
 CREATE TABLE "trend_directory"."table_trend_store_part"
@@ -1927,6 +1575,10 @@ CREATE TABLE "trend_directory"."table_trend_store_part"
 )INHERITS ("trend_directory"."trend_store_part");
 
 COMMENT ON TABLE "trend_directory"."table_trend_store_part" IS 'The parts of a horizontally partitioned table trend store. Each table trend store has at least 1 part.';
+
+GRANT SELECT ON TABLE "trend_directory"."table_trend_store_part" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."table_trend_store_part" TO minerva_writer;
 
 
 
@@ -1946,35 +1598,38 @@ CREATE TABLE "trend_directory"."view_trend_store_part"
 
 
 
-CREATE SEQUENCE trend_directory.trend_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
 CREATE TABLE "trend_directory"."trend"
 (
+  "id" serial NOT NULL,
   "trend_store_part_id" integer NOT NULL,
   "name" name NOT NULL,
   "data_type" text NOT NULL,
+  "extra_data" jsonb NOT NULL DEFAULT '{}',
   "description" text NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_id_seq'::regclass),
   PRIMARY KEY (id)
 );
+
+GRANT SELECT ON TABLE "trend_directory"."trend" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."trend" TO minerva_writer;
 
 
 
 CREATE TABLE "trend_directory"."table_trend"
 (
+  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_id_seq'::regclass),
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend");
+
+GRANT SELECT ON TABLE "trend_directory"."table_trend" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."table_trend" TO minerva_writer;
 
 
 
 CREATE TABLE "trend_directory"."view_trend"
 (
+  "id" integer NOT NULL DEFAULT nextval('trend_directory.trend_id_seq'::regclass),
   PRIMARY KEY (id)
 )INHERITS ("trend_directory"."trend");
 
@@ -3568,21 +3223,14 @@ CREATE TYPE "attribute_directory"."attribute_descr" AS (
 
 
 
-CREATE SEQUENCE attribute_directory.attribute_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
 CREATE TABLE "attribute_directory"."attribute"
 (
+  "id" serial NOT NULL,
   "attribute_store_id" integer NOT NULL,
   "description" text,
   "name" name NOT NULL,
   "data_type" text NOT NULL,
-  "id" integer NOT NULL DEFAULT nextval('attribute_directory.attribute_id_seq'::regclass),
+  "extra_data" jsonb NOT NULL DEFAULT '{}',
   PRIMARY KEY (id)
 );
 

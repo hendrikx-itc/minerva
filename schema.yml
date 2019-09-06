@@ -43,10 +43,23 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE    
+
 - schema:
     name: alias
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE    
+
 - schema:
     name: alias_directory
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE,CREATE
+    - role: minerva
+      privilege: USAGE    
+
 - schema:
     name: relation
     comment: Stores the actual relations between entities in dynamically created tables.
@@ -66,8 +79,10 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+
 - schema:
     name: relation_directory
+
 - schema:
     name: trend
     comment: Stores information with fixed interval and format, like periodic measurements.
@@ -76,8 +91,15 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+
 - schema:
     name: trend_directory
+    privileges:
+    - role: minerva_writer
+      privilege: USAGE
+    - role: minerva
+      privilege: USAGE
+
 - schema:
     name: attribute
     privileges:
@@ -655,6 +677,7 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
 - table:
     name: job_error_log
     schema: system
@@ -1134,27 +1157,21 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-- sequence:
-    name: entity_type_id_seq
-    schema: directory
-    startvalue: 1
-    increment: 1
 - table:
     name: entity_type
     schema: directory
     description: |-
       Stores the entity types that exist in the entity table. Entity types are also used to give context to data that is stored for entities.
     columns:
+    - name: id
+      data_type: serial
+      nullable: false
     - name: name
       data_type: varchar
       nullable: false
     - name: description
       data_type: varchar
       nullable: false
-    - name: id
-      data_type: integer
-      nullable: false
-      default: nextval('directory.entity_type_id_seq'::regclass)
     primary_key:
       name: entity_type_pkey
       columns:
@@ -1168,68 +1185,21 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-- sequence:
-    name: entity_id_seq
-    schema: directory
-    startvalue: 1
-    increment: 1
-- table:
-    name: entity
-    schema: directory
-    description: |-
-      Describes entities. An entity is the base object for which the database can hold further information such as attributes, trends and notifications. All data must have a reference to an entity.
-    columns:
-    - name: created
-      data_type: timestamp with time zone
-      nullable: false
-    - name: name
-      data_type: varchar
-      nullable: false
-    - name: entity_type_id
-      data_type: integer
-      nullable: false
-    - name: id
-      data_type: integer
-      nullable: false
-      default: nextval('directory.entity_id_seq'::regclass)
-    privileges:
-    - role: minerva
-      privilege: SELECT
-    - role: minerva_writer
-      privilege: INSERT,UPDATE,DELETE
-    partition:
-      type: list
-      columns:
-      - name: entity_type_id
-    primary_key:
-      name: entity_pkey
-      columns:
-      - entity_type_id
-      - id
-    indexes:
-    - name: ix_directory_entity_entity_type
-      definition: btree (entity_type_id)
-- sequence:
-    name: tag_group_id_seq
-    schema: directory
-    startvalue: 3
-    increment: 1
 - table:
     name: tag_group
     schema: directory
     description: |-
       Stores groups that can be related to by tags.
     columns:
+    - name: id
+      data_type: serial
+      nullable: false
     - name: name
       data_type: varchar
       nullable: false
     - name: complementary
       data_type: bool
       nullable: false
-    - name: id
-      data_type: integer
-      nullable: false
-      default: nextval('directory.tag_group_id_seq'::regclass)
     primary_key:
       name: tag_group_pkey
       columns:
@@ -1243,17 +1213,16 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-- sequence:
-    name: tag_id_seq
-    schema: directory
-    startvalue: 1
-    increment: 1
+
 - table:
     name: tag
     schema: directory
     description: |-
       Stores all tags. A tag is a simple label that can be attached to a number of object types in the database, such as entities and trends.
     columns:
+    - name: id
+      data_type: serial
+      nullable: false
     - name: name
       data_type: varchar
       nullable: false
@@ -1263,10 +1232,6 @@ objects:
     - name: description
       data_type: varchar
       nullable: true
-    - name: id
-      data_type: integer
-      nullable: false
-      default: nextval('directory.tag_id_seq'::regclass)
     primary_key:
       name: tag_pkey
       columns:
@@ -1294,6 +1259,7 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
 - table:
     name: entity_tag_link
     schema: directory
@@ -1329,6 +1295,7 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
 - table:
     name: entity_tag_link_denorm
     schema: directory
@@ -1358,18 +1325,7 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-- function:
-    name: get_entity_by_id
-    schema: directory
-    return_type: directory.entity
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: integer
-    source: |-
-      SELECT * FROM directory.entity WHERE id = $1;
+
 - function:
     name: get_entity_type_name
     schema: directory
@@ -1382,41 +1338,7 @@ objects:
     - data_type: integer
     source: |-
       SELECT name FROM directory.entity_type WHERE id = $1;
-- function:
-    name: get_entity_by_type_and_id
-    schema: directory
-    return_type: directory.entity
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - name: entity_type
-      data_type: integer
-    - name: entity_id
-      data_type: integer
-    source: |-
-      SELECT * from directory.entity WHERE entity_type_id = $1 AND id = $2;
-- function:
-    name: get_entity_by_type_and_id
-    schema: directory
-    return_type: directory.entity
-    language: plpgsql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - name: entity_type
-      data_type: text
-    - name: entity_id
-      data_type: integer
-    source: |-
-      DECLARE
-        result directory.entity;
-      BEGIN
-        EXECUTE format('SELECT * from entity.%I WHERE id = %s;', $1, $2) into result;
-        RETURN result;
-      END;
+
 - function:
     name: get_entity_type
     schema: directory
@@ -1429,6 +1351,7 @@ objects:
     - data_type: text
     source: |-
       SELECT entity_type FROM directory.entity_type WHERE lower(name) = lower($1);
+
 - function:
     name: get_data_source
     schema: directory
@@ -1441,6 +1364,7 @@ objects:
     - data_type: text
     source: |-
       SELECT * FROM directory.data_source WHERE name = $1;
+
 - function:
     name: create_data_source
     schema: directory
@@ -1467,36 +1391,37 @@ objects:
     - data_type: text
     source: |-
       DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
-- function:
-    name: create_entity_type
-    schema: directory
-    return_type: directory.entity_type
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      INSERT INTO directory.entity_type(name, description) VALUES ($1, '') RETURNING entity_type;
+
 - function:
     name: create_entity_table_sql
     schema: entity
     return_type: text[]
     language: sql
-    volatility: stable
+    volatility: volatile
     strict: false
     secdef: false
     arguments:
     - data_type: directory.entity_type
     source: |-
-      SELECT ARRAY[
-        format(
-          'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
-          $1.name,
-          $1.id
-        )
-      ];
+        SELECT ARRAY[ 
+            format(
+              'CREATE TABLE IF NOT EXISTS entity.%I('
+              'id serial primary key,'
+              'name text UNIQUE,'
+              'created timestamp with time zone default now()'
+              ');',
+              $1.name
+            ),
+            format(
+               'GRANT SELECT ON TABLE entity.%I TO minerva;',
+               $1.name
+            ),
+            format(
+               'GRANT INSERT,UPDATE,DELETE ON TABLE entity.%I TO minerva_writer;',
+               $1.name
+            )
+        ];
+
 - function:
     name: create_entity_table
     schema: entity
@@ -1509,8 +1434,9 @@ objects:
     - data_type: directory.entity_type
     source: |-
         SELECT public.action($1, entity.create_entity_table_sql($1));
+
 - function:
-    name: create_or_replace_entity_type
+    name: define_entity_type
     schema: directory
     return_type: directory.entity_type
     language: sql
@@ -1520,9 +1446,24 @@ objects:
     arguments:
     - data_type: text
     source: |-
-      INSERT INTO directory.entity_type(name, description) VALUES ($1, '')
-          ON CONFLICT DO NOTHING
-          RETURNING entity_type;
+      INSERT INTO directory.entity_type(name, description)
+      VALUES ($1, '')
+      ON CONFLICT DO NOTHING
+      RETURNING entity_type;
+
+- function:
+    name: create_entity_type
+    schema: directory
+    return_type: directory.entity_type
+    language: sql
+    volatility: volatile
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: text
+    source: |-
+      SELECT entity.create_entity_table(directory.define_entity_type($1));
+
 - function:
     name: name_to_entity_type
     schema: directory
@@ -1534,31 +1475,8 @@ objects:
     arguments:
     - data_type: text
     source: |-
-      SELECT COALESCE(directory.get_entity_type($1), directory.create_or_replace_entity_type($1));
-- function:
-    name: entity_type_id
-    schema: directory
-    return_type: integer
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: directory.entity_type
-    source: |-
-      SELECT $1.id;
-- function:
-    name: entity_id
-    schema: directory
-    return_type: integer
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: directory.entity
-    source: |-
-      SELECT $1.id;
+      SELECT COALESCE(directory.get_entity_type($1), directory.create_entity_type($1));
+
 - function:
     name: name_to_data_source
     schema: directory
@@ -1571,6 +1489,7 @@ objects:
     - data_type: text
     source: |-
       SELECT COALESCE(directory.get_data_source($1), directory.create_data_source($1));
+
 - function:
     name: tag_entity
     schema: directory
@@ -1592,30 +1511,7 @@ objects:
           WHERE name = $2 AND entity_tag_link.entity_id IS NULL;
 
           SELECT $1;
-- function:
-    name: update_denormalized_entity_tags
-    schema: directory
-    return_type: directory.entity_tag_link_denorm
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: entity_id
-      data_type: integer
-    source: |-
-      DELETE FROM directory.entity_tag_link_denorm WHERE entity_id = $1;
-      INSERT INTO directory.entity_tag_link_denorm
-      SELECT
-          entity.id,
-          array_agg(lower(tag.name)),
-          lower(entity.name)
-      FROM directory.entity
-      JOIN directory.entity_tag_link etl ON etl.entity_id = entity.id
-      JOIN directory.tag ON tag.id = etl.tag_id
-      WHERE entity.id = $1
-      GROUP BY (entity.id, entity.name)
-      RETURNING *;
+
 - function:
     name: create_entity_type_tag
     schema: directory
@@ -1634,37 +1530,6 @@ objects:
           END;
 
           RETURN NEW;
-      END;
-- function:
-    name: create_entity_table
-    schema: entity
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          EXECUTE format(
-              'CREATE TABLE entity.%I PARTITION OF directory.entity FOR VALUES IN ( %s );',
-              NEW.name,
-              NEW.id
-         );
-         EXECUTE format(
-             'CREATE INDEX "ix_directory_entity_%s_name" ON entity.%I (name);',
-             NEW.name,
-             NEW.name
-         );
-         EXECUTE format(
-             'GRANT SELECT ON TABLE entity.%I TO minerva;',
-             NEW.name
-         );
-         EXECUTE format(
-             'GRANT INSERT,UPDATE,DELETE ON TABLE entity.%I TO minerva_writer;',
-             NEW.name
-         );
-         RETURN NEW;
       END;
 - function:
     name: create_entity_tag_link
@@ -1715,6 +1580,7 @@ objects:
 
           RETURN OLD;
       END;
+
 - trigger:
     table:
       schema: directory
@@ -1727,18 +1593,7 @@ objects:
     events:
     - insert
     affecteach: row
-- trigger:
-    table:
-      schema: directory
-      name: entity_type
-    name: create_entity_table_for_new_entity_types
-    function:
-      schema: entity
-      name: create_entity_table
-    when: after
-    events:
-    - insert
-    affecteach: row
+
 - trigger:
     table:
       schema: directory
@@ -1798,6 +1653,7 @@ objects:
     arguments: []
     source: |-
       SELECT 'alias'::name;
+
 - function:
     name: initialize_alias_type_sql
     schema: alias_directory
@@ -1810,27 +1666,38 @@ objects:
     - data_type: alias_directory.alias_type
     source: |-
       SELECT ARRAY[
-              format(
-                  'CREATE TABLE %I.%I ('
-                  '  id serial PRIMARY KEY,'
-                  '  %I text UNIQUE NOT NULL,'
-                  '  entity_id integer,'
-                  '  entity_type_id integer'
-                  ');',
-                  alias_directory.alias_schema(),
-                  $1.name, $1.name
-              ),
-              format(
-                  'CREATE INDEX ON %I.%I USING btree(entity_id);',
-                  alias_directory.alias_schema(),
-                  $1.name
-              ),
-              format(
-                  'CREATE INDEX ON %I.%I USING btree(entity_type_id);',
-                  alias_directory.alias_schema(),
-                  $1.name
-              )
-          ];
+          format(
+              'CREATE TABLE %I.%I ('
+              '  id serial PRIMARY KEY,'
+              '  %I text UNIQUE NOT NULL,'
+              '  entity_id integer,'
+              '  entity_type_id integer'
+              ');',
+              alias_directory.alias_schema(),
+              $1.name, $1.name
+          ),
+          format(
+              'CREATE INDEX ON %I.%I USING btree(entity_id);',
+              alias_directory.alias_schema(),
+              $1.name
+          ),
+          format(
+              'CREATE INDEX ON %I.%I USING btree(entity_type_id);',
+              alias_directory.alias_schema(),
+              $1.name
+          ),
+          format(
+              'GRANT SELECT ON %I.%I TO minerva;',
+              alias_directory.alias_schema(),
+              $1.name
+          ),
+          format(
+              'GRANT INSERT,UPDATE,DELETE ON %I.%I TO minerva_writer;',
+              alias_directory.alias_schema(),
+              $1.name
+          )
+      ];
+
 - function:
     name: initialize_alias_type
     schema: alias_directory
@@ -1921,6 +1788,7 @@ objects:
       data_type: name
     source: |-
       SELECT alias_type FROM alias_directory.alias_type WHERE name = $1;
+
 - function:
     name: create_alias_type
     schema: alias_directory
@@ -1934,10 +1802,11 @@ objects:
       data_type: name
     source: |-
       SELECT alias_directory.initialize_alias_type(
-              alias_directory.define_alias_type($1)
-          );
+          alias_directory.define_alias_type($1)
+      );
     description: |-
       Define a new alias type and created the table for storing the aliases.
+
 - function:
     name: get_or_create_alias_type
     schema: alias_directory
@@ -1954,91 +1823,7 @@ objects:
         alias_directory.get_alias_type($1),
         alias_directory.create_alias_type($1)
       );
-- function:
-    name: create_alias
-    schema: alias_directory
-    return_type: directory.entity
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: entity_id
-      data_type: integer
-    - name: entity_type_id
-      data_type: integer
-    - name: alias_type_name
-      data_type: text
-    - name: alias
-      data_type: text
-    source: |-
-      BEGIN
-          EXECUTE format(
-              'INSERT INTO alias.%I (entity_id, entity_type_id, %I) VALUES ($1, $2, $3)',
-              $3, $3
-          ) USING $1, $2, $4;
-          RETURN directory.get_entity_by_type_and_id(entity_type_id, entity_id);
-      END;
-- function:
-    name: create_alias
-    schema: alias_directory
-    return_type: directory.entity
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: entity
-      data_type: directory.entity
-    - name: alias_type_name
-      data_type: text
-    - name: alias
-      data_type: text
-    source: |-
-      SELECT alias_directory.create_alias($1.id, $1.entity_type_id, $2, $3);
-- function:
-    name: get_entity_by_alias_sql
-    schema: alias_directory
-    return_type: text
-    language: sql
-    volatility: plpgsql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - name: alias_type
-      data_type: name
-    - name: name
-      data_type: name
-    source: |-
-      SELECT format(
-                'SELECT (directory.get_entity_by_type_and_id(d.entity_type_id, d.entity_id)).* FROM alias.%I d '
-                'WHERE %I = ''%s'';',
-                $1, $1, $2)
-- function:
-    name: get_entity_by_alias
-    schema: alias_directory
-    return_type: directory.entity
-    language: plpgsql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - name: alias_type
-      data_type: name
-    - name: name
-      data_type: name
-    source: |-
-        DECLARE
-             result directory.entity;
-        BEGIN
-             EXECUTE alias_directory.get_entity_by_alias_sql($1, $2) INTO result;
-             IF result IS NOT NULL THEN
-                 RETURN result;
-             ELSE
-                 RETURN NULL;
-             END IF;
-        END;
+
 - enum_type:
     schema: relation_directory
     name: type_cardinality_enum
@@ -2469,6 +2254,7 @@ objects:
 
           RETURN NEW;
       END;
+
 - function:
     name: drop_table_on_type_delete
     schema: relation_directory
@@ -2484,335 +2270,14 @@ objects:
 
           RETURN OLD;
       END;
-- sequence:
-    name: dn_id_seq
-    schema: alias
-    startvalue: 1
-    increment: 1
-- table:
-    name: dn
-    schema: alias
-    columns:
-    - name: dn
-      data_type: text
-      nullable: false
-    - name: entity_id
-      data_type: integer
-      nullable: false
-    - name: entity_type_id
-      data_type: integer
-      nullable: false
-    - name: id
-      data_type: integer
-      nullable: false
-      default: nextval('alias.dn_id_seq'::regclass)
-    primary_key:
-      name: dn_pkey
-      columns:
-      - id
-    indexes:
-    - name: dn_dn_key
-      unique: true
-      definition: btree (dn)
-- function:
-    name: get_entity_by_dn
-    schema: directory
-    return_type: directory.entity
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      SELECT alias_directory.get_entity_by_alias('dn', $1);
-- composite_type:
-    name: dn_part
-    schema: directory
-    columns:
-    - name: type_name
-      data_type: text
-      nullable: false
-    - name: name
-      data_type: text
-      nullable: false
-- function:
-    name: dn_part_to_string
-    schema: directory
-    return_type: text
-    language: sql
-    volatility: immutable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: directory.dn_part
-    source: |-
-      SELECT $1.type_name || '=' || $1.name;
-- cast:
-    source:
-      schema: directory
-      name: dn_part
-    target:
-      schema: pg_catalog
-      name: text
-    function:
-      schema: directory
-      name: dn_part_to_string
-    implicit: false
-- function:
-    name: array_to_dn_part
-    schema: directory
-    return_type: directory.dn_part
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: text[]
-    source: |-
-      SELECT CAST(ROW($1[1], $1[2]) AS directory.dn_part);
-- cast:
-    source:
-      schema: pg_catalog
-      name: text[]
-    target:
-      schema: directory
-      name: dn_part
-    function:
-      schema: directory
-      name: array_to_dn_part
-    implicit: false
-- function:
-    name: split_raw_part
-    schema: directory
-    return_type: directory.dn_part
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      SELECT directory.array_to_dn_part(string_to_array($1, '='));
-- function:
-    name: explode_dn
-    schema: directory
-    return_type: directory.dn_part[]
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      SELECT array_agg(directory.split_raw_part(raw_part)) FROM unnest(string_to_array($1, ',')) AS raw_part;
-- function:
-    name: glue_dn
-    schema: directory
-    return_type: text
-    language: sql
-    volatility: immutable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: directory.dn_part[]
-    source: |-
-      SELECT
-              array_to_string(b.part_arr, ',')
-          FROM (
-              SELECT array_agg(parts.p) part_arr
-              FROM (
-                  SELECT directory.dn_part_to_string(part) p FROM unnest($1) part
-              ) parts
-          ) b;
-- function:
-    name: parent_dn_parts
-    schema: directory
-    return_type: directory.dn_part[]
-    language: sql
-    volatility: immutable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: directory.dn_part[]
-    source: |-
-      SELECT
-              CASE
-                  WHEN array_length($1, 1) > 1 THEN
-                      $1[1:array_length($1, 1) - 1]
-                  ELSE
-                      NULL
-              END;
-- function:
-    name: parent_dn
-    schema: directory
-    return_type: text
-    language: sql
-    volatility: immutable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      SELECT directory.glue_dn(directory.parent_dn_parts(directory.explode_dn($1)));
-- function:
-    name: last_dn_part
-    schema: directory
-    return_type: directory.dn_part
-    language: sql
-    volatility: immutable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: directory.dn_part[]
-    source: |-
-      SELECT $1[array_length($1, 1)];
-- function:
-    name: create_entity
-    schema: directory
-    return_type: directory.entity
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - name: name
-      data_type: text
-    - name: entity_type
-      data_type: directory.entity_type
-    source: |-
-      INSERT INTO directory.entity(created, name, entity_type_id)
-              VALUES (
-                  now(),
-                  $1,
-                  $2.id
-              )
-              RETURNING entity;
-- function:
-    name: create_entity_from_dn
-    schema: directory
-    return_type: directory.entity
-    language: plpgsql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-        DECLARE entity directory.entity;
-        BEGIN
-            SELECT * FROM directory.create_entity(
-                (directory.last_dn_part(directory.explode_dn($1))).name,
-                directory.name_to_entity_type((directory.last_dn_part(directory.explode_dn($1))).type_name)
-            ) INTO entity;
-            PERFORM alias_directory.create_alias(entity, 'dn', $1);
-            RETURN entity;
-        END;
-- function:
-    name: get_or_create_entity
-    schema: alias_directory
-    return_type: directory.entity
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: alias_type
-      data_type: name
-    - name: name
-      data_type: name
-    - name: entity_type
-      data_type: name
-    source: |-
-        SELECT COALESCE(
-            alias_directory.get_entity_by_alias($1, $2),
-            alias_directory.create_alias(directory.create_entity($2, directory.get_entity_type($3)), $1, $2)
-        );
-- function:
-    name: dn_to_entity
-    schema: directory
-    return_type: directory.entity
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      SELECT COALESCE(directory.get_entity_by_dn($1), directory.create_entity_from_dn($1));
-- function:
-    name: dns_to_entity_ids
-    schema: directory
-    return_type: integer
-    returns_set: true
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: text[]
-    source: |-
-      SELECT (directory.dn_to_entity(dn)).id FROM unnest($1) dn;
-- function:
-    name: aliases_to_entity_ids
-    schema: alias_directory
-    return_type: integer
-    returns_set: true
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: alias_type
-      data_type: text
-    - name: alias
-      data_type: text[]
-    - name: entity_type
-      data_type: text
-    source: |-
-      SELECT (alias_directory.get_or_create_entity($1::name, nm::name, $3)).id FROM unnest($2) nm;
-- function:
-    name: tag_entity
-    schema: directory
-    return_type: text
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: dn
-      data_type: text
-    - name: tag
-      data_type: text
-    source: |-
-      INSERT INTO directory.entity_tag_link(tag_id, entity_id)
-          SELECT
-              f.tag_id,
-              f.entity_id
-          FROM (
-              SELECT
-                  tag.id AS tag_id,
-                  dn.entity_id
-              FROM directory.tag, alias.dn
-              WHERE tag.name = $2 AND dn.dn = $1
-          ) f
-          LEFT JOIN directory.entity_tag_link ON entity_tag_link.tag_id = f.tag_id AND entity_tag_link.entity_id = f.entity_id
-          WHERE entity_tag_link.entity_id IS NULL;
 
-          SELECT $1;
-- sequence:
-    name: job_id_seq
-    schema: logging
-    startvalue: 1
-    increment: 1
 - table:
     name: job
     schema: logging
     columns:
     - name: id
-      data_type: integer
+      data_type: serial
       nullable: false
-      default: nextval('logging.job_id_seq'::regclass)
     - name: action
       data_type: text
       nullable: false
@@ -2823,6 +2288,12 @@ objects:
     - name: finished
       data_type: timestamp with time zone
       nullable: true
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
+
 - function:
     name: start_job
     schema: logging
@@ -2837,6 +2308,7 @@ objects:
     source: |-
       INSERT INTO logging.job(action, started) VALUES ($1, clock_timestamp())
       RETURNING job.id;
+
 - function:
     name: end_job
     schema: logging
@@ -2956,6 +2428,7 @@ objects:
       name: trend_store_part_pkey
       columns:
       - id
+
 - table:
     name: table_trend_store
     schema: trend_directory
@@ -2990,6 +2463,11 @@ objects:
     description: |-
       Table based trend stores describing the common properties of all its
       partitions like entity type, data granularity, etc.
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
 
 - table:
     name: table_trend_store_part
@@ -3025,6 +2503,12 @@ objects:
       on_delete: cascade
     description: |-
       The parts of a horizontally partitioned table trend store. Each table trend store has at least 1 part.
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
+
 - table:
     name: view_trend_store
     schema: trend_directory
@@ -3051,6 +2535,7 @@ objects:
       schema: trend_directory
     description: |-
       View based trend stores describing the properties like entity type, data granularity, etc.
+
 - table:
     name: view_trend_store_part
     schema: trend_directory
@@ -3083,15 +2568,14 @@ objects:
         columns:
         - id
       on_delete: cascade
-- sequence:
-    name: trend_id_seq
-    schema: trend_directory
-    startvalue: 1
-    increment: 1
+
 - table:
     name: trend
     schema: trend_directory
     columns:
+    - name: id
+      data_type: serial
+      nullable: false
     - name: trend_store_part_id
       data_type: integer
       nullable: false
@@ -3101,17 +2585,23 @@ objects:
     - name: data_type
       data_type: text
       nullable: false
+    - name: extra_data
+      data_type: jsonb
+      nullable: false
+      default: "'{}'"
     - name: description
       data_type: text
       nullable: false
-    - name: id
-      data_type: integer
-      nullable: false
-      default: nextval('trend_directory.trend_id_seq'::regclass)
     primary_key:
       name: trend_pkey
       columns:
       - id
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
+
 - table:
     name: table_trend
     schema: trend_directory
@@ -3150,6 +2640,12 @@ objects:
         columns:
         - id
       on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
+
 - table:
     name: view_trend
     schema: trend_directory
@@ -3188,6 +2684,7 @@ objects:
         columns:
         - id
       on_delete: cascade
+
 - table:
     name: trend_tag_link
     schema: trend_directory
@@ -3224,6 +2721,7 @@ objects:
         columns:
         - id
       on_delete: cascade
+
 - table:
     name: modified
     schema: trend_directory
@@ -5819,6 +5317,7 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
 - composite_type:
     name: attribute_descr
     schema: attribute_directory
@@ -5832,15 +5331,14 @@ objects:
     - name: description
       data_type: text
       nullable: false
-- sequence:
-    name: attribute_id_seq
-    schema: attribute_directory
-    startvalue: 1
-    increment: 1
+
 - table:
     name: attribute
     schema: attribute_directory
     columns:
+    - name: id
+      data_type: serial
+      nullable: false
     - name: attribute_store_id
       data_type: integer
       nullable: false
@@ -5853,10 +5351,10 @@ objects:
     - name: data_type
       data_type: text
       nullable: false
-    - name: id
-      data_type: integer
+    - name: extra_data
+      data_type: jsonb
       nullable: false
-      default: nextval('attribute_directory.attribute_id_seq'::regclass)
+      default: "'{}'"
     primary_key:
       name: attribute_pkey
       columns:
