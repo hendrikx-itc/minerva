@@ -13,6 +13,9 @@ Welcome to Minerva's documentation!
    schema/index
    entities.rst
    aliases.rst
+   trends.rst
+   attributes.rst
+   notifications.rst
 
 
 Indices and tables
