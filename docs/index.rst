@@ -12,6 +12,7 @@ Welcome to Minerva's documentation!
 
    schema/index
    entities.rst
+   aliases.rst
 
 
 Indices and tables
