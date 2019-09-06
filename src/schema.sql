@@ -389,93 +389,6 @@ CREATE CAST (smallint AS timestamp with time zone)
   WITH FUNCTION "public"."smallint_to_timestamp_with_time_zone"(smallint);
 
 
-CREATE TYPE "system"."job_state_enum" AS ENUM (
-  'queued',
-  'running',
-  'finished',
-  'failed'
-);
-
-
-
-CREATE SEQUENCE system.job_source_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
-CREATE TABLE "system"."job_source"
-(
-  "name" varchar NOT NULL,
-  "job_type" varchar NOT NULL,
-  "config" json,
-  "id" integer NOT NULL DEFAULT nextval('system.job_source_id_seq'::regclass),
-  PRIMARY KEY (id)
-);
-
-CREATE UNIQUE INDEX "ix_system_job_source_name" ON "system"."job_source" USING btree (name);
-
-GRANT SELECT ON TABLE "system"."job_source" TO minerva;
-
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_source" TO minerva_writer;
-
-
-
-CREATE SEQUENCE system.job_id_seq
-  START WITH 1
-  INCREMENT BY 1
-  NO MINVALUE
-  NO MAXVALUE
-  CACHE 1;
-
-
-CREATE TABLE "system"."job"
-(
-  "type" varchar NOT NULL,
-  "description" json NOT NULL,
-  "size" bigint NOT NULL,
-  "started" timestamp with time zone,
-  "finished" timestamp with time zone,
-  "job_source_id" integer NOT NULL,
-  "created" timestamp with time zone NOT NULL DEFAULT now(),
-  "state" system.job_state_enum NOT NULL DEFAULT 'queued'::system.job_state_enum,
-  "id" integer NOT NULL DEFAULT nextval('system.job_id_seq'::regclass),
-  PRIMARY KEY (id)
-);
-
-GRANT SELECT ON TABLE "system"."job" TO minerva;
-
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job" TO minerva_writer;
-
-
-
-CREATE TABLE "system"."job_error_log"
-(
-  "job_id" integer NOT NULL,
-  "message" varchar,
-  PRIMARY KEY (job_id)
-);
-
-GRANT SELECT ON TABLE "system"."job_error_log" TO minerva;
-
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_error_log" TO minerva_writer;
-
-
-
-CREATE TABLE "system"."job_queue"
-(
-  "job_id" integer NOT NULL,
-  PRIMARY KEY (job_id)
-);
-
-GRANT SELECT ON TABLE "system"."job_queue" TO minerva;
-
-GRANT INSERT,UPDATE,DELETE ON TABLE "system"."job_queue" TO minerva_writer;
-
-
-
 CREATE SEQUENCE system.setting_id_seq
   START WITH 1
   INCREMENT BY 1
@@ -551,123 +464,6 @@ CREATE FUNCTION "system"."set_version"(integer, integer, integer)
     RETURNS system.version_tuple
 AS $$
 SELECT system.set_version(($1, $2, $3)::system.version_tuple);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE TYPE "system"."job_type" AS (
-  "id" integer,
-  "type" varchar,
-  "description" varchar,
-  "size" bigint,
-  "config" text
-);
-
-
-
-CREATE FUNCTION "system"."enqueue_job"(system.job)
-    RETURNS system.job
-AS $$
-INSERT INTO system.job_queue(job_id) VALUES ($1.id);
-
-    SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "system"."define_job"("type" varchar, "description" json, "size" bigint, "job_source_id" integer)
-    RETURNS system.job
-AS $$
-INSERT INTO system.job(
-        size, job_source_id, type, description
-    ) VALUES (
-        size, job_source_id, type, description
-    ) RETURNING *;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "system"."create_job"("type" varchar, "description" json, "size" bigint, "job_source_id" integer)
-    RETURNS system.job
-AS $$
-SELECT system.enqueue_job(system.define_job($1, $2, $3, $4));
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "system"."get_job"()
-    RETURNS system.job_type
-AS $$
-DECLARE
-    result system.job_type;
-BEGIN
-    LOOP
-        SELECT job_queue.job_id, job.type, job.description, job.size, js.config INTO result
-            FROM system.job_queue
-            JOIN system.job ON job_queue.job_id = job.id
-            JOIN system.job_source js ON js.id = job.job_source_id
-            WHERE pg_try_advisory_xact_lock(job_queue.job_id)
-            ORDER BY job_id ASC LIMIT 1;
-
-        IF result IS NOT NULL THEN
-            DELETE FROM system.job_queue WHERE job_id = result.id;
-
-            IF NOT found THEN
-                -- race: job was just assigned, retry
-                CONTINUE;
-            END IF;
-
-            UPDATE system.job SET state = 'running', started = NOW() WHERE id = result.id;
-        END IF;
-
-        RETURN result;
-    END LOOP;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "system"."finish_job"("job_id" integer)
-    RETURNS void
-AS $$
-UPDATE system.job SET state = 'finished', finished = NOW() WHERE system.job.id = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "system"."fail_job"("job_id" integer)
-    RETURNS void
-AS $$
-UPDATE system.job SET state = 'failed', finished = NOW() WHERE system.job.id = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "system"."fail_job"("job_id" integer, "message" text)
-    RETURNS void
-AS $$
-UPDATE system.job SET state = 'failed', finished = NOW() WHERE system.job.id = $1;
-
-    INSERT INTO system.job_error_log (job_id, message) VALUES ($1, $2);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "system"."create_job_source"(text, text, json)
-    RETURNS system.job_source
-AS $$
-INSERT INTO system.job_source (id, name, job_type, config)
-    VALUES (DEFAULT, $1, $2, $3)
-    RETURNING *;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "system"."get_job_source"(integer)
-    RETURNS system.job_source
-AS $$
-SELECT * FROM system.job_source WHERE id = $1;
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "system"."remove_jobs"("before" timestamp with time zone, "max" bigint DEFAULT 100000)
-    RETURNS bigint
-AS $$
-WITH deleted AS (
-        DELETE FROM system.job WHERE id IN (SELECT id FROM system.job WHERE created < $1 ORDER BY created ASC LIMIT $2) RETURNING *
-    )
-    SELECT count(*) FROM deleted;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -1465,7 +1261,7 @@ $$ LANGUAGE plpgsql VOLATILE;
 
 CREATE TABLE "logging"."job"
 (
-  "id" serial NOT NULL,
+  "id" integer GENERATED BY DEFAULT AS IDENTITY,
   "action" text NOT NULL,
   "started" timestamp with time zone NOT NULL,
   "finished" timestamp with time zone
@@ -7284,16 +7080,6 @@ ALTER TABLE "notification_directory"."set_attribute"
   ADD CONSTRAINT "set_attribute_notification_set_store_id_fkey"
   FOREIGN KEY (notification_set_store_id)
   REFERENCES "notification_directory"."notification_set_store" (id) ON DELETE CASCADE;
-
-ALTER TABLE "system"."job"
-  ADD CONSTRAINT "job_job_source_id_fkey"
-  FOREIGN KEY (job_source_id)
-  REFERENCES "system"."job_source" (id) ON DELETE CASCADE;
-
-ALTER TABLE "system"."job_queue"
-  ADD CONSTRAINT "job_queue_job_id_fkey"
-  FOREIGN KEY (job_id)
-  REFERENCES "system"."job" (id) ON DELETE CASCADE;
 
 ALTER TABLE "trend_directory"."trend_store"
   ADD CONSTRAINT "trend_store_entity_type_id_fkey"
