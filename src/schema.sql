@@ -693,6 +693,101 @@ SELECT public.action($1, entity.create_entity_table_sql($1));
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "entity"."to_entity_function_name"(directory.entity_type)
+    RETURNS name
+AS $$
+SELECT format('to_%s', $1.name)::name;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "entity"."get_entity_function_name"(directory.entity_type)
+    RETURNS name
+AS $$
+SELECT format('get_%s', $1.name)::name;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "entity"."create_entity_function_name"(directory.entity_type)
+    RETURNS name
+AS $$
+SELECT format('create_%s', $1.name)::name;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "entity"."create_create_entity_function_sql"(directory.entity_type)
+    RETURNS text[]
+AS $function$
+SELECT ARRAY[ 
+    format(
+      'CREATE FUNCTION entity.%I(text) RETURNS entity.%I
+      AS $$
+        INSERT INTO entity.%I(name) VALUES ($1) ON CONFLICT DO NOTHING RETURNING %I;
+      $$ LANGUAGE sql',
+      entity.create_entity_function_name($1),
+      $1.name,
+      $1.name,
+      $1.name
+    )
+];
+$function$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity"."create_create_entity_function"(directory.entity_type)
+    RETURNS directory.entity_type
+AS $$
+SELECT public.action($1, entity.create_create_entity_function_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity"."create_get_entity_function_sql"(directory.entity_type)
+    RETURNS text[]
+AS $function$
+SELECT ARRAY[ 
+    format(
+      'CREATE FUNCTION entity.%I(text) RETURNS entity.%I
+      AS $$
+        SELECT * FROM entity.%I WHERE name = $1;
+      $$ LANGUAGE sql',
+      entity.get_entity_function_name($1),
+      $1.name,
+      $1.name
+    )
+];
+$function$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity"."create_get_entity_function"(directory.entity_type)
+    RETURNS directory.entity_type
+AS $$
+SELECT public.action($1, entity.create_get_entity_function_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity"."create_to_entity_function_sql"(directory.entity_type)
+    RETURNS text[]
+AS $function$
+SELECT ARRAY[ 
+    format(
+      'CREATE FUNCTION entity.%I(text) RETURNS entity.%I
+      AS $$
+        SELECT coalesce(entity.%I($1), entity.%I($1));
+      $$ LANGUAGE sql',
+      entity.to_entity_function_name($1),
+      $1.name,
+      entity.get_entity_function_name($1),
+      entity.create_entity_function_name($1)
+    )
+];
+$function$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity"."create_to_entity_function"(directory.entity_type)
+    RETURNS directory.entity_type
+AS $$
+SELECT public.action($1, entity.create_to_entity_function_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "directory"."define_entity_type"(text)
     RETURNS directory.entity_type
 AS $$
@@ -703,10 +798,20 @@ RETURNING entity_type;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
+CREATE FUNCTION "directory"."init_entity_type"(directory.entity_type)
+    RETURNS directory.entity_type
+AS $$
+SELECT entity.create_entity_table($1);
+SELECT entity.create_get_entity_function($1);
+SELECT entity.create_create_entity_function($1);
+SELECT entity.create_to_entity_function($1);
+$$ LANGUAGE sql VOLATILE STRICT;
+
+
 CREATE FUNCTION "directory"."create_entity_type"(text)
     RETURNS directory.entity_type
 AS $$
-SELECT entity.create_entity_table(directory.define_entity_type($1));
+SELECT directory.init_entity_type(directory.define_entity_type($1));
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
@@ -5652,7 +5757,10 @@ AS $$
 DECLARE
     result integer;
 BEGIN
-    EXECUTE format('SELECT count(directory.dn_to_entity(v.dn)) FROM virtual_entity.%I v LEFT JOIN directory.entity ON entity.dn = v.dn WHERE entity.dn IS NULL', name) INTO result;
+    EXECUTE format(
+        'SELECT count(entity.%I(v.name)) FROM virtual_entity.%I v LEFT JOIN entity.%I e ON e.name = v.name WHERE e.name IS NULL',
+        format('to_%s', name), name, name
+    ) INTO result;
 
     RETURN result;
 END;
