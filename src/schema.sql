@@ -1686,7 +1686,7 @@ and capable of storing data.';
 
 
 CREATE FUNCTION "trend_directory"."deinitialize_table_trend_store_part"(trend_directory.table_trend_store_part)
-    RETURNS void
+    RETURNS trend_directory.table_trend_store_part
 AS $$
 SELECT trend_directory.drop_base_table($1);
 SELECT trend_directory.drop_staging_table($1);

@@ -2922,7 +2922,7 @@ objects:
 - function:
     name: deinitialize_table_trend_store_part
     schema: trend_directory
-    return_type: void
+    return_type: trend_directory.table_trend_store_part 
     language: sql
     volatility: volatile
     strict: false
