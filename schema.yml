@@ -1804,15 +1804,18 @@ objects:
       data_type: integer
       generated_identity: by_default
     - name: action
-      data_type: text
+      data_type: jsonb
       nullable: false
-      default: ''
     - name: started
       data_type: timestamp with time zone
       nullable: false
     - name: finished
       data_type: timestamp with time zone
       nullable: true
+    primary_key:
+      name: job_pkey
+      columns:
+      - id
     privileges:
     - role: minerva
       privilege: SELECT
@@ -1828,8 +1831,8 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: actiondata
-      data_type: text
+    - name: action
+      data_type: jsonb
     source: |-
       INSERT INTO logging.job(action, started) VALUES ($1, clock_timestamp())
       RETURNING job.id;
