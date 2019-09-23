@@ -7314,7 +7314,7 @@ objects:
 - function:
     name: drop_attribute
     schema: attribute_directory
-    return_type: void
+    return_type: attribute_directory.attribute_store
     language: sql
     volatility: volatile
     arguments:

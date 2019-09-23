@@ -4472,7 +4472,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."drop_attribute"(attribute_directory.attribute_store, name)
-    RETURNS void
+    RETURNS attribute_directory.attribute_store
 AS $$
 DELETE FROM attribute_directory.attribute
 WHERE attribute_store_id = $1.id AND name = $2;
