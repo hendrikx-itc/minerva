@@ -3,6 +3,7 @@ export PGHOST=localhost
 export PGPORT=16050
 export PGUSER=postgres
 export PGDATABASE=minerva
+export PGPASSWORD=password
 
 function absolute_dir {
     local old_pwd="$(pwd)"

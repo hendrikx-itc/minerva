@@ -2192,10 +2192,10 @@ objects:
         generated_identity: by_default
         nullable: false
         description: The unique identifier of this materialization
-      - name: dst_trend_store_id
+      - name: dst_trend_store_part_id
         data_type: integer
         nullable: false
-        description: The ID of the destination table_trend_store
+        description: The ID of the destination table_trend_store_part
       - name: processing_delay
         data_type: interval
         nullable: false
@@ -2235,14 +2235,14 @@ objects:
     indexes:
     - name: ix_view_materialization_uniqueness
       unique: true
-      definition: btree (dst_trend_store_id)
+      definition: btree (dst_trend_store_part_id)
     foreign_keys:
     - name: view_materialization_dst_trend_store_id_fkey
       columns:
-      - dst_trend_store_id
+      - dst_trend_store_part_id
       references:
         table:
-          name: table_trend_store
+          name: table_trend_store_part
           schema: trend_directory
         columns:
         - id
@@ -4275,9 +4275,9 @@ objects:
     arguments:
     - data_type: trend_directory.view_materialization
     source: |-
-      SELECT table_trend_store::name::text
-      FROM trend_directory.table_trend_store
-      WHERE table_trend_store.id = $1.dst_trend_store_id
+      SELECT table_trend_store_part.name::text
+      FROM trend_directory.table_trend_store_part
+      WHERE table_trend_store_part.id = $1.dst_trend_store_part_id
 
 - function:
     name: add_new_state
@@ -4362,9 +4362,9 @@ objects:
       SELECT 'added: ' || trend_directory.add_new_state() || ', updated: ' || trend_directory.update_modified_state() || ', deleted: ' || trend_directory.delete_obsolete_state();
 
 - function:
-    name: dst_trend_store
+    name: dst_trend_store_part
     schema: trend_directory
-    return_type: trend_directory.table_trend_store
+    return_type: trend_directory.table_trend_store_part
     language: sql
     volatility: stable
     strict: false
@@ -4372,7 +4372,7 @@ objects:
     arguments:
     - data_type: trend_directory.view_materialization
     source: |-
-      SELECT * FROM trend_directory.table_trend_store WHERE id = $1.dst_trend_store_id;
+      SELECT * FROM trend_directory.table_trend_store_part WHERE id = $1.dst_trend_store_part_id;
 
 - function:
     name: columns_part
