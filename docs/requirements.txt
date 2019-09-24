@@ -1,1 +1,1 @@
-pg-db-tools>=1.0.4
+pg-db-tools>=1.0.5
