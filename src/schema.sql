@@ -2402,7 +2402,36 @@ WITH process_log AS (
   FROM trend_directory.modified_log
   WHERE id > $1
   GROUP BY table_trend_store_part_id, timestamp
-) SELECT max(max_id) FROM process_log;
+) SELECT coalesce(max(max_id), $1) FROM process_log;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE TABLE "trend_directory"."modified_log_processing_state"
+(
+  "name" text NOT NULL,
+  "last_processed_id" bigint NOT NULL,
+  "updated" timestamp with time zone NOT NULL DEFAULT now(),
+  PRIMARY KEY (name)
+);
+
+GRANT SELECT ON TABLE "trend_directory"."modified_log_processing_state" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."modified_log_processing_state" TO minerva_writer;
+
+
+
+CREATE FUNCTION "trend_directory"."process_modified_log"()
+    RETURNS bigint
+AS $$
+WITH processed AS (
+  SELECT trend_directory.process_modified_log(coalesce(max(last_processed_id), 0)) AS last_processed_id
+  FROM trend_directory.modified_log_processing_state WHERE name = 'current'
+)
+INSERT INTO trend_directory.modified_log_processing_state(name, last_processed_id)
+SELECT 'current', processed.last_processed_id
+FROM processed
+ON CONFLICT (name) DO UPDATE SET last_processed_id = EXCLUDED.last_processed_id
+RETURNING last_processed_id;
 $$ LANGUAGE sql VOLATILE;
 
 

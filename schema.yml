@@ -4084,7 +4084,51 @@ objects:
         FROM trend_directory.modified_log
         WHERE id > $1
         GROUP BY table_trend_store_part_id, timestamp
-      ) SELECT max(max_id) FROM process_log;
+      ) SELECT coalesce(max(max_id), $1) FROM process_log;
+
+- table:
+    name: modified_log_processing_state
+    schema: trend_directory
+    columns:
+    - name: name
+      data_type: text
+      nullable: false
+    - name: last_processed_id
+      data_type: bigint 
+      nullable: false
+    - name: updated
+      data_type: timestamp with time zone
+      nullable: false
+      default: now()
+    primary_key:
+      name: modified_log_processed_state_pkey
+      columns:
+      - name
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
+
+- function:
+    name: process_modified_log
+    schema: trend_directory
+    return_type: bigint
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments: []
+    source: |-
+      WITH processed AS (
+        SELECT trend_directory.process_modified_log(coalesce(max(last_processed_id), 0)) AS last_processed_id
+        FROM trend_directory.modified_log_processing_state WHERE name = 'current'
+      )
+      INSERT INTO trend_directory.modified_log_processing_state(name, last_processed_id)
+      SELECT 'current', processed.last_processed_id
+      FROM processed
+      ON CONFLICT (name) DO UPDATE SET last_processed_id = EXCLUDED.last_processed_id
+      RETURNING last_processed_id;
 
 - function:
     name: mark_modified
