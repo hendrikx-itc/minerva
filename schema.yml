@@ -1801,7 +1801,7 @@ objects:
     schema: logging
     columns:
     - name: id
-      data_type: integer
+      data_type: bigint
       generated_identity: by_default
     - name: action
       data_type: jsonb
@@ -1825,7 +1825,7 @@ objects:
 - function:
     name: start_job
     schema: logging
-    return_type: integer
+    return_type: bigint
     language: sql
     volatility: volatile
     strict: false
@@ -1847,9 +1847,20 @@ objects:
     secdef: false
     arguments:
     - name: job_id
-      data_type: integer
+      data_type: bigint
     source: |-
       UPDATE logging.job SET finished=clock_timestamp() WHERE id=$1;
+
+- composite_type:
+    name: fingerprint
+    schema: trend_directory
+    columns:
+    - name: modified
+      data_type: timestamp with time zone
+      nullable: false
+    - name: body
+      data_type: jsonb
+      nullable: false
 
 - composite_type:
     name: trend_descr
@@ -2146,6 +2157,44 @@ objects:
       on_delete: cascade
 
 - table:
+    name: modified_log
+    schema: trend_directory
+    columns:
+    - name: id
+      data_type: bigint
+      generated_identity: by_default
+      nullable: false
+    - name: table_trend_store_part_id
+      data_type: integer
+      nullable: false
+    - name: timestamp
+      data_type: timestamp with time zone
+      nullable: false
+    - name: modified
+      data_type: timestamp with time zone
+      nullable: false
+    primary_key:
+      name: modified_log_pkey
+      columns:
+      - id
+    foreign_keys:
+    - name: modified_table_trend_store_part_id_fkey
+      columns:
+      - table_trend_store_part_id
+      references:
+        table:
+          name: table_trend_store_part
+          schema: trend_directory
+        columns:
+        - id
+      on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
+
+- table:
     name: modified
     schema: trend_directory
     columns:
@@ -2202,19 +2251,19 @@ objects:
       - name: processing_delay
         data_type: interval
         nullable: false
-        description: |-
+        description: >
           The time after the destination timestamp before this materialization
           can be executed
       - name: stability_delay
         data_type: interval
         nullable: false
-        description: |-
+        description: >
           The time to wait after the most recent modified timestamp before
           the source data is considered 'stable'
       - name: reprocessing_period
         data_type: interval
         nullable: false
-        description: |-
+        description: >
           The maximum time after the destination timestamp that the materialization
           is allowed to be executed
       - name: src_view
@@ -2224,7 +2273,7 @@ objects:
         data_type: bool
         nullable: false
         default: 'false'
-        description: |-
+        description: >
           Indicates if jobs should be created for this materialization (manual
           execution is always possible)
       - name: cost
@@ -2251,6 +2300,54 @@ objects:
         - id
       on_delete: cascade
 
+- function: 
+    name: source_fingerprint_sql
+    schema: trend_directory
+    return_type: text
+    description: Returns the query to generate fingerprints for the specified view materialization.
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trend_directory.view_materialization
+    source: |-
+      SELECT format('SELECT * FROM trend.%I($1)', $1::text || '_fingerprint');
+
+- function: 
+    name: source_fingerprint
+    schema: trend_directory
+    return_type: text
+    description: >
+      Returns the fingerprint of the combined states of all sources required to
+      calculate the data for the target timestamp.
+    language: plpgsql
+    volatility: stable
+    arguments:
+    - data_type: trend_directory.view_materialization
+    - data_type: timestamp with time zone
+    source: |-
+      DECLARE
+          result trend_directory.fingerprint;
+      BEGIN
+          EXECUTE trend_directory.source_fingerprint_sql($1) INTO result USING $2;
+
+          RETURN result;
+      END;
+
+- function: 
+    name: update_source_fingerprint
+    schema: trend_directory
+    return_type: text
+    description: Update the fingerprint of the sources in the view_materialization_state table.
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trend_directory.view_materialization
+    - data_type: timestamp with time zone
+    source: |-
+      INSERT INTO trend_directory.view_materialization_state(materialization_id, timestamp, source_fingerprint, processed_fingerprint, job_id)
+      VALUES ($1.id, $2, trend_directory.source_fingerprint($1, $2), null, null)
+      ON CONFLICT DO UPDATE SET source_fingerprint = trend_directory.source_fingerprint($1, $2);
+
 - table:
     name: function_materialization
     schema: trend_directory
@@ -2267,19 +2364,19 @@ objects:
       - name: processing_delay
         data_type: interval
         nullable: false
-        description: |-
+        description: >
           The time after the destination timestamp before this materialization
           can be executed
       - name: stability_delay
         data_type: interval
         nullable: false
-        description: |-
+        description: >
           The time to wait after the most recent modified timestamp before
           the source data is considered 'stable'
       - name: reprocessing_period
         data_type: interval
         nullable: false
-        description: |-
+        description: >
           The maximum time after the destination timestamp that the materialization
           is allowed to be executed
       - name: src_function
@@ -2289,7 +2386,7 @@ objects:
         data_type: bool
         nullable: false
         default: 'false'
-        description: |-
+        description: >
           Indicates if jobs should be created for this materialization (manual
           execution is always possible)
       - name: cost
@@ -2341,8 +2438,10 @@ objects:
 - table:
     name: view_materialization_state
     schema: trend_directory
-    description: |-
-      ID of the most recent job for this materialization
+    description: >
+      Stores the relation between the state of the sources used for the
+      materialization and the state of the materialized data, so that from this
+      table, it can be decided if a new materialization should be done.
     columns:
     - name: materialization_id
       data_type: integer
@@ -2352,23 +2451,18 @@ objects:
       data_type: timestamp with time zone
       nullable: false
       description: The timestamp of the materialized (materialization result) data
-    - name: max_modified
-      data_type: timestamp with time zone
-      nullable: false
-      description: The greatest modified timestamp of all materialization sources
-    - name: source_states
-      data_type: trend_directory.source_fragment_state[]
+    - name: source_fingerprint
+      data_type: jsonb
       nullable: true
-      description: Array of trend_store_id/timestamp/modified combinations for all
-        source data fragments
-    - name: processed_states
-      data_type: trend_directory.source_fragment_state[]
+      description: Aggregate state of all sources
+    - name: processed_fingerprint
+      data_type: jsonb
       nullable: true
-      description: |
-        Array containing a snapshot of the source_states at the time of
+      description: >
+        Snapshot of the source_fingerprint at the time of
         the most recent materialization
     - name: job_id
-      data_type: integer
+      data_type: bigint
       nullable: true
       description: ID of the most recent job for this materialization
     primary_key:
@@ -2470,25 +2564,32 @@ objects:
       privilege: INSERT,UPDATE,DELETE
 
 - table:
-    name: materialization_trend_store_link
+    name: view_materialization_trend_store_link
     schema: trend_directory
     description: |-
-      Stores the dependencies between a materialization and its source table trend
-      stores. Multiple levels of views and functions may exist between a
+      Stores the dependencies between a view materialization and its source table trend
+      store parts. Multiple levels of views and functions may exist between a
       materialization and its source table trend stores. These intermediate views and
       functions are not registered here, but only the table trend stores containing
-      the actual source data used in the views and/or functions.
+      the actual source data used in the view.
+
+      The timestamp_mapping_func column stores the function to map a timestamp
+      of the source (table_trend_store_part) to a timestamp of the target (the
+      view and target table_trend_store_part).
     columns:
-    - name: materialization_id
+    - name: view_materialization_id
       data_type: integer
       nullable: false
-    - name: trend_store_id
+    - name: table_trend_store_part_id
       data_type: integer
+      nullable: false
+    - name: timestamp_mapping_func
+      data_type: regprocedure
       nullable: false
     foreign_keys:
     - name: materialization_trend_store_link_materialization_id_fkey
       columns:
-      - materialization_id
+      - view_materialization_id
       references:
         table:
           name: view_materialization
@@ -2498,14 +2599,19 @@ objects:
       on_delete: cascade
     - name: materialization_trend_store_link_trend_store_id_fkey
       columns:
-      - trend_store_id
+      - table_trend_store_part_id
       references:
         table:
-          name: table_trend_store
+          name: table_trend_store_part
           schema: trend_directory
         columns:
         - id
       on_delete: cascade
+    primary_key:
+      name: view_materialization_trend_store_link_pkey
+      columns:
+      - view_materialization_id
+      - table_trend_store_part_id
 
 - function:
     name: base_table_schema
@@ -2666,8 +2772,7 @@ objects:
               'entity_id integer NOT NULL, '
               '"timestamp" timestamp with time zone NOT NULL, '
               'created timestamp with time zone NOT NULL, '
-              'modified timestamp with time zone NOT NULL, '
-              'job_id integer NOT NULL'
+              'job_id bigint NOT NULL'
               '%s'
               ');',
               trend_directory.base_table_schema(),
@@ -2689,11 +2794,6 @@ objects:
           ),
           format(
               'CREATE INDEX ON %I.%I USING btree (created);',
-              trend_directory.base_table_schema(),
-              name
-          ),
-          format(
-              'CREATE INDEX ON %I.%I USING btree (modified);',
               trend_directory.base_table_schema(),
               name
           ),
@@ -4081,10 +4181,11 @@ objects:
           RETURN max_modified;
       END;
 
+
 - function:
     name: update_modified
     schema: trend_directory
-    return_type: trend_directory.modified
+    return_type: void
     language: sql
     volatility: volatile
     strict: false
@@ -4097,58 +4198,54 @@ objects:
     - name: modified
       data_type: timestamp with time zone
     source: |-
-      UPDATE trend_directory.modified
-      SET "end" = greatest("end", $3)
-      WHERE "timestamp" = $2 AND table_trend_store_part_id = $1
-      RETURNING modified;
+      INSERT INTO trend_directory.modified AS m (table_trend_store_part_id, timestamp, start, "end")
+      VALUES ($1, $2, $3, $3)
+      ON CONFLICT ON CONSTRAINT modified_pkey DO UPDATE SET "end" = greatest(m."end", EXCLUDED."end");
 
 - function:
-    name: store_modified
+    name: process_modified_log
     schema: trend_directory
-    return_type: trend_directory.modified
+    return_type: bigint
     language: sql
     volatility: volatile
     strict: false
     secdef: false
     arguments:
-    - name: table_trend_store_part_id
-      data_type: integer
-    - name: timestamp
-      data_type: timestamp with time zone
-    - name: modified
-      data_type: timestamp with time zone
+    - name: start_id
+      data_type: bigint
     source: |-
-      INSERT INTO trend_directory.modified(
-          table_trend_store_part_id, "timestamp", start, "end"
-      ) VALUES (
-          $1, $2, $3, $3
-      ) RETURNING modified;
-
-- function:
-    name: mark_modified
-    schema: trend_directory
-    return_type: trend_directory.modified
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: table_trend_store_part_id
-      data_type: integer
-    - name: timestamp
-      data_type: timestamp with time zone
-    - name: modified
-      data_type: timestamp with time zone
-    source: |-
-      SELECT COALESCE(
-          trend_directory.update_modified($1, $2, $3),
-          trend_directory.store_modified($1, $2, $3)
-      );
+      WITH process_log AS (
+        SELECT
+          max(id) AS max_id,
+          trend_directory.update_modified(table_trend_store_part_id, timestamp, max(modified)) AS update
+        FROM trend_directory.modified_log
+        WHERE id > $1
+        GROUP BY table_trend_store_part_id, timestamp
+      ) SELECT max(max_id) FROM process_log;
 
 - function:
     name: mark_modified
     schema: trend_directory
-    return_type: trend_directory.modified
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: table_trend_store_part_id
+      data_type: integer
+    - name: timestamp
+      data_type: timestamp with time zone
+    - name: modified
+      data_type: timestamp with time zone
+    source: |-
+      INSERT INTO trend_directory.modified_log(table_trend_store_part_id, timestamp, modified)
+      VALUES ($1, $2, $3);
+
+- function:
+    name: mark_modified
+    schema: trend_directory
+    return_type: void
     language: sql
     volatility: volatile
     strict: false
@@ -4159,10 +4256,8 @@ objects:
     - name: timestamp
       data_type: timestamp with time zone
     source: |-
-      SELECT COALESCE(
-          trend_directory.update_modified($1, $2, now()),
-          trend_directory.store_modified($1, $2, now())
-      );
+      INSERT INTO trend_directory.modified_log(table_trend_store_part_id, timestamp, modified)
+      VALUES ($1, $2, now());
 
 - composite_type:
     name: transfer_result
@@ -4385,6 +4480,8 @@ objects:
     volatility: stable
     strict: false
     secdef: false
+    description: |-
+      Return the comma separated, quoted list of column names to be used in queries
     arguments:
     - data_type: trend_directory.view_materialization
     source: |-
