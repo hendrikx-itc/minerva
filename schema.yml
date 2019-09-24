@@ -2232,6 +2232,46 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- function:
+    name: new_modified
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments: []
+    source: |-
+      BEGIN
+          PERFORM (WITH mapped_modified AS (
+            SELECT
+              view_materialization_id,
+              trend_directory.map_timestamp(view_materialization_trend_store_link, NEW.timestamp) AS dst_timestamp
+            FROM trend_directory.view_materialization_trend_store_link
+            WHERE table_trend_store_part_id = NEW.table_trend_store_part_id
+          )
+          SELECT trend_directory.update_source_fingerprint(vm, dst_timestamp)
+          FROM mapped_modified
+          JOIN trend_directory.view_materialization vm ON vm.id = view_materialization_id
+          GROUP BY vm, dst_timestamp);
+
+          RETURN NEW;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: modified
+    name: update_materialization_state_on_new_modified
+    function:
+      schema: trend_directory
+      name: new_modified
+    when: after
+    events:
+    - insert
+    - update
+    affecteach: row
+
 - table:
     name: view_materialization
     schema: trend_directory
@@ -2315,7 +2355,7 @@ objects:
 - function: 
     name: source_fingerprint
     schema: trend_directory
-    return_type: text
+    return_type: trend_directory.fingerprint
     description: >
       Returns the fingerprint of the combined states of all sources required to
       calculate the data for the target timestamp.
@@ -2332,21 +2372,6 @@ objects:
 
           RETURN result;
       END;
-
-- function: 
-    name: update_source_fingerprint
-    schema: trend_directory
-    return_type: text
-    description: Update the fingerprint of the sources in the view_materialization_state table.
-    language: sql
-    volatility: stable
-    arguments:
-    - data_type: trend_directory.view_materialization
-    - data_type: timestamp with time zone
-    source: |-
-      INSERT INTO trend_directory.view_materialization_state(materialization_id, timestamp, source_fingerprint, processed_fingerprint, job_id)
-      VALUES ($1.id, $2, trend_directory.source_fingerprint($1, $2), null, null)
-      ON CONFLICT DO UPDATE SET source_fingerprint = trend_directory.source_fingerprint($1, $2);
 
 - table:
     name: function_materialization
@@ -2466,7 +2491,7 @@ objects:
       nullable: true
       description: ID of the most recent job for this materialization
     primary_key:
-      name: state_pkey
+      name: view_materialization_state_pkey
       columns:
       - materialization_id
       - timestamp
@@ -2486,6 +2511,21 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- function:
+    name: update_source_fingerprint
+    schema: trend_directory
+    return_type: void
+    description: Update the fingerprint of the sources in the view_materialization_state table.
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trend_directory.view_materialization
+    - data_type: timestamp with time zone
+    source: |-
+      INSERT INTO trend_directory.view_materialization_state(materialization_id, timestamp, source_fingerprint, processed_fingerprint, job_id)
+      VALUES ($1.id, $2, (trend_directory.source_fingerprint($1, $2)).body, null, null)
+      ON CONFLICT ON CONSTRAINT view_materialization_state_pkey DO UPDATE SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body;
 
 - table:
     name: materialization_tag_link
@@ -2566,7 +2606,7 @@ objects:
 - table:
     name: view_materialization_trend_store_link
     schema: trend_directory
-    description: |-
+    description: >
       Stores the dependencies between a view materialization and its source table trend
       store parts. Multiple levels of views and functions may exist between a
       materialization and its source table trend stores. These intermediate views and
@@ -2580,12 +2620,21 @@ objects:
     - name: view_materialization_id
       data_type: integer
       nullable: false
+      description: Reference to a view_materialization.
     - name: table_trend_store_part_id
       data_type: integer
       nullable: false
+      description: >
+        Reference to a table_trend_store_part that is a source of the
+        materialization referenced by view_materialization_id.
     - name: timestamp_mapping_func
       data_type: regprocedure
       nullable: false
+      description: >
+        The function that maps timestamps in the source table to timestamps in
+        the materialized data. For example, for a view for an hour aggregation from 15 minute
+        granularity data will need to map 4 timestamps in the source to 1 timestamp in
+        the resulting data.
     foreign_keys:
     - name: materialization_trend_store_link_materialization_id_fkey
       columns:
@@ -2612,6 +2661,25 @@ objects:
       columns:
       - view_materialization_id
       - table_trend_store_part_id
+
+- function:
+    name: map_timestamp
+    schema: trend_directory
+    return_type: timestamp with time zone
+    description: Map timestamp using the mapping function defined in the link
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - data_type: trend_directory.view_materialization_trend_store_link
+    - data_type: timestamp with time zone
+    source: |-
+      DECLARE
+          result timestamp with time zone;
+      BEGIN
+          EXECUTE format('SELECT %s($1)', $1.timestamp_mapping_func::regproc::name) INTO result USING $2;
+
+          RETURN result;
+      END;
 
 - function:
     name: base_table_schema
@@ -4271,50 +4339,115 @@ objects:
       nullable: false
 
 - function:
-    name: transfer
+    name: clear_table_trend_store_part_sql
     schema: trend_directory
-    return_type: trend_directory.transfer_result
+    return_type: text
+    description: >
+      Return the query to remove all records of the specified timestamp from the
+      table_trend_store_part.
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: table_trend_store_part_id
+      data_type: integer
+    source: |-
+      SELECT format('DELETE FROM trend.%I WHERE timestamp = $1', ttsp.name)
+      FROM trend_directory.table_trend_store_part ttsp WHERE id = $1;
+
+- function:
+    name: clear_table_trend_store_part
+    schema: trend_directory
+    return_type: integer
+    description: >
+      Removes all records of the specified timestamp from the
+      table_trend_store_part and returns the removed record count.
     language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
     arguments:
-    - name: source
-      data_type: trend_directory.view_trend_store
-    - name: target
-      data_type: trend_directory.table_trend_store
+    - name: table_trend_store_part_id
+      data_type: integer
     - name: timestamp
       data_type: timestamp with time zone
-    - name: trend_names
-      data_type: text[]
+    source: |-
+      DECLARE
+          row_count integer;
+      BEGIN
+          EXECUTE trend_directory.clear_table_trend_store_part_sql($1) USING $2;
+
+          GET DIAGNOSTICS row_count = ROW_COUNT;
+
+          RETURN row_count;
+      END;
+
+- function:
+    name: transfer
+    schema: trend_directory
+    return_type: integer
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: materialization
+      data_type: trend_directory.view_materialization
+    - name: timestamp
+      data_type: timestamp with time zone
+    source: |-
+      DECLARE
+          columns_part text;
+          row_count integer;
+      BEGIN
+          SELECT trend_directory.columns_part($1) INTO columns_part;
+
+          EXECUTE format(
+              'INSERT INTO trend.%I (created, job_id, %s) SELECT now(), 0, %s FROM %s WHERE timestamp = $1',
+              (trend_directory.dst_trend_store_part($1)).name,
+              columns_part,
+              columns_part,
+              $1.src_view::name
+          ) USING timestamp;
+
+          GET DIAGNOSTICS row_count = ROW_COUNT;
+
+          RETURN row_count;
+      END;
+
+- function:
+    name: materialize
+    schema: trend_directory
+    return_type: trend_directory.transfer_result
+    language: plpgsql
+    volatility: volatile
+    description: >
+      Materialize the data produced by the referenced view of the
+      view_materialization by clearing the timestamp in the target
+      table_trend_store_part and inserting the data resulting from the view
+      into it.
+    strict: false
+    secdef: false
+    arguments:
+    - name: materialization
+      data_type: trend_directory.view_materialization
+    - name: timestamp
+      data_type: timestamp with time zone
     source: |-
       DECLARE
           columns_part text;
           result trend_directory.transfer_result;
       BEGIN
-          SELECT
-              array_to_string(array_agg(quote_ident(trend_name)), ',') INTO columns_part
-          FROM unnest(
-              ARRAY['entity_id', 'timestamp', 'created', 'modified'] || trend_names
-          ) AS trend_name;
+          PERFORM trend_directory.clear_table_trend_store_part(
+              $1.dst_trend_store_part_id, $2
+          );
 
-          EXECUTE format(
-              'INSERT INTO trend.%I (%s) SELECT %s FROM trend.%I WHERE timestamp = $1',
-              trend_directory.base_table_name(target),
-              columns_part,
-              columns_part,
-              trend_directory.base_table_name(source)
-          ) USING timestamp;
+          result.row_count = trend_directory.transfer($1, $2);
 
-          GET DIAGNOSTICS result.row_count = ROW_COUNT;
-
-          SELECT (
-              trend_directory.mark_modified(
-                  target.id,
-                  timestamp,
-                  trend_directory.get_max_modified(target, timestamp)
-              )
-          ).end INTO result.max_modified;
+          UPDATE trend_directory.view_materialization_state vms
+          SET processed_fingerprint = vms.source_fingerprint
+          WHERE vms.materialization_id = $1.id AND vms.timestamp = $2;
 
           RETURN result;
       END;
