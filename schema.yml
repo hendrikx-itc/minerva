@@ -1954,20 +1954,30 @@ objects:
 - table:
     name: modified_log
     schema: trend_directory
+    description: >
+      The modified_log table stores records of when what table_trend_store_part
+      is modified and for what timestamp. This table is typically populated by
+      data loading tools that call the trend_directory.mark_modified function.
+      It is not populated automatically when inserting into the
+      table_trend_store_part tables.
     columns:
     - name: id
       data_type: bigint
       generated_identity: by_default
       nullable: false
+      description: Unique identifier for the log entry
     - name: table_trend_store_part_id
       data_type: integer
       nullable: false
+      description: Reference to the table_trend_store_part
     - name: timestamp
       data_type: timestamp with time zone
       nullable: false
+      description: Timestamp of the data in the table_trend_store_part
     - name: modified
       data_type: timestamp with time zone
       nullable: false
+      description: Timestamp of the moment of modification
     primary_key:
       name: modified_log_pkey
       columns:
@@ -4134,10 +4144,10 @@ objects:
     name: mark_modified
     schema: trend_directory
     return_type: void
+    description: >
+      Stores a record in the trend_directory.modified_log table.
     language: sql
     volatility: volatile
-    strict: false
-    secdef: false
     arguments:
     - name: table_trend_store_part_id
       data_type: integer
@@ -4153,6 +4163,8 @@ objects:
     name: mark_modified
     schema: trend_directory
     return_type: void
+    description: >
+      Stores a record in the trend_directory.modified_log table.
     language: sql
     volatility: volatile
     strict: false

@@ -1133,6 +1133,17 @@ CREATE TABLE "trend_directory"."modified_log"
   PRIMARY KEY (id)
 );
 
+COMMENT ON TABLE "trend_directory"."modified_log" IS 'The modified_log table stores records of when what table_trend_store_part is modified and for what timestamp. This table is typically populated by data loading tools that call the trend_directory.mark_modified function. It is not populated automatically when inserting into the table_trend_store_part tables.
+';
+
+COMMENT ON COLUMN "trend_directory"."modified_log"."id" IS 'Unique identifier for the log entry';
+
+COMMENT ON COLUMN "trend_directory"."modified_log"."table_trend_store_part_id" IS 'Reference to the table_trend_store_part';
+
+COMMENT ON COLUMN "trend_directory"."modified_log"."timestamp" IS 'Timestamp of the data in the table_trend_store_part';
+
+COMMENT ON COLUMN "trend_directory"."modified_log"."modified" IS 'Timestamp of the moment of modification';
+
 GRANT SELECT ON TABLE "trend_directory"."modified_log" TO minerva;
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."modified_log" TO minerva_writer;
@@ -2442,6 +2453,9 @@ INSERT INTO trend_directory.modified_log(table_trend_store_part_id, timestamp, m
 VALUES ($1, $2, $3);
 $$ LANGUAGE sql VOLATILE;
 
+COMMENT ON FUNCTION "trend_directory"."mark_modified"("table_trend_store_part_id" integer, "timestamp" timestamp with time zone, "modified" timestamp with time zone) IS 'Stores a record in the trend_directory.modified_log table.
+';
+
 
 CREATE FUNCTION "trend_directory"."mark_modified"("table_trend_store_id" integer, "timestamp" timestamp with time zone)
     RETURNS void
@@ -2449,6 +2463,9 @@ AS $$
 INSERT INTO trend_directory.modified_log(table_trend_store_part_id, timestamp, modified)
 VALUES ($1, $2, now());
 $$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."mark_modified"("table_trend_store_id" integer, "timestamp" timestamp with time zone) IS 'Stores a record in the trend_directory.modified_log table.
+';
 
 
 CREATE TYPE "trend_directory"."transfer_result" AS (
