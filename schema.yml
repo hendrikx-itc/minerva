@@ -1955,9 +1955,9 @@ objects:
     name: modified_log
     schema: trend_directory
     description: >
-      The modified_log table stores records of when what table_trend_store_part
+      The ``modified_log`` table stores records of when what ``table_trend_store_part``
       is modified and for what timestamp. This table is typically populated by
-      data loading tools that call the trend_directory.mark_modified function.
+      data loading tools that call the ``trend_directory.mark_modified`` function.
       It is not populated automatically when inserting into the
       table_trend_store_part tables.
     columns:
@@ -2081,8 +2081,9 @@ objects:
     name: view_materialization
     schema: trend_directory
     description: |-
-      A table_materialization is a materialization that uses the data from the function
-      registered in the src_function column to populate the target trend store.
+      A ``view_materialization`` is a materialization that uses the data from
+      the view registered in the ``src_view`` column to populate the target trend
+      store.
     columns:
       - name: id
         data_type: integer
@@ -2181,6 +2182,18 @@ objects:
 - table:
     name: function_materialization
     schema: trend_directory
+    description: |-
+      A ``function_materialization`` is a materialization that uses the data
+      from the function registered in the ``src_function`` column to populate
+      the target ``table_trend_store_part``.
+
+      The function must have the form of::
+        
+        (timestamp with time zone) -> TABLE(
+          entity_id integer,
+          timestamp timestamp with time zone,
+          ...
+        )
     columns:
       - name: id
         data_type: integer
