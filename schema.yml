@@ -68,19 +68,8 @@ objects:
 
 - schema:
     name: relation
-    comment: Stores the actual relations between entities in dynamically created tables.
-    privileges:
-    - role: minerva_writer
-      privilege: USAGE,CREATE
-    - role: minerva
-      privilege: USAGE
-
-- schema:
-    name: relation_def
-    comment: 'Stores definitions of relations in the form of views. These views are
-      used to
-
-      populate the corresponding tables in the relation schema'
+    comment: >
+      Stores the actual relations between entities in materialized views.
     privileges:
     - role: minerva_writer
       privilege: USAGE,CREATE
@@ -1891,6 +1880,12 @@ objects:
       nullable: false
       default: "'{}'"
     - name: description
+      data_type: text
+      nullable: false
+    - name: time_aggregation
+      data_type: text
+      nullable: false
+    - name: object_aggregation
       data_type: text
       nullable: false
     primary_key:
@@ -10614,3 +10609,14 @@ objects:
 - setting:
     name: minerva.trigger_mark_modified
     value: 'on'
+
+- function:
+    name: mapping_id
+    schema: trend
+    return_type: timestamp with time zone
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: timestamp with time zone
+    source: |-
+      SELECT $1;

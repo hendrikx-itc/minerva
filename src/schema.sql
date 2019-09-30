@@ -66,16 +66,10 @@ GRANT USAGE ON SCHEMA "alias_directory" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "relation";
-COMMENT ON SCHEMA "relation" IS 'Stores the actual relations between entities in dynamically created tables.';
+COMMENT ON SCHEMA "relation" IS 'Stores the actual relations between entities in materialized views.
+';
 GRANT USAGE,CREATE ON SCHEMA "relation" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "relation" TO "minerva";
-
-
-CREATE SCHEMA IF NOT EXISTS "relation_def";
-COMMENT ON SCHEMA "relation_def" IS 'Stores definitions of relations in the form of views. These views are used to
-populate the corresponding tables in the relation schema';
-GRANT USAGE,CREATE ON SCHEMA "relation_def" TO "minerva_writer";
-GRANT USAGE ON SCHEMA "relation_def" TO "minerva";
 
 
 CREATE SCHEMA IF NOT EXISTS "relation_directory";
@@ -1106,6 +1100,8 @@ CREATE TABLE "trend_directory"."table_trend"
   "data_type" text NOT NULL,
   "extra_data" jsonb NOT NULL DEFAULT '{}',
   "description" text NOT NULL,
+  "time_aggregation" text NOT NULL,
+  "object_aggregation" text NOT NULL,
   PRIMARY KEY (id)
 );
 
@@ -1133,7 +1129,7 @@ CREATE TABLE "trend_directory"."modified_log"
   PRIMARY KEY (id)
 );
 
-COMMENT ON TABLE "trend_directory"."modified_log" IS 'The modified_log table stores records of when what table_trend_store_part is modified and for what timestamp. This table is typically populated by data loading tools that call the trend_directory.mark_modified function. It is not populated automatically when inserting into the table_trend_store_part tables.
+COMMENT ON TABLE "trend_directory"."modified_log" IS 'The ``modified_log`` table stores records of when what ``table_trend_store_part`` is modified and for what timestamp. This table is typically populated by data loading tools that call the ``trend_directory.mark_modified`` function. It is not populated automatically when inserting into the table_trend_store_part tables.
 ';
 
 COMMENT ON COLUMN "trend_directory"."modified_log"."id" IS 'Unique identifier for the log entry';
@@ -1205,8 +1201,9 @@ CREATE TABLE "trend_directory"."view_materialization"
   PRIMARY KEY (id)
 );
 
-COMMENT ON TABLE "trend_directory"."view_materialization" IS 'A table_materialization is a materialization that uses the data from the function
-registered in the src_function column to populate the target trend store.';
+COMMENT ON TABLE "trend_directory"."view_materialization" IS 'A ``view_materialization`` is a materialization that uses the data from
+the view registered in the ``src_view`` column to populate the target trend
+store.';
 
 COMMENT ON COLUMN "trend_directory"."view_materialization"."id" IS 'The unique identifier of this materialization';
 
@@ -1265,6 +1262,18 @@ CREATE TABLE "trend_directory"."function_materialization"
   "cost" integer NOT NULL DEFAULT 10,
   PRIMARY KEY (id)
 );
+
+COMMENT ON TABLE "trend_directory"."function_materialization" IS 'A ``function_materialization`` is a materialization that uses the data
+from the function registered in the ``src_function`` column to populate
+the target ``table_trend_store_part``.
+
+The function must have the form of::
+  
+  (timestamp with time zone) -> TABLE(
+    entity_id integer,
+    timestamp timestamp with time zone,
+    ...
+  )';
 
 COMMENT ON COLUMN "trend_directory"."function_materialization"."id" IS 'The unique identifier of this materialization';
 
@@ -6542,6 +6551,13 @@ EXECUTE 'ALTER DATABASE ' || current_database() || ' SET minerva.trigger_mark_mo
 END; $$;
 
 SET minerva.trigger_mark_modified TO on;
+
+
+CREATE FUNCTION "trend"."mapping_id"(timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+SELECT $1;
+$$ LANGUAGE sql IMMUTABLE;
 
 
 ALTER TABLE "attribute_directory"."attribute_store"
