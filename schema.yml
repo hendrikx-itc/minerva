@@ -2117,10 +2117,6 @@ objects:
         description: >
           Indicates if jobs should be created for this materialization (manual
           execution is always possible)
-      - name: cost
-        data_type: integer
-        nullable: false
-        default: '10'
     primary_key:
       name: view_materialization_pkey
       columns:
@@ -2227,10 +2223,6 @@ objects:
         description: >
           Indicates if jobs should be created for this materialization (manual
           execution is always possible)
-      - name: cost
-        data_type: integer
-        nullable: false
-        default: '10'
     primary_key:
       name: function_materialization_pkey
       columns:
