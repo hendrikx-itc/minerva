@@ -1166,41 +1166,6 @@ GRANT SELECT ON TABLE "trend_directory"."modified" TO minerva;
 GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."modified" TO minerva_writer;
 
 
-CREATE OR REPLACE FUNCTION "trend_directory"."update_materialization_state"(integer, timestamp with time zone)
-RETURNS bigint
-AS $$
-    SELECT count(*) FROM (
-        WITH mapped_modified AS (
-          SELECT
-            materialization_id,
-            trend_directory.map_timestamp(materialization_trend_store_link, $2) AS dst_timestamp
-          FROM trend_directory.materialization_trend_store_link
-          WHERE trend_store_part_id = $1
-        )
-        SELECT trend_directory.update_source_fingerprint(m, dst_timestamp)
-        FROM mapped_modified
-        JOIN trend_directory.materialization m ON m.id = materialization_id
-        GROUP BY m, dst_timestamp
-    ) update_result;
-$$ language sql volatile;
-
-
-CREATE OR REPLACE FUNCTION "trend_directory"."new_modified"()
-    RETURNS trigger
-AS $$
-BEGIN
-    PERFORM "trend_directory"."update_materialization_state"(NEW.trend_store_part_id, NEW.timestamp);
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE TRIGGER update_materialization_state_on_new_modified
-  AFTER INSERT OR UPDATE ON "trend_directory"."modified"
-  FOR EACH ROW
-  EXECUTE PROCEDURE "trend_directory"."new_modified"();
-
 
 CREATE TABLE "trend_directory"."materialization"
 (
@@ -1475,6 +1440,42 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."map_timestamp"(trend_directory.materialization_trend_store_link, timestamp with time zone) IS 'Map timestamp using the mapping function defined in the link';
+
+
+CREATE FUNCTION "trend_directory"."update_materialization_state"(integer, timestamp with time zone)
+    RETURNS bigint
+AS $$
+SELECT count(*) FROM (
+    WITH mapped_modified AS (
+      SELECT
+        materialization_id,
+        trend_directory.map_timestamp(materialization_trend_store_link, $2) AS dst_timestamp
+      FROM trend_directory.materialization_trend_store_link
+      WHERE trend_store_part_id = $1
+    )
+    SELECT trend_directory.update_source_fingerprint(m, dst_timestamp)
+    FROM mapped_modified
+    JOIN trend_directory.materialization m ON m.id = materialization_id
+    GROUP BY m, dst_timestamp
+) update_result;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."new_modified"()
+    RETURNS trigger
+AS $$
+BEGIN
+    PERFORM "trend_directory"."update_materialization_state"(NEW.trend_store_part_id, NEW.timestamp);
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TRIGGER update_materialization_state_on_new_modified
+  AFTER INSERT OR UPDATE ON "trend_directory"."modified"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."new_modified"();
 
 
 CREATE FUNCTION "trend_directory"."base_table_schema"()

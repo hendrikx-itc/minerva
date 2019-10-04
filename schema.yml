@@ -2040,46 +2040,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- function:
-    name: new_modified
-    schema: trend_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          PERFORM (WITH mapped_modified AS (
-            SELECT
-              materialization_id,
-              trend_directory.map_timestamp(materialization_trend_store_link, NEW.timestamp) AS dst_timestamp
-            FROM trend_directory.materialization_trend_store_link
-            WHERE trend_store_part_id = NEW.trend_store_part_id
-          )
-          SELECT trend_directory.update_source_fingerprint(m, dst_timestamp)
-          FROM mapped_modified
-          JOIN trend_directory.materialization m ON m.id = materialization_id
-          GROUP BY m, dst_timestamp);
-
-          RETURN NEW;
-      END;
-
-- trigger:
-    table:
-      schema: trend_directory
-      name: modified
-    name: update_materialization_state_on_new_modified
-    function:
-      schema: trend_directory
-      name: new_modified
-    when: after
-    events:
-    - insert
-    - update
-    affecteach: row
-
 - table:
     name: materialization
     schema: trend_directory
@@ -2601,6 +2561,60 @@ objects:
 
           RETURN result;
       END;
+
+- function:
+    name: update_materialization_state
+    schema: trend_directory
+    return_type: bigint
+    language: sql
+    volatility: volatile
+    arguments:
+      - data_type: integer
+      - data_type: timestamp with time zone
+    source: |-
+      SELECT count(*) FROM (
+          WITH mapped_modified AS (
+            SELECT
+              materialization_id,
+              trend_directory.map_timestamp(materialization_trend_store_link, $2) AS dst_timestamp
+            FROM trend_directory.materialization_trend_store_link
+            WHERE trend_store_part_id = $1
+          )
+          SELECT trend_directory.update_source_fingerprint(m, dst_timestamp)
+          FROM mapped_modified
+          JOIN trend_directory.materialization m ON m.id = materialization_id
+          GROUP BY m, dst_timestamp
+      ) update_result;
+
+- function:
+    name: new_modified
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments: []
+    source: |-
+      BEGIN
+          PERFORM "trend_directory"."update_materialization_state"(NEW.trend_store_part_id, NEW.timestamp);
+
+          RETURN NEW;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: modified
+    name: update_materialization_state_on_new_modified
+    function:
+      schema: trend_directory
+      name: new_modified
+    when: after
+    events:
+    - insert
+    - update
+    affecteach: row
 
 - function:
     name: base_table_schema
