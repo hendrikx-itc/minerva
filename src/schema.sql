@@ -6717,6 +6717,13 @@ SELECT date_trunc('day', $1) + interval '1 day';
 $$ LANGUAGE sql IMMUTABLE;
 
 
+CREATE FUNCTION "trend"."mapping_900->3600"(timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+SELECT date_trunc('hour', $1) + interval '1 hour';
+$$ LANGUAGE sql IMMUTABLE;
+
+
 ALTER TABLE "attribute_directory"."attribute_store"
   ADD CONSTRAINT "attribute_attribute_store_entity_type_id_fkey"
   FOREIGN KEY (entity_type_id)
