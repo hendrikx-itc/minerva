@@ -1166,22 +1166,30 @@ GRANT SELECT ON TABLE "trend_directory"."modified" TO minerva;
 GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."modified" TO minerva_writer;
 
 
+CREATE OR REPLACE FUNCTION "trend_directory"."update_materialization_state"(integer, timestamp with time zone)
+RETURNS bigint
+AS $$
+    SELECT count(*) FROM (
+        WITH mapped_modified AS (
+          SELECT
+            materialization_id,
+            trend_directory.map_timestamp(materialization_trend_store_link, $2) AS dst_timestamp
+          FROM trend_directory.materialization_trend_store_link
+          WHERE trend_store_part_id = $1
+        )
+        SELECT trend_directory.update_source_fingerprint(m, dst_timestamp)
+        FROM mapped_modified
+        JOIN trend_directory.materialization m ON m.id = materialization_id
+        GROUP BY m, dst_timestamp
+    ) update_result;
+$$ language sql volatile;
 
-CREATE FUNCTION "trend_directory"."new_modified"()
+
+CREATE OR REPLACE FUNCTION "trend_directory"."new_modified"()
     RETURNS trigger
 AS $$
 BEGIN
-    PERFORM (WITH mapped_modified AS (
-      SELECT
-        materialization_id,
-        trend_directory.map_timestamp(materialization_trend_store_link, NEW.timestamp) AS dst_timestamp
-      FROM trend_directory.materialization_trend_store_link
-      WHERE trend_store_part_id = NEW.trend_store_part_id
-    )
-    SELECT trend_directory.update_source_fingerprint(m, dst_timestamp)
-    FROM mapped_modified
-    JOIN trend_directory.materialization m ON m.id = materialization_id
-    GROUP BY m, dst_timestamp);
+    PERFORM "trend_directory"."update_materialization_state"(NEW.trend_store_part_id, NEW.timestamp);
 
     RETURN NEW;
 END;

@@ -10871,7 +10871,6 @@ objects:
     source: |-
       SELECT $1;
 
-
 - function:
     name: mapping_900->day
     schema: trend
