@@ -6755,14 +6755,28 @@ $$ LANGUAGE sql IMMUTABLE;
 CREATE FUNCTION "trend"."mapping_15m->1d"(timestamp with time zone)
     RETURNS timestamp with time zone
 AS $$
-SELECT date_trunc('day', $1) + interval '1d';
+SELECT date_trunc('day', $1 - interval '1s') + interval '1d';
 $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trend"."mapping_15m->1h"(timestamp with time zone)
     RETURNS timestamp with time zone
 AS $$
-SELECT date_trunc('hour', $1) + interval '1h';
+SELECT date_trunc('hour', $1 - interval '1s') + interval '1h';
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trend"."mapping_1d->1w"(timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+SELECT date_trunc('week', $1 - interval '1s') + interval '1w';
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trend"."mapping_1d->1month"(timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+SELECT date_trunc('month', $1 - interval '1s') + interval '1month';
 $$ LANGUAGE sql IMMUTABLE;
 
 
