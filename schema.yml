@@ -10930,7 +10930,7 @@ objects:
     arguments:
       - data_type: timestamp with time zone
     source: |-
-      SELECT date_trunc('day', $1) + interval '1d';
+      SELECT date_trunc('day', $1 - interval '1s') + interval '1d';
 
 - function:
     name: mapping_15m->1h
@@ -10941,5 +10941,5 @@ objects:
     arguments:
       - data_type: timestamp with time zone
     source: |-
-      SELECT date_trunc('hour', $1) + interval '1h';
+      SELECT date_trunc('hour', $1 - interval '1s') + interval '1h';
 
