@@ -1211,6 +1211,38 @@ CREATE UNIQUE INDEX "ix_materialization_uniqueness" ON "trend_directory"."materi
 
 
 
+CREATE TABLE "trend_directory"."materialization_metrics"
+(
+  "materialization_id" integer NOT NULL,
+  "execution_count" integer NOT NULL DEFAULT 0,
+  "total_duration" interval NOT NULL DEFAULT '0s',
+  PRIMARY KEY (materialization_id)
+);
+
+COMMENT ON TABLE "trend_directory"."materialization_metrics" IS 'Metrics on individual materializations.';
+
+COMMENT ON COLUMN "trend_directory"."materialization_metrics"."materialization_id" IS 'The ID of the materialization';
+
+
+
+CREATE FUNCTION "trend_directory"."create_metrics_for_materialization"()
+    RETURNS trigger
+AS $$
+BEGIN
+    INSERT INTO trend_directory.materialization_metrics(materialization_id)
+    VALUES (NEW.id);
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TRIGGER create_metrics_on_new_materialization
+  AFTER INSERT ON "trend_directory"."materialization"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."create_metrics_for_materialization"();
+
+
 CREATE FUNCTION "trend_directory"."source_fingerprint_sql"(trend_directory.materialization)
     RETURNS text
 AS $$
@@ -2683,9 +2715,13 @@ CREATE FUNCTION "trend_directory"."materialize"("materialization" trend_director
     RETURNS trend_directory.transfer_result
 AS $$
 DECLARE
+    start timestamp with time zone;
+    duration interval;
     columns_part text;
     result trend_directory.transfer_result;
 BEGIN
+    start = clock_timestamp();
+
     -- Remove all records in the target table for the timestamp to materialize
     PERFORM trend_directory.clear_trend_store_part(
         $1.dst_trend_store_part_id, $2
@@ -2700,6 +2736,12 @@ BEGIN
 
     -- Log the change in the target trend store part
     PERFORM trend_directory.mark_modified($1.dst_trend_store_part_id, $2, now());
+
+    duration = clock_timestamp() - start;
+
+    UPDATE trend_directory.materialization_metrics
+    SET execution_count = execution_count + 1, total_duration = total_duration + duration
+    WHERE materialization_id = $1.id;
 
     RETURN result;
 END;
@@ -6923,6 +6965,11 @@ ALTER TABLE "trend_directory"."materialization"
   ADD CONSTRAINT "materialization_dst_trend_store_id_fkey"
   FOREIGN KEY (dst_trend_store_part_id)
   REFERENCES "trend_directory"."trend_store_part" (id) ON DELETE CASCADE;
+
+ALTER TABLE "trend_directory"."materialization_metrics"
+  ADD CONSTRAINT "materialization_metrics_materialization_id_fkey"
+  FOREIGN KEY (materialization_id)
+  REFERENCES "trend_directory"."materialization" (id) ON DELETE CASCADE;
 
 ALTER TABLE "trend_directory"."view_materialization"
   ADD CONSTRAINT "view_materialization_materialization_id_fkey"

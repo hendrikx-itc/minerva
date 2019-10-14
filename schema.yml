@@ -2109,7 +2109,71 @@ objects:
         - id
       on_delete: cascade
 
-- function: 
+- table:
+    name: materialization_metrics
+    schema: trend_directory
+    description: |-
+      Metrics on individual materializations.
+    columns:
+      - name: materialization_id
+        data_type: integer
+        nullable: false
+        description: The ID of the materialization
+      - name: execution_count
+        data_type: integer
+        nullable: false
+        default: '0'
+      - name: total_duration
+        data_type: interval
+        nullable: false
+        default: "'0s'"
+    primary_key:
+      name: materialization_metrics_pkey
+      columns:
+      - materialization_id
+    foreign_keys:
+    - name: materialization_metrics_materialization_id_fkey
+      columns:
+      - materialization_id
+      references:
+        table:
+          name: materialization
+          schema: trend_directory
+        columns:
+        - id
+      on_delete: cascade
+
+- function:
+    name: create_metrics_for_materialization
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments: []
+    source: |-
+      BEGIN
+          INSERT INTO trend_directory.materialization_metrics(materialization_id)
+          VALUES (NEW.id);
+
+          RETURN NEW;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: materialization
+    name: create_metrics_on_new_materialization
+    function:
+      schema: trend_directory
+      name: create_metrics_for_materialization
+    when: after
+    events:
+    - insert
+    affecteach: row
+
+- function:
     name: source_fingerprint_sql
     schema: trend_directory
     return_type: text
@@ -4518,9 +4582,13 @@ objects:
       data_type: timestamp with time zone
     source: |-
       DECLARE
+          start timestamp with time zone;
+          duration interval;
           columns_part text;
           result trend_directory.transfer_result;
       BEGIN
+          start = clock_timestamp();
+
           -- Remove all records in the target table for the timestamp to materialize
           PERFORM trend_directory.clear_trend_store_part(
               $1.dst_trend_store_part_id, $2
@@ -4535,6 +4603,12 @@ objects:
 
           -- Log the change in the target trend store part
           PERFORM trend_directory.mark_modified($1.dst_trend_store_part_id, $2, now());
+
+          duration = clock_timestamp() - start;
+
+          UPDATE trend_directory.materialization_metrics
+          SET execution_count = execution_count + 1, total_duration = total_duration + duration
+          WHERE materialization_id = $1.id;
 
           RETURN result;
       END;
