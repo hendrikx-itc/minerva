@@ -6766,6 +6766,20 @@ SELECT date_trunc('hour', $1 - interval '15m') + interval '1h';
 $$ LANGUAGE sql IMMUTABLE;
 
 
+CREATE FUNCTION "trend"."mapping_30m->1d"(timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+SELECT date_trunc('day', $1 - interval '30m') + interval '1d';
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trend"."mapping_30m->1h"(timestamp with time zone)
+    RETURNS timestamp with time zone
+AS $$
+SELECT date_trunc('hour', $1 - interval '30m') + interval '1h';
+$$ LANGUAGE sql IMMUTABLE;
+
+
 CREATE FUNCTION "trend"."mapping_1d->1w"(timestamp with time zone)
     RETURNS timestamp with time zone
 AS $$
