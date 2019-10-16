@@ -1,4 +1,4 @@
-FROM postgres:11
+FROM postgres:12
 MAINTAINER Hendrikx ITC
 
 RUN apt-get update && apt-get install -y python3-pip
