@@ -1,27 +1,50 @@
-node ('git') {
-    stage ('checkout') {
-        checkout scm
+pipeline {
+    agent {
+        node {
+            label 'git'
+        }
     }
 
-    stage ('build') {
-        // Report status of stage 'build' back to Gitlab
-        gitlabCommitStatus(name: 'build') {
-            // Populate changelog file with version information from git tag
-            dir ('debian') {
-                sh './make-changelog'
+    stages {
+        stage ('checkout') {
+            steps {
+                checkout scm
             }
+        }
 
-            //---------------------------
-            // Build Ubuntu 18.04 package
-            //---------------------------
-            def buildDir1804 = 'pkg-build/1804'
+        stage ('build') {
+            steps {
+                // Report status of stage 'build' back to Gitlab
+                gitlabCommitStatus(name: 'build') {
+                    // Populate changelog file with version information from git tag
+                    dir ('debian') {
+                        sh './make-changelog'
+                    }
 
-            // Clean the build directory before starting
-            sh "rm -rf ${buildDir1804}"
+                    script {
+                        //---------------------------
+                        // Build Ubuntu 18.04 package
+                        //---------------------------
+                        def buildDir1804 = 'pkg-build/1804'
 
-            sh './package 1804'
-            publishPackages buildDir1804.toString(), 'common/bionic', 'bionic'
-            archiveArtifacts(artifacts: "${buildDir1804}/*")
+                        // Clean the build directory before starting
+                        sh "rm -rf ${buildDir1804}"
+
+                        sh './package 1804'
+                        
+                        switch (GIT_BRANCH) {
+                            case "origin/master":
+                                publishPackages buildDir1804.toString(), 'common/bionic/stable', 'bionic'
+                                break
+                            case "origin/develop":
+                                publishPackages buildDir1804.toString(), 'common/bionic/unstable', 'bionic'
+                                break
+                        }
+
+                        archiveArtifacts(artifacts: "${buildDir1804}/*")
+                    }
+                }
+            }
         }
     }
 }
