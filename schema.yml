@@ -9232,6 +9232,17 @@ objects:
       END;
 
 - composite_type:
+    name: threshold_def
+    schema: trigger
+    columns:
+    - name: name
+      data_type: name
+      nullable: false
+    - name: data_type
+      data_type: name
+      nullable: false
+
+- composite_type:
     name: kpi_def
     schema: trigger
     columns:
@@ -9240,6 +9251,23 @@ objects:
       nullable: false
     - name: data_type
       data_type: name
+      nullable: false
+
+- composite_type:
+    name: notification
+    schema: trigger
+    columns:
+    - name: entity_id
+      data_type: integer
+      nullable: false
+    - name: timestamp
+      data_type: timestamp with time zone
+      nullable: false
+    - name: weight
+      data_type: integer
+      nullable: false
+    - name: details
+      data_type: text
       nullable: false
 
 - table:
@@ -9732,6 +9760,19 @@ objects:
       SELECT trigger.action($1, trigger.create_kpi_view_sql($1, $2));
 
 - function:
+    name: details_type_name
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT ($1.name || '_details')::name;
+
+- function:
     name: notification_fn_name
     schema: trigger
     return_type: name
@@ -10031,7 +10072,8 @@ objects:
     secdef: false
     arguments:
     - data_type: trigger.rule
-    source: "SELECT\n\tpg_get_functiondef(oid)\nFROM pg_proc\nWHERE proname = trigger.weight_fn_name($1);"
+    source: |-
+      SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = trigger.weight_fn_name($1);
 
 - function:
     name: weight_fn_sql
@@ -10047,15 +10089,15 @@ objects:
       data_type: text
     source: |-
       SELECT format(
-      $function$
-      CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
-          RETURNS integer AS
-      $weight_fn$SELECT (%s)$weight_fn$ LANGUAGE SQL IMMUTABLE;
-      $function$,
-              trigger.weight_fn_name($1),
-              $1.name,
-              $2
-          );
+        $function$
+        CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
+            RETURNS integer AS
+        $weight_fn$SELECT (%s)$weight_fn$ LANGUAGE SQL IMMUTABLE;
+        $function$,
+        trigger.weight_fn_name($1),
+        trigger.details_type_name($1),
+        $2
+      );
 
 - function:
     name: drop_weight_fn_sql
@@ -10225,8 +10267,6 @@ objects:
     return_type: text
     language: sql
     volatility: immutable
-    strict: false
-    secdef: false
     arguments:
     - data_type: trigger.rule
     source: |-
@@ -10493,9 +10533,20 @@ objects:
     - name: expression
       data_type: text
     source: |-
-      SELECT trigger.action($1, trigger.weight_fn_sql($1, $2));
-      SELECT trigger.action($1, format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.weight_fn_name($1), $1.name));
-      SELECT trigger.action($1, format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.weight_fn_name($1), $1.name));
+      SELECT public.action(
+          $1,
+          ARRAY[
+              trigger.weight_fn_sql($1, $2),
+              format(
+                  'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
+                  trigger.weight_fn_name($1), trigger.details_type_name($1)
+              ),
+              format(
+                  'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
+                  trigger.weight_fn_name($1), trigger.details_type_name($1)
+              )
+          ]
+      );
 
 - function:
     name: set_weight
@@ -10821,6 +10872,657 @@ objects:
       SELECT trigger.create_notifications(trigger.get_rule($1));
 
 - function:
+    name: with_threshold_fn_name
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT ($1.name || '_with_threshold')::name;
+
+- function:
+    name: kpi_fn_name
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT ($1.name || '_kpi')::name;
+
+- function:
+    name: fingerprint_fn_name
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT ($1.name || '_fingerprint')::name;
+
+- function:
+    name: notification_message_fn_name
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT ($1.name || '_notification_message')::name;
+
+- function:
+    name: rule_fn_name 
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT $1.name;
+
+- function:
+    name: runnable_fn_name
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT ($1.name || '_runnable')::name;
+
+- function:
+    name: create_details_type_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+      - data_type: trigger.rule
+      - data_type: trigger.threshold_def[]
+    source: |-
+      SELECT format(
+          'CREATE TYPE trigger_rule.%I AS ('
+          '%s'
+          ');',
+          trigger.details_type_name($1),
+          array_to_string(
+              array_agg(format('%I %s', (c.col).name, (c.col).data_type)),
+              ','
+          )
+      ) FROM (
+          SELECT unnest(
+              ARRAY[
+                  ('entity_id', 'integer'),
+                  ('timestamp', 'timestamp with time zone')
+              ]::trigger.threshold_def[]
+          ) AS col
+          UNION ALL
+          SELECT (kpi.name, kpi.data_type)::trigger.threshold_def AS col
+          FROM trigger.get_kpi_defs($1) kpi
+          UNION ALL
+          SELECT unnest($2) AS col
+      ) c;
+
+- function:
+    name: drop_details_type_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT format('DROP TYPE IF EXISTS trigger_rule.%I CASCADE;', trigger.details_type_name($1));
+
+- function:
+    name: create_details_type
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+      - data_type: trigger.rule
+      - data_type: trigger.threshold_def[]
+    source: |-
+      SELECT public.action($1, trigger.create_details_type_sql($1, $2));
+
+- function:
+    name: drop_details_type
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT public.action($1, trigger.drop_details_type_sql($1));
+
+- function:
+    name: create_dummy_thresholds
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+      - data_type: trigger.rule
+      - data_type: trigger.threshold_def[]
+    source: |-
+      SELECT trigger.set_thresholds(
+          $1,
+          array_to_string(array_agg(format('NULL::%s %I', threshold.data_type, threshold.name)), ', ')
+      ) FROM unnest($2) threshold;
+
+- function:
+    name: create_exception_threshold_table_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+      - data_type: trigger.rule
+      - data_type: trigger.threshold_def[]
+    source: |-
+      SELECT format(
+          'CREATE TABLE trigger_rule.%I(%s);',
+          trigger.exception_threshold_table_name($1),
+          array_to_string(col_def, ',')
+      )
+      FROM (
+          SELECT
+              ARRAY[
+                  'id serial',
+                  'entity_id integer',
+                  'created timestamp with time zone default now()',
+                  'start timestamp with time zone',
+                  'expires timestamp with time zone',
+                  'remark text'
+              ]::text[] ||
+              array_agg(quote_ident(threshold.name) || ' ' || threshold.data_type) AS col_def
+          FROM unnest($2) threshold
+      ) c;
+
+- function:
+    name: create_exception_threshold_table
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+      - data_type: trigger.rule
+      - data_type: trigger.threshold_def[]
+    source: |-
+      SELECT public.action($1, trigger.create_exception_threshold_table_sql($1, $2));
+      SELECT public.action($1, format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_threshold_table_name($1)));
+      SELECT public.action($1, format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_threshold_table_name($1)));
+      SELECT public.action($1, format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_threshold_table_name($1)));
+      SELECT public.action($1, format(
+          'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
+          pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_threshold_table_name($1)), 'id')
+      ));
+
+- function:
+    name: with_threshold_fn_sql_normal
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT format(
+      $view$
+      SELECT %s
+      FROM trigger_rule.%I AS threshold, trigger_rule.%I($1) AS kpi
+      LEFT JOIN trigger_rule.%I exc ON
+          exc.entity_id = kpi.entity_id AND
+          exc.start <= timestamp AND
+          exc.expires > timestamp
+      $view$,
+          array_to_string(col_def, ','),
+          trigger.threshold_view_name($1),
+          trigger.kpi_fn_name($1),
+          trigger.exception_threshold_table_name($1)
+      )
+      FROM (
+          SELECT
+              ARRAY['kpi.*']::text[] || array_agg(format('COALESCE(exc.%I, threshold.%I) AS %I', threshold.name, threshold.name, threshold.name)) AS col_def
+          FROM trigger.get_threshold_defs($1) threshold
+      ) c;
+
+- function:
+    name: with_threshold_fn_sql_no_thresholds
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT format(
+          'SELECT * FROM trigger_rule.%I($1)',
+          trigger.kpi_fn_name($1)
+      );
+
+
+- function:
+    name: has_thresholds
+    schema: trigger
+    return_type: boolean
+    language: sql
+    description: "Return true if there is a view with thresholds for the specified rule"
+    volatility: stable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT EXISTS(
+          SELECT 1
+          FROM pg_class
+          WHERE relname = trigger.threshold_view_name($1) AND relkind = 'v'
+      );
+
+
+- function:
+    name: with_threshold_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT CASE WHEN trigger.has_thresholds($1) THEN
+          trigger.with_threshold_fn_sql_normal($1)
+      ELSE
+          trigger.with_threshold_fn_sql_no_thresholds($1)
+      END;
+
+- function:
+    name: create_with_threshold_fn
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT public.action(
+          $1,
+          ARRAY[
+              format(
+                  'CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone) RETURNS SETOF trigger_rule.%I AS $fn$%s$fn$ LANGUAGE sql STABLE',
+                  trigger.with_threshold_fn_name($1),
+                  trigger.details_type_name($1),
+                  trigger.with_threshold_fn_sql($1)
+              ),
+              format(
+                  'ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin',
+                  trigger.with_threshold_fn_name($1)
+              ),
+              format(
+                  'GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva',
+                  trigger.with_threshold_fn_name($1)
+              )
+          ]
+      );
+
+- function:
+    name: define_thresholds
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+      - data_type: trigger.rule
+      - data_type: trigger.threshold_def[]
+    source: |-
+      SELECT trigger.create_details_type($1, $2);
+      SELECT CASE WHEN array_length($2, 1) > 0 THEN
+          trigger.create_dummy_thresholds($1, $2)
+      END;
+      SELECT CASE WHEN array_length($2, 1) > 0 THEN
+          trigger.create_set_thresholds_fn($1)
+      END;
+      SELECT trigger.create_exception_threshold_table($1, $2);
+      SELECT trigger.create_with_threshold_fn($1);
+
+- function:
+    name: notification_message_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    - name: expression
+      data_type: text
+    source: |-
+      SELECT format(
+      'CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
+          RETURNS text
+      AS $function$
+      SELECT (%s)::text
+      $function$ LANGUAGE SQL IMMUTABLE',
+          trigger.notification_message_fn_name($1),
+          trigger.details_type_name($1),
+          $2
+      );
+
+- function:
+    name: create_notification_message_fn
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    - name: expression
+      data_type: text
+    source: |-
+      SELECT public.action(
+          $1,
+          ARRAY[
+              trigger.notification_message_fn_sql($1, $2),
+              format(
+                  'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
+                  trigger.notification_message_fn_name($1),
+                  trigger.details_type_name($1)
+              ),
+              format(
+                  'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
+                  trigger.notification_message_fn_name($1),
+                  trigger.details_type_name($1)
+              )
+          ]
+      );
+
+- function:
+    name: create_dummy_notification_message_fn
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT trigger.create_notification_message_fn($1, quote_literal($1.name));
+
+- function:
+    name: rule_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: immutable
+    arguments:
+    - data_type: trigger.rule
+    - name: where_clause
+      data_type: text
+    source: |-
+      SELECT format(
+          'SELECT * FROM trigger_rule.%I($1) WHERE %s;',
+          trigger.with_threshold_fn_name($1), $2
+      );
+
+- function:
+    name: create_rule_fn_sql
+    schema: trigger
+    return_type: text[]
+    language: sql
+    volatility: immutable
+    arguments:
+    - data_type: trigger.rule
+    - name: rule_view_sql
+      data_type: text
+    source: |-
+      SELECT ARRAY[
+          format(
+              'CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone) RETURNS SETOF trigger_rule.%I AS $fn$ %s $fn$ LANGUAGE sql STABLE',
+              trigger.rule_fn_name($1),
+              trigger.details_type_name($1),
+              $2
+          ),
+          format(
+              'ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin',
+              trigger.rule_fn_name($1)
+          ),
+          format(
+              'GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva',
+              trigger.rule_fn_name($1)
+          )
+      ];
+
+- function:
+    name: create_rule_fn
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    - name: rule_view_sql
+      data_type: text
+    source: |-
+      SELECT public.action($1, trigger.create_rule_fn_sql($1, $2));
+
+- function:
+    name: set_condition
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    - name: sql
+      data_type: text
+    source: |-
+      SELECT trigger.create_rule_fn($1, trigger.rule_fn_sql($1, $2));
+
+- function:
+    name: notification_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT format(
+          'CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone)
+          RETURNS SETOF trigger.notification
+      AS $fn$
+      SELECT
+          n.entity_id,
+          n.timestamp,
+          COALESCE(exc.weight, trigger_rule.%I(n)) AS weight,
+          trigger_rule.%I(n) AS details
+      FROM trigger_rule.%I($1) AS n
+      LEFT JOIN trigger_rule.%I AS exc ON
+          exc.entity_id = n.entity_id AND
+          exc.start <= n.timestamp AND
+          exc.expires > n.timestamp $fn$ LANGUAGE sql STABLE',
+          trigger.notification_fn_name($1),
+          trigger.weight_fn_name($1),
+          trigger.notification_message_fn_name($1),
+          $1.name,
+          trigger.exception_weight_table_name($1)
+      );
+
+- function:
+    name: create_notification_fn_sql
+    schema: trigger
+    return_type: text[]
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT ARRAY[
+          trigger.notification_fn_sql($1),
+          format('ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin', trigger.notification_fn_name($1)),
+          format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva', trigger.notification_fn_name($1))
+      ];
+
+- function:
+    name: create_notification_fn
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT public.action($1, trigger.create_notification_fn_sql($1));
+
+- function:
+    name: create_fingerprint_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trigger.rule
+    - name: fn_sql
+      data_type: text
+    source: |-
+      SELECT format(
+          $fn$CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone)
+            RETURNS text
+          AS $function$
+            %s
+          $function$ LANGUAGE sql STABLE$fn$,
+          trigger.fingerprint_fn_name($1),
+          $2
+      );
+
+- function:
+    name: create_fingerprint_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT trigger.create_fingerprint_fn_sql(
+          $1,
+          $fn_body$SELECT now()::text;$fn_body$
+      );
+
+- function:
+    name: create_fingerprint_fn
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT public.action($1, trigger.create_fingerprint_fn_sql($1));
+
+- function:
+    name: drop_fingerprint_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: immutable
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT format('DROP FUNCTION IF EXISTS trigger_rule.%I(timestamp with time zone)', trigger.fingerprint_fn_name($1));
+
+- function:
+    name: drop_fingerprint_fn
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT public.action($1, trigger.drop_fingerprint_fn_sql($1));
+
+#-------------------------
+# Function <rule>_runnable
+#-------------------------
+
+- function:
+    name: create_runnable_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trigger.rule
+    - name: fn_body
+      data_type: text
+    source: |-
+      SELECT format(
+          $fn$CREATE OR REPLACE FUNCTION trigger_rule.%I(timestamp with time zone)
+            RETURNS boolean
+          AS $function$
+          %s
+          $function$ LANGUAGE sql STABLE$fn$,
+          trigger.runnable_fn_name($1),
+          $2
+      );
+
+- function:
+    name: create_runnable_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT trigger.create_runnable_fn_sql($1, 'SELECT TRUE;');
+
+- function:
+    name: create_runnable_fn
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT public.action($1, trigger.create_runnable_fn_sql($1));
+
+- function:
+    name: drop_runnable_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.runnable_fn_name($1));
+
+- function:
+    name: set_runnable
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trigger.rule
+    - name: fn_sql
+      data_type: text
+    source: |-
+      SELECT public.action($1, trigger.create_runnable_fn_sql($1, $2));
+
+#-----------
+# Setup rule
+#-----------
+
+- function:
     name: setup_rule
     schema: trigger
     return_type: trigger.rule
@@ -10830,23 +11532,16 @@ objects:
     secdef: false
     arguments:
     - data_type: trigger.rule
-    - name: kpi_sql
-      data_type: text
-    - data_type: name[]
-    - name: sql
-      data_type: text
+    - data_type: trigger.threshold_def[]
     source: |-
-      SELECT trigger.create_kpi_view($1, $2);
-      SELECT trigger.create_dummy_thresholds($1, $3);
-      SELECT trigger.create_exception_threshold_table($1, $3);
-      SELECT trigger.create_with_threshold_view($1);
+      SELECT trigger.define_thresholds($1, $2);
       SELECT trigger.create_exception_weight_table($1);
-      SELECT trigger.create_rule_view($1, trigger.rule_view_sql($1, $4));
-      SELECT trigger.create_notification_type($1);
       SELECT trigger.create_dummy_default_weight($1);
-      SELECT trigger.create_dummy_notification_fn($1);
-      SELECT trigger.create_notification_view($1);
-      SELECT trigger.create_set_thresholds_fn($1);
+      SELECT trigger.create_dummy_notification_message_fn($1);
+      SELECT trigger.set_condition($1, 'true');
+      SELECT trigger.create_notification_fn($1);
+      SELECT trigger.create_fingerprint_fn($1);
+      SELECT trigger.create_runnable_fn($1);
 
 - function:
     name: create_rule
@@ -10858,13 +11553,9 @@ objects:
     secdef: false
     arguments:
     - data_type: name
-    - name: kpi_sql
-      data_type: text
-    - data_type: name[]
-    - name: sql
-      data_type: text
+    - data_type: trigger.threshold_def[]
     source: |-
-      SELECT trigger.setup_rule(trigger.define($1), $2, $3, $4);
+      SELECT trigger.setup_rule(trigger.define($1), $2);
 
 - function:
     name: cleanup_rule
