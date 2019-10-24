@@ -3206,9 +3206,13 @@ objects:
       data_type: text
     - name: description
       data_type: text
+    - name: time_aggregation
+      data_type: text
+    - name: entity_aggregation
+      data_type: text
     source: |-
-      INSERT INTO trend_directory.table_trend (trend_store_part_id, name, data_type, description)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO trend_directory.table_trend (trend_store_part_id, name, data_type, description, time_aggregation, entity_aggregation)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING table_trend;
 
 - function:
@@ -3571,6 +3575,22 @@ objects:
       );
 
 - function:
+    name: get_trend_store_part
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend_store_id
+      data_type: integer
+    - name: name
+      data_type: name
+    source: |-
+      SELECT * FROM trend_directory.trend_store_part WHERE trend_store_id = $1 AND name = $2;
+
+- function:
     name: define_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store
@@ -3878,10 +3898,14 @@ objects:
       data_type: text
     - name: description
       data_type: text
+    - name: time_aggregation
+      data_type: text
+    - name: entity_aggregation
+      data_type: text
     source: |-
       SELECT trend_directory.add_trend_to_trend_store(
           $1,
-          trend_directory.define_table_trend($1.id, $2, $3, $4)
+          trend_directory.define_table_trend($1.id, $2, $3, $4, $5, $6)
       )
 
 - function:
@@ -3896,7 +3920,7 @@ objects:
     - data_type: trend_directory.trend_store_part
     - data_type: trend_directory.trend_descr
     source: |-
-      SELECT trend_directory.add_trend_to_trend_store($1, $2.name, $2.data_type, $2.description);
+      SELECT trend_directory.add_trend_to_trend_store($1, $2.name, $2.data_type, $2.description, $2.time_aggregation, $2.entity_aggregation);
 
 - function:
     name: create_table_trends
@@ -3948,6 +3972,24 @@ objects:
       SELECT trend_directory.create_table_trend($1, t)
       FROM trend_directory.missing_table_trends($1, $2) t;
 
+      SELECT $1;
+
+- function:
+    name: add_missing_trends
+    schema: trend_directory
+    return_type: trend_directory.trend_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store
+    - name: parts
+      data_type: trend_directory.trend_store_part_descr[]
+    source: |-
+      SELECT trend_directory.assure_table_trends_exist(
+        trend_directory.get_trend_store_part($1.id, name), trends)
+      FROM unnest($2);
       SELECT $1;
 
 - function:
