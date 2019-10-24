@@ -5300,13 +5300,6 @@ SELECT public.action($1, notification_directory.create_table_sql($1));
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "notification_directory"."initialize_notification_store"(notification_directory.notification_store)
-    RETURNS notification_directory.notification_store
-AS $$
-SELECT notification_directory.create_table($1);
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "notification_directory"."create_staging_table_sql"(notification_directory.notification_store)
     RETURNS text[]
 AS $$
@@ -5363,6 +5356,14 @@ CREATE FUNCTION "notification_directory"."drop_staging_table"(notification_direc
     RETURNS notification_directory.notification_store
 AS $$
 SELECT public.action($1, notification_directory.drop_staging_table_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "notification_directory"."initialize_notification_store"(notification_directory.notification_store)
+    RETURNS notification_directory.notification_store
+AS $$
+SELECT notification_directory.create_table($1);
+SELECT notification_directory.create_staging_table($1);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -5996,14 +5997,14 @@ CREATE FUNCTION "trigger"."create_notification_fn_sql"(trigger.rule, "expression
     RETURNS text
 AS $$
 SELECT format(
-'CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
-	RETURNS text
-AS $function$
-SELECT (%s)::text
-$function$ LANGUAGE SQL IMMUTABLE',
-    trigger.notification_fn_name($1),
-    $1.name,
-    $2
+  'CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
+    RETURNS text
+  AS $function$
+    SELECT (%s)::text
+  $function$ LANGUAGE SQL IMMUTABLE',
+  trigger.notification_fn_name($1),
+  trigger.details_type_name($1),
+  $2
 );
 $$ LANGUAGE sql IMMUTABLE;
 
@@ -6011,7 +6012,7 @@ $$ LANGUAGE sql IMMUTABLE;
 CREATE FUNCTION "trigger"."drop_notification_fn_sql"(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.notification_fn_name($1), $1.name);
+SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.notification_fn_name($1), trigger.details_type_name($1));
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -6019,8 +6020,20 @@ CREATE FUNCTION "trigger"."create_notification_fn"(trigger.rule, "expression" te
     RETURNS trigger.rule
 AS $$
 SELECT trigger.action($1, trigger.create_notification_fn_sql($1, $2));
-SELECT trigger.action($1, format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.notification_fn_name($1), $1.name));
-SELECT trigger.action($1, format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.notification_fn_name($1), $1.name));
+SELECT trigger.action(
+    $1,
+    format(
+        'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
+        trigger.notification_fn_name($1), trigger.details_type_name($1)
+    )
+);
+SELECT trigger.action(
+    $1,
+    format(
+        'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
+        trigger.notification_fn_name($1), trigger.details_type_name($1)
+    )
+);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -6269,7 +6282,10 @@ $$ LANGUAGE sql IMMUTABLE;
 CREATE FUNCTION "trigger"."drop_notification_type_sql"(trigger.rule)
     RETURNS text
 AS $$
-SELECT format('DROP TYPE IF EXISTS trigger_rule.%I', trigger.notification_type_name($1));
+SELECT format(
+    'DROP TYPE IF EXISTS trigger_rule.%I',
+    trigger.notification_type_name($1)
+);
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -6402,10 +6418,12 @@ SELECT trigger.action($1, format(
     $2
 ));
 SELECT trigger.action($1, format(
-    'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.threshold_view_name($1)
+    'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin',
+    trigger.threshold_view_name($1)
 ));
 SELECT trigger.action($1, format(
-    'GRANT SELECT ON trigger_rule.%I TO minerva', trigger.threshold_view_name($1)
+    'GRANT SELECT ON trigger_rule.%I TO minerva',
+    trigger.threshold_view_name($1)
 ));
 
 SELECT $1;
@@ -6416,19 +6434,20 @@ CREATE FUNCTION "trigger"."create_set_thresholds_fn_sql"(trigger.rule)
     RETURNS text
 AS $$
 SELECT format(
-        $def$CREATE OR REPLACE FUNCTION trigger_rule.%I(%s) RETURNS integer AS
-$function$
-BEGIN
-    EXECUTE format('CREATE OR REPLACE VIEW trigger_rule.%I AS SELECT %s', %s);
-    RETURN 42;
-END;
-$function$ LANGUAGE plpgsql VOLATILE$def$,
-	trigger.set_thresholds_fn_name($1),
-	array_to_string(array_agg(format('%I %s', t.name, t.data_type)), ', '),
-	trigger.threshold_view_name($1),
-	array_to_string(array_agg(format('%%L::%s AS %I', t.data_type, t.name)), ', '),
-	array_to_string(array_agg(format('$%s', t.row_num)), ', ')
-    ) FROM (SELECT d.*, row_number() over() AS row_num FROM trigger.get_threshold_defs($1) d) t;
+    $def$CREATE OR REPLACE FUNCTION trigger_rule.%I(%s)
+    RETURNS integer AS
+    $function$
+    BEGIN
+        EXECUTE format('CREATE OR REPLACE VIEW trigger_rule.%I AS SELECT %s', %s);
+        RETURN 42;
+    END;
+    $function$ LANGUAGE plpgsql VOLATILE$def$,
+    trigger.set_thresholds_fn_name($1),
+    array_to_string(array_agg(format('%I %s', t.name, t.data_type)), ', '),
+    trigger.threshold_view_name($1),
+    array_to_string(array_agg(format('%%L::%s AS %I', t.data_type, t.name)), ', '),
+    array_to_string(array_agg(format('$%s', t.row_num)), ', ')
+) FROM (SELECT d.*, row_number() over() AS row_num FROM trigger.get_threshold_defs($1) d) t;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -6600,9 +6619,9 @@ BEGIN
     EXECUTE format(
 $query$
 INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
-(SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I WHERE timestamp = $2)
+(SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I($2))
 $query$,
-        notification_directory.staging_table_name($2), trigger.notification_view_name($1)
+        notification_directory.staging_table_name($2), trigger.notification_fn_name($1)
     )
     USING $1.id, $3;
 

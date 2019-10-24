@@ -5067,6 +5067,14 @@ objects:
     - delete
     affecteach: row
 
+#######################
+#######################
+##                   ##
+## Attribute Storage ##
+##                   ##
+#######################
+#######################
+
 - table:
     name: attribute_store
     schema: attribute_directory
@@ -8302,6 +8310,14 @@ objects:
     - role: minerva
       privilege: SELECT
 
+##########################
+##########################
+##                      ##
+## Notification Storage ##
+##                      ##
+##########################
+##########################
+
 - composite_type:
     name: attr_def
     schema: notification_directory
@@ -8611,19 +8627,6 @@ objects:
       SELECT public.action($1, notification_directory.create_table_sql($1));
 
 - function:
-    name: initialize_notification_store
-    schema: notification_directory
-    return_type: notification_directory.notification_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: notification_directory.notification_store
-    source: |-
-      SELECT notification_directory.create_table($1);
-
-- function:
     name: create_staging_table_sql
     schema: notification_directory
     return_type: text[]
@@ -8705,6 +8708,20 @@ objects:
     - data_type: notification_directory.notification_store
     source: |-
       SELECT public.action($1, notification_directory.drop_staging_table_sql($1));
+
+- function:
+    name: initialize_notification_store
+    schema: notification_directory
+    return_type: notification_directory.notification_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: notification_directory.notification_store
+    source: |-
+      SELECT notification_directory.create_table($1);
+      SELECT notification_directory.create_staging_table($1);
 
 - function:
     name: define_attribute
@@ -9812,9 +9829,17 @@ objects:
     - data_type: trigger.rule
     - name: expression
       data_type: text
-    source: "SELECT format(\n'CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)\n\
-      \tRETURNS text\nAS $function$\nSELECT (%s)::text\n$function$ LANGUAGE SQL IMMUTABLE',\n\
-      \    trigger.notification_fn_name($1),\n    $1.name,\n    $2\n);"
+    source: |-
+      SELECT format(
+        'CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
+          RETURNS text
+        AS $function$
+          SELECT (%s)::text
+        $function$ LANGUAGE SQL IMMUTABLE',
+        trigger.notification_fn_name($1),
+        trigger.details_type_name($1),
+        $2
+      );
 
 - function:
     name: drop_notification_fn_sql
@@ -9827,7 +9852,7 @@ objects:
     arguments:
     - data_type: trigger.rule
     source: |-
-      SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.notification_fn_name($1), $1.name);
+      SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.notification_fn_name($1), trigger.details_type_name($1));
 
 - function:
     name: create_notification_fn
@@ -9843,94 +9868,20 @@ objects:
       data_type: text
     source: |-
       SELECT trigger.action($1, trigger.create_notification_fn_sql($1, $2));
-      SELECT trigger.action($1, format('ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin', trigger.notification_fn_name($1), $1.name));
-      SELECT trigger.action($1, format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva', trigger.notification_fn_name($1), $1.name));
-
-- function:
-    name: notification_view_name
-    schema: trigger
-    return_type: name
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT ($1.name || '_notification')::name;
-
-- function:
-    name: notification_view_sql
-    schema: trigger
-    return_type: text
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT format(
-          'CREATE OR REPLACE VIEW trigger_rule.%I AS
-      SELECT
-          n.entity_id,
-          n.timestamp,
-          COALESCE(exc.weight, trigger_rule.%I(n)) AS weight,
-          trigger_rule.%I(n) AS details
-      FROM trigger_rule.%I AS n
-      LEFT JOIN trigger_rule.%I AS exc ON
-          exc.entity_id = n.entity_id AND
-          exc.start <= n.timestamp AND
-          exc.expires > n.timestamp',
-          trigger.notification_view_name($1),
-          trigger.weight_fn_name($1),
-          trigger.notification_fn_name($1),
-          $1.name,
-          trigger.exception_weight_table_name($1)
+      SELECT trigger.action(
+          $1,
+          format(
+              'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
+              trigger.notification_fn_name($1), trigger.details_type_name($1)
+          )
       );
-
-- function:
-    name: drop_notification_view_sql
-    schema: trigger
-    return_type: text
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT format('DROP VIEW trigger_rule.%I', trigger.notification_view_name($1));
-
-- function:
-    name: create_notification_view_sql
-    schema: trigger
-    return_type: text[]
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT ARRAY[
-          trigger.notification_view_sql($1),
-          format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.notification_view_name($1)),
-          format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.notification_view_name($1))
-      ];
-
-- function:
-    name: create_notification_view
-    schema: trigger
-    return_type: trigger.rule
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT trigger.action($1, trigger.create_notification_view_sql($1));
+      SELECT trigger.action(
+          $1,
+          format(
+              'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
+              trigger.notification_fn_name($1), trigger.details_type_name($1)
+          )
+      );
 
 - function:
     name: notification_threshold_test_fn_name
@@ -9980,7 +9931,11 @@ objects:
     secdef: false
     arguments:
     - data_type: trigger.rule
-    source: "SELECT\n\tpg_get_viewdef(oid, true)\nFROM pg_class\nWHERE relname = trigger.with_threshold_view_name($1);"
+    source: 
+      SELECT
+          pg_get_viewdef(oid, true)
+      FROM pg_class
+      WHERE relname = trigger.with_threshold_view_name($1);
 
 - function:
     name: get_threshold_defs
@@ -10215,7 +10170,10 @@ objects:
     arguments:
     - data_type: trigger.rule
     source: |-
-      SELECT format('DROP TYPE IF EXISTS trigger_rule.%I', trigger.notification_type_name($1));
+      SELECT format(
+          'DROP TYPE IF EXISTS trigger_rule.%I',
+          trigger.notification_type_name($1)
+      );
 
 - function:
     name: create_notification_type
@@ -10414,10 +10372,12 @@ objects:
           $2
       ));
       SELECT trigger.action($1, format(
-          'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.threshold_view_name($1)
+          'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin',
+          trigger.threshold_view_name($1)
       ));
       SELECT trigger.action($1, format(
-          'GRANT SELECT ON trigger_rule.%I TO minerva', trigger.threshold_view_name($1)
+          'GRANT SELECT ON trigger_rule.%I TO minerva',
+          trigger.threshold_view_name($1)
       ));
 
       SELECT $1;
@@ -10432,15 +10392,22 @@ objects:
     secdef: false
     arguments:
     - data_type: trigger.rule
-    source: "SELECT format(\n        $def$CREATE OR REPLACE FUNCTION trigger_rule.%I(%s)\
-      \ RETURNS integer AS\n$function$\nBEGIN\n    EXECUTE format('CREATE OR REPLACE\
-      \ VIEW trigger_rule.%I AS SELECT %s', %s);\n    RETURN 42;\nEND;\n$function$\
-      \ LANGUAGE plpgsql VOLATILE$def$,\n\ttrigger.set_thresholds_fn_name($1),\n\t\
-      array_to_string(array_agg(format('%I %s', t.name, t.data_type)), ', '),\n\t\
-      trigger.threshold_view_name($1),\n\tarray_to_string(array_agg(format('%%L::%s\
-      \ AS %I', t.data_type, t.name)), ', '),\n\tarray_to_string(array_agg(format('$%s',\
-      \ t.row_num)), ', ')\n    ) FROM (SELECT d.*, row_number() over() AS row_num\
-      \ FROM trigger.get_threshold_defs($1) d) t;"
+    source: |-
+      SELECT format(
+          $def$CREATE OR REPLACE FUNCTION trigger_rule.%I(%s)
+          RETURNS integer AS
+          $function$
+          BEGIN
+              EXECUTE format('CREATE OR REPLACE VIEW trigger_rule.%I AS SELECT %s', %s);
+              RETURN 42;
+          END;
+          $function$ LANGUAGE plpgsql VOLATILE$def$,
+          trigger.set_thresholds_fn_name($1),
+          array_to_string(array_agg(format('%I %s', t.name, t.data_type)), ', '),
+          trigger.threshold_view_name($1),
+          array_to_string(array_agg(format('%%L::%s AS %I', t.data_type, t.name)), ', '),
+          array_to_string(array_agg(format('$%s', t.row_num)), ', ')
+      ) FROM (SELECT d.*, row_number() over() AS row_num FROM trigger.get_threshold_defs($1) d) t;
 
 - function:
     name: create_set_thresholds_fn
@@ -10693,9 +10660,9 @@ objects:
           EXECUTE format(
       $query$
       INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
-      (SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I WHERE timestamp = $2)
+      (SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I($2))
       $query$,
-              notification_directory.staging_table_name($2), trigger.notification_view_name($1)
+              notification_directory.staging_table_name($2), trigger.notification_fn_name($1)
           )
           USING $1.id, $3;
 
