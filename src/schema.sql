@@ -6054,62 +6054,6 @@ SELECT trigger.action(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."notification_view_name"(trigger.rule)
-    RETURNS name
-AS $$
-SELECT ($1.name || '_notification')::name;
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION "trigger"."notification_view_sql"(trigger.rule)
-    RETURNS text
-AS $$
-SELECT format(
-    'CREATE OR REPLACE VIEW trigger_rule.%I AS
-SELECT
-    n.entity_id,
-    n.timestamp,
-    COALESCE(exc.weight, trigger_rule.%I(n)) AS weight,
-    trigger_rule.%I(n) AS details
-FROM trigger_rule.%I AS n
-LEFT JOIN trigger_rule.%I AS exc ON
-    exc.entity_id = n.entity_id AND
-    exc.start <= n.timestamp AND
-    exc.expires > n.timestamp',
-    trigger.notification_view_name($1),
-    trigger.weight_fn_name($1),
-    trigger.notification_fn_name($1),
-    $1.name,
-    trigger.exception_weight_table_name($1)
-);
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION "trigger"."drop_notification_view_sql"(trigger.rule)
-    RETURNS text
-AS $$
-SELECT format('DROP VIEW trigger_rule.%I', trigger.notification_view_name($1));
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION "trigger"."create_notification_view_sql"(trigger.rule)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    trigger.notification_view_sql($1),
-    format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.notification_view_name($1)),
-    format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.notification_view_name($1))
-];
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_notification_view"(trigger.rule)
-    RETURNS trigger.rule
-AS $$
-SELECT trigger.action($1, trigger.create_notification_view_sql($1));
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "trigger"."notification_threshold_test_fn_name"(trigger.rule)
     RETURNS name
 AS $$
@@ -6139,10 +6083,7 @@ $$ LANGUAGE sql IMMUTABLE;
 CREATE FUNCTION "trigger"."get_with_threshold_view_sql"(trigger.rule)
     RETURNS text
 AS $$
-SELECT
-	pg_get_viewdef(oid, true)
-FROM pg_class
-WHERE relname = trigger.with_threshold_view_name($1);
+SELECT pg_get_viewdef(oid, true) FROM pg_class WHERE relname = trigger.with_threshold_view_name($1);
 $$ LANGUAGE sql STABLE;
 
 
