@@ -1855,11 +1855,11 @@ $$ LANGUAGE sql IMMUTABLE STRICT;
 COMMENT ON FUNCTION "trend_directory"."get_default_partition_size"("granularity" interval) IS 'Return the default partition size in seconds for a particular granularity';
 
 
-CREATE FUNCTION "trend_directory"."define_table_trend"("trend_store_part_id" integer, "name" name, "data_type" text, "description" text)
+CREATE FUNCTION "trend_directory"."define_table_trend"("trend_store_part_id" integer, "name" name, "data_type" text, "description" text, "time_aggregation" text, "entity_aggregation" text)
     RETURNS trend_directory.table_trend
 AS $$
-INSERT INTO trend_directory.table_trend (trend_store_part_id, name, data_type, description)
-VALUES ($1, $2, $3, $4)
+INSERT INTO trend_directory.table_trend (trend_store_part_id, name, data_type, description, time_aggregation, entity_aggregation)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING table_trend;
 $$ LANGUAGE sql VOLATILE;
 
@@ -2079,6 +2079,13 @@ SELECT trend_directory.define_table_trends(
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."get_trend_store_part"("trend_store_id" integer, "name" name)
+    RETURNS trend_directory.trend_store_part
+AS $$
+SELECT * FROM trend_directory.trend_store_part WHERE trend_store_id = $1 AND name = $2;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."define_trend_store"(trend_directory.trend_store, trend_directory.trend_store_part_descr[])
     RETURNS trend_directory.trend_store
 AS $$
@@ -2261,12 +2268,12 @@ SELECT public.action($2,
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.trend_store_part, name, "data_type" text, "description" text)
+CREATE FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.trend_store_part, name, "data_type" text, "description" text, "time_aggregation" text, "entity_aggregation" text)
     RETURNS trend_directory.table_trend
 AS $$
 SELECT trend_directory.add_trend_to_trend_store(
     $1,
-    trend_directory.define_table_trend($1.id, $2, $3, $4)
+    trend_directory.define_table_trend($1.id, $2, $3, $4, $5, $6)
 )
 $$ LANGUAGE sql VOLATILE;
 
@@ -2274,7 +2281,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."create_table_trend"(trend_directory.trend_store_part, trend_directory.trend_descr)
     RETURNS trend_directory.table_trend
 AS $$
-SELECT trend_directory.add_trend_to_trend_store($1, $2.name, $2.data_type, $2.description);
+SELECT trend_directory.add_trend_to_trend_store($1, $2.name, $2.data_type, $2.description, $2.time_aggregation, $2.entity_aggregation);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2302,6 +2309,16 @@ AS $$
 SELECT trend_directory.create_table_trend($1, t)
 FROM trend_directory.missing_table_trends($1, $2) t;
 
+SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."add_missing_trends"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS trend_directory.trend_store
+AS $$
+SELECT trend_directory.assure_table_trends_exist(
+  trend_directory.get_trend_store_part($1.id, name), trends)
+FROM unnest($2);
 SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
