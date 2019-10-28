@@ -2079,10 +2079,29 @@ SELECT trend_directory.define_table_trends(
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."create_trend_store_part"("trend_store_id" integer, "name" name)
+    RETURNS trend_directory.trend_store_part
+AS $$
+SELECT trend_directory.initialize_trend_store_part(
+    trend_directory.define_trend_store_part($1, $2)
+  );
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."get_trend_store_part"("trend_store_id" integer, "name" name)
     RETURNS trend_directory.trend_store_part
 AS $$
 SELECT * FROM trend_directory.trend_store_part WHERE trend_store_id = $1 AND name = $2;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."get_or_create_trend_store_part"("trend_store_id" integer, "name" name)
+    RETURNS trend_directory.trend_store_part
+AS $$
+SELECT COALESCE(
+  trend_directory.get_trend_store_part($1, $2),
+  trend_directory.create_trend_store_part($1, $2)        
+);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2317,7 +2336,7 @@ CREATE FUNCTION "trend_directory"."add_missing_trends"(trend_directory.trend_sto
     RETURNS trend_directory.trend_store
 AS $$
 SELECT trend_directory.assure_table_trends_exist(
-  trend_directory.get_trend_store_part($1.id, name), trends)
+  trend_directory.get_or_create_trend_store_part($1.id, name), trends)
 FROM unnest($2);
 SELECT $1;
 $$ LANGUAGE sql VOLATILE;

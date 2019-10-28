@@ -3575,6 +3575,24 @@ objects:
       );
 
 - function:
+    name: create_trend_store_part
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend_store_id
+      data_type: integer
+    - name: name
+      data_type: name
+    source: |-
+      SELECT trend_directory.initialize_trend_store_part(
+          trend_directory.define_trend_store_part($1, $2)
+        );
+
+- function:
     name: get_trend_store_part
     schema: trend_directory
     return_type: trend_directory.trend_store_part
@@ -3589,6 +3607,25 @@ objects:
       data_type: name
     source: |-
       SELECT * FROM trend_directory.trend_store_part WHERE trend_store_id = $1 AND name = $2;
+
+- function:
+    name: get_or_create_trend_store_part
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend_store_id
+      data_type: integer
+    - name: name
+      data_type: name
+    source: |-
+      SELECT COALESCE(
+        trend_directory.get_trend_store_part($1, $2),
+        trend_directory.create_trend_store_part($1, $2)
+      );
 
 - function:
     name: define_trend_store
@@ -3988,7 +4025,7 @@ objects:
       data_type: trend_directory.trend_store_part_descr[]
     source: |-
       SELECT trend_directory.assure_table_trends_exist(
-        trend_directory.get_trend_store_part($1.id, name), trends)
+        trend_directory.get_or_create_trend_store_part($1.id, name), trends)
       FROM unnest($2);
       SELECT $1;
 
