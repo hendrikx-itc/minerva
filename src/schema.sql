@@ -2100,8 +2100,17 @@ CREATE FUNCTION "trend_directory"."get_or_create_trend_store_part"("trend_store_
 AS $$
 SELECT COALESCE(
   trend_directory.get_trend_store_part($1, $2),
-  trend_directory.create_trend_store_part($1, $2)        
+  trend_directory.create_trend_store_part($1, $2)
 );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."add_missing_trend_store_parts"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS trend_directory.trend_store
+AS $$
+SELECT trend_directory.get_or_create_trend_store_part($1.id, name)
+  FROM unnest($2);
+SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 

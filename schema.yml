@@ -3628,6 +3628,23 @@ objects:
       );
 
 - function:
+    name: add_missing_trend_store_parts
+    schema: trend_directory
+    return_type: trend_directory.trend_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store
+    - name: parts
+      data_type: trend_directory.trend_store_part_descr[]
+    source: |-
+      SELECT trend_directory.get_or_create_trend_store_part($1.id, name)
+        FROM unnest($2);
+      SELECT $1;
+
+- function:
     name: define_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store
