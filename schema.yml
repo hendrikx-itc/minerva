@@ -599,33 +599,6 @@ objects:
       nullable: false
 
 - function:
-    name: version_gtlt_version
-    schema: system
-    return_type: bool
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: system.version_tuple
-    - data_type: system.version_tuple
-    source: |-
-      SELECT
-          $1.major > $2.major AND
-          $1.minor > $2.minor AND
-          $1.patch > $2.patch;
-
-- operator:
-    name: <>
-    code: system.version_gtlt_version
-    left:
-      schema: system
-      name: version_tuple
-    right:
-      schema: system
-      name: version_tuple
-
-- function:
     name: version
     schema: system
     return_type: system.version_tuple
@@ -635,45 +608,7 @@ objects:
     secdef: false
     arguments: []
     source: |-
-      SELECT (5,0,0)::system.version_tuple;
-
-- function:
-    name: set_version
-    schema: system
-    return_type: system.version_tuple
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: system.version_tuple
-    source: |-
-      BEGIN
-
-          EXECUTE format($sql$CREATE FUNCTION system.version()
-          RETURNS system.version_tuple
-      AS $function$
-      SELECT %s::system.version_tuple;
-      $function$ LANGUAGE sql IMMUTABLE;$sql$, $1);
-
-          RETURN $1;
-
-      END;
-
-- function:
-    name: set_version
-    schema: system
-    return_type: system.version_tuple
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: integer
-    - data_type: integer
-    - data_type: integer
-    source: |-
-      SELECT system.set_version(($1, $2, $3)::system.version_tuple);
+      SELECT (5,0,1)::system.version_tuple;
 
 - function:
     name: get_setting
