@@ -10,6 +10,7 @@ import re
 
 import psycopg2
 
+MINERVA_ROOT='/usr/share/minerva'
 
 class Version:
     def __init__(self, major, minor, bugfix):
@@ -45,15 +46,22 @@ class Version:
 def main():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        '--minerva-root',
+        help='Root directory of Minerva sources and migrations'
+    )
+
     args = parser.parse_args()
+
+    minerva_root = args.minerva_root or MINERVA_ROOT
 
     with closing(psycopg2.connect('')) as conn:
         conn.autocommit = True
 
-        migrate(conn)
+        migrate(conn, minerva_root)
 
 
-def migrate(conn):
+def migrate(conn, minerva_root):
     query = 'SELECT * FROM system.version()'
 
     with closing(conn.cursor()) as cursor:
@@ -64,8 +72,6 @@ def migrate(conn):
     current_version = Version(major, minor, bugfix)
 
     print("Current version: {}".format(current_version))
-
-    minerva_root = './'
 
     migration_scripts = load_migration_scripts(minerva_root)
 
