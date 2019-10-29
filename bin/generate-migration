@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# Generate a migration SQL file for the difference between two revisions.
+#
+# Usage: generate-migration REVISION_FROM REVISION_TO
+#
+# The
+
+SCHEMA_FROM_FILE="/tmp/schema-$1.yml"
+SCHEMA_TO_FILE="/tmp/schema-$2.yml"
+MIGRATION_FILE="$1_to_$2.sql"
+
+git -C $MINERVA_ROOT show $1:schema.yml > $SCHEMA_FROM_FILE
+git -C $MINERVA_ROOT show $2:schema.yml > $SCHEMA_TO_FILE
+
+echo "Generating migration file '$MIGRATION_FILE'"
+
+db-schema diff $SCHEMA_FROM_FILE $SCHEMA_TO_FILE > $MINERVA_ROOT/migrations/$MIGRATION_FILE
+
+echo "Done"
+
