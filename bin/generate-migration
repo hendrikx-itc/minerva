@@ -8,12 +8,21 @@
 
 command -v db-schema >/dev/null 2>&1 || { echo >&2 "The db-schema command from pg-db-tools is required but it's not installed.  Aborting."; exit 1; }
 
-SCHEMA_FROM_FILE="/tmp/schema-$1.yml"
-SCHEMA_TO_FILE="/tmp/schema-$2.yml"
-MIGRATION_FILE="$1_to_$2.sql"
-
-git -C $MINERVA_ROOT show $1:schema.yml > $SCHEMA_FROM_FILE
-git -C $MINERVA_ROOT show $2:schema.yml > $SCHEMA_TO_FILE
+if [ "$#" -eq 2 ]; then
+    # Two explict versions are given, so compare those.
+    SCHEMA_FROM_FILE="/tmp/schema-$1.yml"
+    SCHEMA_TO_FILE="/tmp/schema-$2.yml"
+    MIGRATION_FILE="$1_to_$2.sql"
+    git -C $MINERVA_ROOT show $1:schema.yml > $SCHEMA_FROM_FILE
+    git -C $MINERVA_ROOT show $2:schema.yml > $SCHEMA_TO_FILE
+elif [ "$#" -eq 1 ]; then
+    # Only one explicit version is given, so compare that to the current
+    # version in the working directory.
+    SCHEMA_FROM_FILE="/tmp/schema-$1.yml"
+    SCHEMA_TO_FILE="$MINERVA_ROOT/schema.yml"
+    MIGRATION_FILE="$1_to_current.sql"
+    git -C $MINERVA_ROOT show $1:schema.yml > $SCHEMA_FROM_FILE
+fi
 
 echo "Generating migration file '$MIGRATION_FILE'"
 
