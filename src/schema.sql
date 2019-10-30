@@ -391,52 +391,11 @@ CREATE TYPE "system"."version_tuple" AS (
 
 
 
-CREATE FUNCTION "system"."version_gtlt_version"(system.version_tuple, system.version_tuple)
-    RETURNS bool
-AS $$
-SELECT
-    $1.major > $2.major AND
-    $1.minor > $2.minor AND
-    $1.patch > $2.patch;
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE OPERATOR <> (
-    PROCEDURE = system.version_gtlt_version,
-    LEFTARG = system.version_tuple,
-    RIGHTARG = system.version_tuple
-);
-
-
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,0,0)::system.version_tuple;
+SELECT (5,0,1)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION "system"."set_version"(system.version_tuple)
-    RETURNS system.version_tuple
-AS $$
-BEGIN
-
-    EXECUTE format($sql$CREATE FUNCTION system.version()
-    RETURNS system.version_tuple
-AS $function$
-SELECT %s::system.version_tuple;
-$function$ LANGUAGE sql IMMUTABLE;$sql$, $1);
-
-    RETURN $1;
-
-END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "system"."set_version"(integer, integer, integer)
-    RETURNS system.version_tuple
-AS $$
-SELECT system.set_version(($1, $2, $3)::system.version_tuple);
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "system"."get_setting"("name" text)
