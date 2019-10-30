@@ -6,6 +6,8 @@
 #
 # The
 
+command -v db-schema >/dev/null 2>&1 || { echo >&2 "The db-schema command from pg-db-tools is required but it's not installed.  Aborting."; exit 1; }
+
 SCHEMA_FROM_FILE="/tmp/schema-$1.yml"
 SCHEMA_TO_FILE="/tmp/schema-$2.yml"
 MIGRATION_FILE="$1_to_$2.sql"
