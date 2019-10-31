@@ -6,6 +6,7 @@ AS $$
 SELECT (5,0,3)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
+DROP TRIGGER cleanup_on_rule_delete ON "trigger"."rule";
 
 DROP FUNCTION "trigger"."cleanup_on_rule_delete"();
 
@@ -131,5 +132,3 @@ BEGIN
     RETURN $1;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-
-DROP TRIGGER cleanup_on_rule_delete ON "trigger"."rule";
