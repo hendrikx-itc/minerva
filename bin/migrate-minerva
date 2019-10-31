@@ -75,8 +75,16 @@ def migrate(conn, minerva_root):
 
     migration_scripts = load_migration_scripts(minerva_root)
 
-    for from_version, to_version, file_path in migration_scripts:
-        if from_version >= current_version:
+    migrations_to_run = [
+        (from_version, to_version, file_path)
+        for from_version, to_version, file_path in migration_scripts
+        if from_version >= current_version
+    ]
+
+    if len(migrations_to_run) == 0:
+        print("System up-to-date, no migrations to execute")
+    else:
+        for from_version, to_version, file_path in migrations_to_run:
             print("Executing migration {} -> {}".format(from_version, to_version))
 
             execute_migration(conn, file_path)
