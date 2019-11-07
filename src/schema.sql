@@ -1756,11 +1756,14 @@ CREATE FUNCTION "trend_directory"."create_staging_table_sql"(trend_directory.tre
 AS $$
 SELECT ARRAY[
     format(
-        'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone);',
+        'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone%s);',
         trend_directory.staging_table_schema(),
         trend_directory.staging_table_name($1),
-        trend_directory.staging_table_schema(),
-        trend_directory.base_table_name($1)
+        (
+            SELECT string_agg(format(', %I %s', t.name, t.data_type), ' ')
+            FROM trend_directory.table_trend t
+            WHERE t.trend_store_part_id = $1.id
+        )
     ),
     format(
         'ALTER TABLE ONLY %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
@@ -2088,6 +2091,13 @@ SELECT trend_directory.initialize_trend_store_part(
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."get_trend_store_parts"("trend_store_id" integer)
+    RETURNS trend_directory.trend_store_part
+AS $$
+SELECT trend_store_part FROM trend_directory.trend_store_part WHERE trend_store_id = $1
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."get_trend_store_part"("trend_store_id" integer, "name" name)
     RETURNS trend_directory.trend_store_part
 AS $$
@@ -2290,6 +2300,13 @@ SELECT public.action($2,
             trend_directory.base_table_name($1),
             $2.name,
             $2.data_type
+        ),
+        format(
+            'ALTER TABLE %I.%I ADD COLUMN %I %s;',
+            trend_directory.staging_table_schema(),
+            trend_directory.staging_table_name($1),
+            $2.name,
+            $2.data_type
         )
     ]
 );
@@ -2336,7 +2353,6 @@ CREATE FUNCTION "trend_directory"."assure_table_trends_exist"(trend_directory.tr
 AS $$
 SELECT trend_directory.create_table_trend($1, t)
 FROM trend_directory.missing_table_trends($1, $2) t;
-
 SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
@@ -2347,6 +2363,81 @@ AS $$
 SELECT trend_directory.assure_table_trends_exist(
   trend_directory.get_or_create_trend_store_part($1.id, name), trends)
 FROM unnest($2);
+SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."remove_table_trend"("trend" trend_directory.table_trend)
+    RETURNS trend_directory.table_trend
+AS $$
+BEGIN
+  EXECUTE FORMAT('ALTER TABLE trend.%I DROP COLUMN %I',
+    trend_directory.trend_store_part_name_for_trend(trend), trend.name);
+  EXECUTE FORMAT('ALTER TABLE trend.%I_staging DROP COLUMN %I',
+    trend_directory.trend_store_part_name_for_trend(trend), trend.name);
+  DELETE FROM trend_directory.table_trend WHERE id = trend.id;
+  RETURN t FROM trend_directory.table_trend t WHERE 0=1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."trend_store_part_name_for_trend"("trend" trend_directory.table_trend)
+    RETURNS name
+AS $$
+SELECT trend_store_part.name FROM trend_directory.table_trend LEFT JOIN trend_directory.trend_store_part
+  ON table_trend.trend_store_part_id = trend_store_part.id
+  WHERE table_trend.id = trend.id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."get_trends_for_trend_store"("trend_store_id" integer)
+    RETURNS SETOF trend_directory.table_trend
+AS $$
+SELECT table_trend
+  FROM trend_directory.table_trend
+  LEFT JOIN trend_directory.trend_store_part
+  ON table_trend.trend_store_part_id = trend_store_part.id
+  WHERE trend_store_part.trend_store_id = trend_store_id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."get_trends_for_trend_store"(trend_directory.trend_store)
+    RETURNS SETOF trend_directory.table_trend
+AS $$
+SELECT trend_directory.get_trends_for_trend_store($1.id);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."get_trend_if_defined"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text)
+    RETURNS trend_directory.table_trend
+AS $$
+SELECT t FROM trend_directory.table_trend t JOIN unnest($2) t2
+  ON t.name = t2.name
+  WHERE t.id = $1.id
+  AND trend_directory.trend_store_part_name_for_trend(t) = $3;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."get_trend_if_defined"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text) IS 'Return the trend, but only if it is a trend defined by trends';
+
+
+CREATE FUNCTION "trend_directory"."remove_trend_if_extraneous"("trend" trend_directory.table_trend, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS void
+AS $$
+SELECT COALESCE(
+  trend_directory.get_trend_if_defined($1, trends, name),
+  trend_directory.remove_table_trend($1)
+)
+FROM unnest($2);
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."remove_trend_if_extraneous"("trend" trend_directory.table_trend, "parts" trend_directory.trend_store_part_descr[]) IS 'Remove the trend if it is not one that is described by parts';
+
+
+CREATE FUNCTION "trend_directory"."remove_extra_trends"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS trend_directory.trend_store
+AS $$
+SELECT trend_directory.remove_trend_if_extraneous(
+  trend_directory.get_trends_for_trend_store($1), $2);
 SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 

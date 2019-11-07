@@ -3055,11 +3055,14 @@ objects:
     source: |-
       SELECT ARRAY[
           format(
-              'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone);',
+              'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone%s);',
               trend_directory.staging_table_schema(),
               trend_directory.staging_table_name($1),
-              trend_directory.staging_table_schema(),
-              trend_directory.base_table_name($1)
+              (
+                  SELECT string_agg(format(', %I %s', t.name, t.data_type), ' ')
+                  FROM trend_directory.table_trend t
+                  WHERE t.trend_store_part_id = $1.id
+              )
           ),
           format(
               'ALTER TABLE ONLY %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
@@ -3593,6 +3596,20 @@ objects:
         );
 
 - function:
+    name: get_trend_store_parts
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend_store_id
+      data_type: integer
+    source: |-
+      SELECT trend_store_part FROM trend_directory.trend_store_part WHERE trend_store_id = $1
+
+- function:
     name: get_trend_store_part
     schema: trend_directory
     return_type: trend_directory.trend_store_part
@@ -3933,6 +3950,13 @@ objects:
                   trend_directory.base_table_name($1),
                   $2.name,
                   $2.data_type
+              ),
+              format(
+                  'ALTER TABLE %I.%I ADD COLUMN %I %s;',
+                  trend_directory.staging_table_schema(),
+                  trend_directory.staging_table_name($1),
+                  $2.name,
+                  $2.data_type
               )
           ]
       );
@@ -4025,7 +4049,6 @@ objects:
     source: |-
       SELECT trend_directory.create_table_trend($1, t)
       FROM trend_directory.missing_table_trends($1, $2) t;
-
       SELECT $1;
 
 - function:
@@ -4044,6 +4067,136 @@ objects:
       SELECT trend_directory.assure_table_trends_exist(
         trend_directory.get_or_create_trend_store_part($1.id, name), trends)
       FROM unnest($2);
+      SELECT $1;
+
+- function:
+    name: remove_table_trend
+    schema: trend_directory
+    return_type: trend_directory.table_trend
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend
+      data_type: trend_directory.table_trend
+    source: |-
+      BEGIN
+        EXECUTE FORMAT('ALTER TABLE trend.%I DROP COLUMN %I',
+          trend_directory.trend_store_part_name_for_trend(trend), trend.name);
+        EXECUTE FORMAT('ALTER TABLE trend.%I_staging DROP COLUMN %I',
+          trend_directory.trend_store_part_name_for_trend(trend), trend.name);
+        DELETE FROM trend_directory.table_trend WHERE id = trend.id;
+        RETURN t FROM trend_directory.table_trend t WHERE 0=1;
+      END;
+
+- function:
+    name: trend_store_part_name_for_trend
+    schema: trend_directory
+    return_type: name
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend
+      data_type: trend_directory.table_trend
+    source: |-
+      SELECT trend_store_part.name FROM trend_directory.table_trend LEFT JOIN trend_directory.trend_store_part
+        ON table_trend.trend_store_part_id = trend_store_part.id
+        WHERE table_trend.id = trend.id;
+
+- function:
+    name: get_trends_for_trend_store
+    schema: trend_directory
+    return_type: trend_directory.table_trend
+    returns_set: true
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend_store_id
+      data_type: integer
+    source: |-
+      SELECT table_trend
+        FROM trend_directory.table_trend
+        LEFT JOIN trend_directory.trend_store_part
+        ON table_trend.trend_store_part_id = trend_store_part.id
+        WHERE trend_store_part.trend_store_id = trend_store_id;
+
+- function:
+    name: get_trends_for_trend_store
+    schema: trend_directory
+    return_type: trend_directory.table_trend
+    returns_set: true
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store
+    source: |-
+      SELECT trend_directory.get_trends_for_trend_store($1.id);
+
+- function:
+    name: get_trend_if_defined
+    schema: trend_directory
+    return_type: trend_directory.table_trend
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend
+      data_type: trend_directory.table_trend
+    - name: trends
+      data_type: trend_directory.trend_descr[]
+    - name: partname
+      data_type: text
+    description: Return the trend, but only if it is a trend defined by trends
+    source: |-
+      SELECT t FROM trend_directory.table_trend t JOIN unnest($2) t2
+        ON t.name = t2.name
+        WHERE t.id = $1.id
+        AND trend_directory.trend_store_part_name_for_trend(t) = $3;
+
+- function:
+    name: remove_trend_if_extraneous
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend
+      data_type: trend_directory.table_trend
+    - name: parts
+      data_type: trend_directory.trend_store_part_descr[]
+    description: Remove the trend if it is not one that is described by parts
+    source: |-
+      SELECT COALESCE(
+        trend_directory.get_trend_if_defined($1, trends, name),
+        trend_directory.remove_table_trend($1)
+      )
+      FROM unnest($2);
+
+- function:
+    name: remove_extra_trends
+    schema: trend_directory
+    return_type: trend_directory.trend_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store
+    - name: parts
+      data_type: trend_directory.trend_store_part_descr[]
+    source: |-
+      SELECT trend_directory.remove_trend_if_extraneous(
+        trend_directory.get_trends_for_trend_store($1), $2);
       SELECT $1;
 
 - function:
