@@ -1,39 +1,45 @@
-## Minerva concepts
+# Minerva ETL
 
-**Entities** represent objects. All data in Minerva is associated with an entity. Each entity belongs to an **entity type**.
+This repository contains the PostgreSQL based database schema for the Minerva ETL platform.
 
-Entities have any number of **aliases**. An alias is a name used to represent the entity, depending on the context.
+## Development
 
-**Data types** describe the kinds of data that can be associated with entities of a certain entity type.
+Developing on and with Minerva is easy using development Docker containers and
+the commands provided in this repository.
 
-Data types use a **data class**. Data classes provide the high-level behavior of data types.
+### Prerequisites
 
-The **trend** data class stores periodic data with a fixed granularity — for instance, number of requests per minute.
+ - [Docker](https://www.docker.com)
 
-The **attribute** data class stores nonperiodic data — for instance, number of accounts.
+### Initialize environment
 
-The **notification** data class stores occurrences of data — for instance, a failure.
+Initialize the environment so that commands are available in the search path:
 
-The **geospatial** data class stores nonperiodic data for a position — for instance, number of active connections at the interconnect at some coordinate.
+```bash
+source bin/activate
+```
+
+### Start container with Minerva database
+
+Now a Minerva database can be started in a Docker container using:
+
+```bash
+db up
+```
+
+This will start the container in the foreground and all logs will be sent to
+stdout. You can press Ctrl+C to stop the container.
 
 
-### Partition size
+To start the container in the background, use the `-d` option:
 
-The **partition size** is specified in units of time and is an important parameter for performance for large data sets. It determines the size of tables, allowing more recent data to be cached more easily.
+```bash
+db up -d
+```
 
-The best partition size depends on many factors:
+Now you can use the `stop` command to stop the container that is running in the background:
 
-- the number of entities with this entity type;
-- the number of trends for this granularity, entity type, and data source;
-- the data access patterns of your users;
-- the age of the data most often accessed;
-- on the database server, disk IO performance;
-- on the database server, memory available for disk caching.
-
-
-### Other important objects
-
-The **data source** is used to distinguish between data from multiple sources, where the same name can have a different meaning.
-
-**Data packages** are used to supply your data to Minerva, grouped by timestamp, entity type and data source. Data from multiple groups cannot be in the same data package. Some data classes have additional grouping.
+```bash
+db stop
+```
 
