@@ -1,0 +1,59 @@
+#!/usr/bin/python3
+"""
+Tool to bump the version of the Minerva project, including the version number
+in the schema and git tagging.
+"""
+import os
+import argparse
+import re
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--major', action='store_true', default=False)
+    parser.add_argument('--minor', action='store_true', default=False)
+    parser.add_argument('--bugfix', action='store_true', default=False)
+
+    args = parser.parse_args()
+
+    minerva_root = os.environ['MINERVA_ROOT']
+
+    schema_file_path = os.path.join(minerva_root, 'schema.yml')
+    schema_file_path_tmp = os.path.join(minerva_root, 'schema.yml.new')
+
+    with open(schema_file_path) as schema_file:
+        with open(schema_file_path_tmp, 'w') as new_schema_file:
+            for line_nr, line in enumerate(schema_file):
+                m = re.match('(.*SELECT )\(([0-9]+),([0-9]+),([0-9]+)\)(::system.version_tuple;)', line)
+
+                if m:
+                    start, major_str, minor_str, bugfix_str, end = m.groups()
+
+                    major = int(major_str)
+                    minor = int(minor_str)
+                    bugfix = int(bugfix_str)
+
+                    if args.major:
+                        major += 1
+
+                    if args.minor:
+                        minor += 1
+
+                    if args.bugfix:
+                        bugfix += 1
+
+                    new_version_line = '{start}({major},{minor},{bugfix}){end}\n'.format(
+                        start=start, major=major, minor=minor, bugfix=bugfix, end=end
+                    )
+
+                    new_schema_file.write(new_version_line)
+                else:
+                    new_schema_file.write(line)
+
+    os.replace(schema_file_path_tmp, schema_file_path)
+
+
+if __name__ == '__main__':
+    main()
+

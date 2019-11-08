@@ -608,7 +608,7 @@ objects:
     secdef: false
     arguments: []
     source: |-
-      SELECT (5,0,3)::system.version_tuple;
+      SELECT (5,0,4)::system.version_tuple;
 
 - function:
     name: get_setting
@@ -9952,30 +9952,6 @@ objects:
       WHERE proname = trigger.notification_fn_name($1);
 
 - function:
-    name: create_notification_fn_sql
-    schema: trigger
-    return_type: text
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    - name: expression
-      data_type: text
-    source: |-
-      SELECT format(
-        'CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
-          RETURNS text
-        AS $function$
-          SELECT (%s)::text
-        $function$ LANGUAGE SQL IMMUTABLE',
-        trigger.notification_fn_name($1),
-        trigger.details_type_name($1),
-        $2
-      );
-
-- function:
     name: drop_notification_fn_sql
     schema: trigger
     return_type: text
@@ -10000,35 +9976,6 @@ objects:
     - data_type: trigger.rule
     source: |-
       SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.notification_fn_name($1));
-
-- function:
-    name: create_notification_fn
-    schema: trigger
-    return_type: trigger.rule
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    - name: expression
-      data_type: text
-    source: |-
-      SELECT trigger.action($1, trigger.create_notification_fn_sql($1, $2));
-      SELECT trigger.action(
-          $1,
-          format(
-              'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
-              trigger.notification_fn_name($1), trigger.details_type_name($1)
-          )
-      );
-      SELECT trigger.action(
-          $1,
-          format(
-              'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
-              trigger.notification_fn_name($1), trigger.details_type_name($1)
-          )
-      );
 
 - function:
     name: notification_threshold_test_fn_name
@@ -10341,34 +10288,6 @@ objects:
           $1,
           trigger.create_notification_type_sql($1)
       );
-
-- function:
-    name: define_notification
-    schema: trigger
-    return_type: trigger.rule
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: name
-    - name: expression
-      data_type: text
-    source: |-
-      SELECT trigger.create_notification_fn(trigger.get_rule($1), $2);
-
-- function:
-    name: create_dummy_notification_fn
-    schema: trigger
-    return_type: trigger.rule
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT trigger.create_notification_fn($1, quote_literal($1.name));
 
 - function:
     name: drop_exception_threshold_table_sql
@@ -11023,17 +10942,6 @@ objects:
       SELECT ($1.name || '_fingerprint')::name;
 
 - function:
-    name: notification_message_fn_name
-    schema: trigger
-    return_type: name
-    language: sql
-    volatility: immutable
-    arguments:
-      - data_type: trigger.rule
-    source: |-
-      SELECT ($1.name || '_notification_message')::name;
-
-- function:
     name: rule_fn_name 
     schema: trigger
     return_type: name
@@ -11054,6 +10962,17 @@ objects:
       - data_type: trigger.rule
     source: |-
       SELECT ($1.name || '_runnable')::name;
+
+- function:
+    name: notification_message_fn_name
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    arguments:
+      - data_type: trigger.rule
+    source: |-
+      SELECT ($1.name || '_notification_message')::name;
 
 #----------------
 # Type <rule>_kpi
@@ -11433,6 +11352,21 @@ objects:
     source: |-
       SELECT trigger.create_notification_message_fn($1, quote_literal($1.name));
 
+- function:
+    name: define_notification_message
+    schema: trigger
+    return_type: trigger.rule
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: name
+    - name: expression
+      data_type: text
+    source: |-
+      SELECT trigger.create_notification_message_fn(trigger.get_rule($1), $2);
+
 #------------------------------------------
 # Function <rule>(timestamp with time zone)
 #------------------------------------------
@@ -11520,6 +11454,11 @@ objects:
       data_type: text
     source: |-
       SELECT trigger.create_rule_fn($1, trigger.rule_fn_sql($1, $2));
+
+
+#------------------------------------
+# Function <rule>_create_notification
+#------------------------------------
 
 - function:
     name: notification_fn_sql

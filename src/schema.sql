@@ -394,7 +394,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,0,3)::system.version_tuple;
+SELECT (5,0,4)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -6040,22 +6040,6 @@ WHERE proname = trigger.notification_fn_name($1);
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trigger"."create_notification_fn_sql"(trigger.rule, "expression" text)
-    RETURNS text
-AS $$
-SELECT format(
-  'CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
-    RETURNS text
-  AS $function$
-    SELECT (%s)::text
-  $function$ LANGUAGE SQL IMMUTABLE',
-  trigger.notification_fn_name($1),
-  trigger.details_type_name($1),
-  $2
-);
-$$ LANGUAGE sql IMMUTABLE;
-
-
 CREATE FUNCTION "trigger"."drop_notification_fn_sql"(trigger.rule)
     RETURNS text
 AS $$
@@ -6068,27 +6052,6 @@ CREATE FUNCTION "trigger"."drop_notification_fn_timestamp_sql"(trigger.rule)
 AS $$
 SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.notification_fn_name($1));
 $$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION "trigger"."create_notification_fn"(trigger.rule, "expression" text)
-    RETURNS trigger.rule
-AS $$
-SELECT trigger.action($1, trigger.create_notification_fn_sql($1, $2));
-SELECT trigger.action(
-    $1,
-    format(
-        'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
-        trigger.notification_fn_name($1), trigger.details_type_name($1)
-    )
-);
-SELECT trigger.action(
-    $1,
-    format(
-        'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
-        trigger.notification_fn_name($1), trigger.details_type_name($1)
-    )
-);
-$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trigger"."notification_threshold_test_fn_name"(trigger.rule)
@@ -6295,20 +6258,6 @@ SELECT trigger.action(
     $1,
     trigger.create_notification_type_sql($1)
 );
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."define_notification"(name, "expression" text)
-    RETURNS trigger.rule
-AS $$
-SELECT trigger.create_notification_fn(trigger.get_rule($1), $2);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trigger"."create_dummy_notification_fn"(trigger.rule)
-    RETURNS trigger.rule
-AS $$
-SELECT trigger.create_notification_fn($1, quote_literal($1.name));
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -6748,13 +6697,6 @@ SELECT ($1.name || '_fingerprint')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trigger"."notification_message_fn_name"(trigger.rule)
-    RETURNS name
-AS $$
-SELECT ($1.name || '_notification_message')::name;
-$$ LANGUAGE sql IMMUTABLE;
-
-
 CREATE FUNCTION "trigger"."rule_fn_name"(trigger.rule)
     RETURNS name
 AS $$
@@ -6766,6 +6708,13 @@ CREATE FUNCTION "trigger"."runnable_fn_name"(trigger.rule)
     RETURNS name
 AS $$
 SELECT ($1.name || '_runnable')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trigger"."notification_message_fn_name"(trigger.rule)
+    RETURNS name
+AS $$
+SELECT ($1.name || '_notification_message')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -7041,6 +6990,13 @@ CREATE FUNCTION "trigger"."create_dummy_notification_message_fn"(trigger.rule)
     RETURNS trigger.rule
 AS $$
 SELECT trigger.create_notification_message_fn($1, quote_literal($1.name));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."define_notification_message"(name, "expression" text)
+    RETURNS trigger.rule
+AS $$
+SELECT trigger.create_notification_message_fn(trigger.get_rule($1), $2);
 $$ LANGUAGE sql VOLATILE;
 
 
