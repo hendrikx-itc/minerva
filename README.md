@@ -10,6 +10,7 @@ the commands provided in this repository.
 ### Prerequisites
 
  - [Docker](https://www.docker.com)
+ - PostgreSQL client `psql`
 
 ### Initialize environment
 
@@ -43,3 +44,15 @@ Now you can use the `stop` command to stop the container that is running in the 
 db stop
 ```
 
+### Connect to Minerva database
+
+To connect to the Minerva database and look around, you can use the PostgreSQL
+client `psql`. When you are in a terminal session with the Minerva environment
+initialized, you can just type:
+
+```bash
+psql
+```
+
+This works because all environment variables have been set so that psql knows
+where to connect (PGDATABASE etc.).
