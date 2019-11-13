@@ -2442,6 +2442,147 @@ SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."change_table_trend_data_unsafe"(trend_directory.table_trend, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
+    RETURNS trend_directory.table_trend
+AS $$
+BEGIN
+  UPDATE trend_directory.table_trend SET
+    data_type = $2,
+    entity_aggregation = $3,
+    time_aggregation = $4
+  WHERE id = $1.id;
+  EXECUTE format('ALTER TABLE trend.%I ALTER %I TYPE %s USING CAST(%I AS %s)',
+    trend_directory.trend_store_part_name_for_trend($1),
+    $1.name,
+    $2,
+    $1.name,
+    $2);
+  RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."data_type_order"("data_type" text)
+    RETURNS integer
+AS $$
+BEGIN
+    CASE data_type
+        WHEN 'smallint' THEN
+            RETURN 1;
+        WHEN 'integer' THEN
+            RETURN 2;
+        WHEN 'bigint' THEN
+            RETURN 3;
+        WHEN 'real' THEN
+            RETURN 4;
+        WHEN 'double precision' THEN
+            RETURN 5;
+        WHEN 'numeric' THEN
+            RETURN 6;
+        WHEN 'timestamp without time zone' THEN
+            RETURN 7;
+        WHEN 'smallint[]' THEN
+            RETURN 8;
+        WHEN 'integer[]' THEN
+            RETURN 9;
+        WHEN 'text[]' THEN
+            RETURN 10;
+        WHEN 'text' THEN
+            RETURN 11;
+        WHEN NULL THEN
+            RETURN NULL;
+        ELSE
+            RAISE EXCEPTION 'Unsupported data type: %', data_type;
+    END CASE;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE STRICT;
+
+
+CREATE FUNCTION "trend_directory"."greatest_data_type"("data_type_a" text, "data_type_b" text)
+    RETURNS text
+AS $$
+SELECT
+    CASE WHEN trend_directory.data_type_order($2) > trend_directory.data_type_order($1) THEN
+        $2
+    ELSE
+        $1
+    END;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trend_directory"."change_table_trend_data_safe"(trend_directory.table_trend, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
+    RETURNS trend_directory.table_trend
+AS $$
+SELECT trend_directory.change_table_trend_data_unsafe(
+  $1,
+  trend_directory.greatest_data_type($2, $1.data_type),
+  $3,
+  $4);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_trend_data_unsafe"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text)
+    RETURNS void
+AS $$
+SELECT trend_directory.change_table_trend_data_unsafe($1, t.data_type, t.entity_aggregation, t.time_aggregation)
+  FROM unnest($2) t
+  WHERE t.name = $1.name AND trend_directory.trend_store_part_name_for_trend($1) = $3;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_trend_data_safe"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text)
+    RETURNS void
+AS $$
+SELECT trend_directory.change_table_trend_data_safe($1, t.data_type, t.entity_aggregation, t.time_aggregation)
+  FROM unnest($2) t
+  WHERE t.name = $1.name AND trend_directory.trend_store_part_name_for_trend($1) = $3;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_all_trend_data"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS trend_directory.trend_store
+AS $$
+SELECT trend_directory.change_trend_data_unsafe(
+  trend_directory.get_trends_for_trend_store($1), trends, name)
+  FROM unnest($2);
+SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_trend_data_upward"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS trend_directory.trend_store
+AS $$
+SELECT trend_directory.change_trend_data_safe(
+  trend_directory.get_trends_for_trend_store($1), trends, name)
+  FROM unnest($2);
+SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_trendstore_strong"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS trend_directory.trend_store
+AS $$
+SELECT trend_directory.change_all_trend_data(
+  trend_directory.remove_extra_trends(
+  trend_directory.add_missing_trends(
+  $1, $2
+), $2
+), $2);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_trendstore_weak"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS trend_directory.trend_store
+AS $$
+SELECT trend_directory.change_trend_data_upward(
+  trend_directory.remove_extra_trends(
+  trend_directory.add_missing_trends(
+  $1, $2
+), $2
+), $2);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."get_most_recent_timestamp"("dest_granularity" interval, "ts" timestamp with time zone)
     RETURNS timestamp with time zone
 AS $$
@@ -2588,54 +2729,6 @@ SELECT EXISTS(
     WHERE c.relname = table_name AND a.attname = column_name AND n.nspname = 'trend'
 );
 $$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."data_type_order"("data_type" text)
-    RETURNS integer
-AS $$
-BEGIN
-    CASE data_type
-        WHEN 'smallint' THEN
-            RETURN 1;
-        WHEN 'integer' THEN
-            RETURN 2;
-        WHEN 'bigint' THEN
-            RETURN 3;
-        WHEN 'real' THEN
-            RETURN 4;
-        WHEN 'double precision' THEN
-            RETURN 5;
-        WHEN 'numeric' THEN
-            RETURN 6;
-        WHEN 'timestamp without time zone' THEN
-            RETURN 7;
-        WHEN 'smallint[]' THEN
-            RETURN 8;
-        WHEN 'integer[]' THEN
-            RETURN 9;
-        WHEN 'text[]' THEN
-            RETURN 10;
-        WHEN 'text' THEN
-            RETURN 11;
-        WHEN NULL THEN
-            RETURN NULL;
-        ELSE
-            RAISE EXCEPTION 'Unsupported data type: %', data_type;
-    END CASE;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT;
-
-
-CREATE FUNCTION "trend_directory"."greatest_data_type"("data_type_a" text, "data_type_b" text)
-    RETURNS text
-AS $$
-SELECT
-    CASE WHEN trend_directory.data_type_order($2) > trend_directory.data_type_order($1) THEN
-        $2
-    ELSE
-        $1
-    END;
-$$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE AGGREGATE trend_directory.max_data_type (text) (
