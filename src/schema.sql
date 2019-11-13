@@ -394,7 +394,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,0,4)::system.version_tuple;
+SELECT (5,0,5)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -6031,29 +6031,6 @@ SELECT ($1.name || '_create_notification')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trigger"."get_notification_fn_sql"(trigger.rule)
-    RETURNS text
-AS $$
-SELECT pg_get_functiondef(oid)
-FROM pg_proc
-WHERE proname = trigger.notification_fn_name($1);
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "trigger"."drop_notification_fn_sql"(trigger.rule)
-    RETURNS text
-AS $$
-SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.notification_fn_name($1), trigger.details_type_name($1));
-$$ LANGUAGE sql IMMUTABLE;
-
-
-CREATE FUNCTION "trigger"."drop_notification_fn_timestamp_sql"(trigger.rule)
-    RETURNS text
-AS $$
-SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.notification_fn_name($1));
-$$ LANGUAGE sql IMMUTABLE;
-
-
 CREATE FUNCTION "trigger"."notification_threshold_test_fn_name"(trigger.rule)
     RETURNS name
 AS $$
@@ -7100,6 +7077,22 @@ SELECT public.action($1, trigger.create_notification_fn_sql($1));
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trigger"."get_notification_fn_sql"(trigger.rule)
+    RETURNS text
+AS $$
+SELECT pg_get_functiondef(oid)
+FROM pg_proc
+WHERE proname = trigger.notification_fn_name($1);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trigger"."drop_notification_fn_sql"(trigger.rule)
+    RETURNS text
+AS $$
+SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.notification_fn_name($1));
+$$ LANGUAGE sql IMMUTABLE;
+
+
 CREATE FUNCTION "trigger"."create_fingerprint_fn_sql"(trigger.rule, "fn_sql" text)
     RETURNS text
 AS $$
@@ -7218,7 +7211,6 @@ BEGIN
     EXECUTE trigger.drop_rule_fn_sql($1);
     EXECUTE trigger.drop_kpi_function_sql($1);
     EXECUTE trigger.drop_notification_fn_sql($1);
-    EXECUTE trigger.drop_notification_fn_timestamp_sql($1);
     EXECUTE trigger.drop_runnable_fn_sql($1);
     EXECUTE trigger.drop_fingerprint_fn_sql($1);
     EXECUTE trigger.drop_with_threshold_fn_sql($1);

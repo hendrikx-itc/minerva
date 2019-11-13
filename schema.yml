@@ -608,7 +608,7 @@ objects:
     secdef: false
     arguments: []
     source: |-
-      SELECT (5,0,4)::system.version_tuple;
+      SELECT (5,0,5)::system.version_tuple;
 
 - function:
     name: get_setting
@@ -9937,47 +9937,6 @@ objects:
       SELECT ($1.name || '_create_notification')::name;
 
 - function:
-    name: get_notification_fn_sql
-    schema: trigger
-    return_type: text
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT pg_get_functiondef(oid)
-      FROM pg_proc
-      WHERE proname = trigger.notification_fn_name($1);
-
-- function:
-    name: drop_notification_fn_sql
-    schema: trigger
-    return_type: text
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT format('DROP FUNCTION trigger_rule.%I(trigger_rule.%I)', trigger.notification_fn_name($1), trigger.details_type_name($1));
-
-- function:
-    name: drop_notification_fn_timestamp_sql
-    schema: trigger
-    return_type: text
-    language: sql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trigger.rule
-    source: |-
-      SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.notification_fn_name($1));
-
-- function:
     name: notification_threshold_test_fn_name
     schema: trigger
     return_type: name
@@ -11516,6 +11475,34 @@ objects:
     source: |-
       SELECT public.action($1, trigger.create_notification_fn_sql($1));
 
+- function:
+    name: get_notification_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT pg_get_functiondef(oid)
+      FROM pg_proc
+      WHERE proname = trigger.notification_fn_name($1);
+
+- function:
+    name: drop_notification_fn_sql
+    schema: trigger
+    return_type: text
+    language: sql
+    volatility: immutable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT format('DROP FUNCTION trigger_rule.%I(timestamp with time zone)', trigger.notification_fn_name($1));
+
 #----------------------------
 # Function <rule>_fingerprint
 #----------------------------
@@ -11714,7 +11701,6 @@ objects:
           EXECUTE trigger.drop_rule_fn_sql($1);
           EXECUTE trigger.drop_kpi_function_sql($1);
           EXECUTE trigger.drop_notification_fn_sql($1);
-          EXECUTE trigger.drop_notification_fn_timestamp_sql($1);
           EXECUTE trigger.drop_runnable_fn_sql($1);
           EXECUTE trigger.drop_fingerprint_fn_sql($1);
           EXECUTE trigger.drop_with_threshold_fn_sql($1);
