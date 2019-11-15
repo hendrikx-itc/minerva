@@ -972,7 +972,6 @@ CREATE TYPE "trend_directory"."generated_trend_descr" AS (
   "data_type" text,
   "description" text,
   "expression" text,
-  "stored" boolean,
   "extra_data" jsonb
 );
 
@@ -1101,7 +1100,6 @@ CREATE TABLE "trend_directory"."generated_table_trend"
   "name" name NOT NULL,
   "data_type" text NOT NULL,
   "expression" text NOT NULL,
-  "stored" boolean NOT NULL,
   "extra_data" jsonb NOT NULL DEFAULT '{}',
   "description" text NOT NULL,
   PRIMARY KEY (id)
@@ -1661,15 +1659,29 @@ RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."column_spec"(trend_directory.table_trend)
+    RETURNS text
+AS $$
+SELECT format('%I %s', $1.name, $1.data_type);
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trend_directory"."column_spec"(trend_directory.generated_table_trend)
+    RETURNS text
+AS $$
+SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', $1.name, $1.data_type, $1.expression);
+$$ LANGUAGE sql IMMUTABLE;
+
+
 CREATE FUNCTION "trend_directory"."column_specs"(trend_directory.trend_store_part)
     RETURNS text[]
 AS $$
 SELECT array_agg(c) FROM (
-  SELECT format('%I %s', t.name, t.data_type) AS c
+  SELECT trend_directory.column_spec(t) AS c
   FROM trend_directory.table_trend t
   WHERE t.trend_store_part_id = $1.id
   UNION ALL
-  SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', t.name, t.data_type, t.expression) AS c
+  SELECT trend_directory.column_spec(t) AS c
   FROM trend_directory.generated_table_trend t
   WHERE t.trend_store_part_id = $1.id
 ) combined_columns;
@@ -1966,8 +1978,8 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."define_generated_table_trends"(trend_directory.trend_store_part, trend_directory.generated_trend_descr[])
     RETURNS trend_directory.trend_store_part
 AS $$
-INSERT INTO trend_directory.generated_table_trend(trend_store_part_id, name, data_type, expression, stored, extra_data, description) (
-    SELECT $1.id, name, data_type, expression, stored, extra_data, description
+INSERT INTO trend_directory.generated_table_trend(trend_store_part_id, name, data_type, expression, extra_data, description) (
+    SELECT $1.id, name, data_type, expression, extra_data, description
     FROM unnest($2)
 );
 

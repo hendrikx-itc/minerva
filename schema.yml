@@ -1581,9 +1581,6 @@ objects:
     - name: expression
       data_type: text
       nullable: false
-    - name: stored
-      data_type: boolean
-      nullable: false
     - name: extra_data
       data_type: jsonb
       nullable: false
@@ -1905,9 +1902,6 @@ objects:
       nullable: false
     - name: expression
       data_type: text
-      nullable: false
-    - name: stored
-      data_type: boolean
       nullable: false
     - name: extra_data
       data_type: jsonb
@@ -2947,6 +2941,28 @@ objects:
       RETURNING *;
 
 - function:
+    name: column_spec
+    schema: trend_directory
+    return_type: text
+    language: sql
+    volatility: immutable
+    arguments:
+    - data_type: trend_directory.table_trend
+    source: |-
+      SELECT format('%I %s', $1.name, $1.data_type);
+
+- function:
+    name: column_spec
+    schema: trend_directory
+    return_type: text
+    language: sql
+    volatility: immutable
+    arguments:
+    - data_type: trend_directory.generated_table_trend
+    source: |-
+        SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', $1.name, $1.data_type, $1.expression);
+
+- function:
     name: column_specs
     schema: trend_directory
     return_type: text[]
@@ -2956,11 +2972,11 @@ objects:
     - data_type: trend_directory.trend_store_part
     source: |-
       SELECT array_agg(c) FROM (
-        SELECT format('%I %s', t.name, t.data_type) AS c
+        SELECT trend_directory.column_spec(t) AS c
         FROM trend_directory.table_trend t
         WHERE t.trend_store_part_id = $1.id
         UNION ALL
-        SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', t.name, t.data_type, t.expression) AS c
+        SELECT trend_directory.column_spec(t) AS c
         FROM trend_directory.generated_table_trend t
         WHERE t.trend_store_part_id = $1.id
       ) combined_columns;
@@ -3422,8 +3438,8 @@ objects:
     - data_type: trend_directory.trend_store_part
     - data_type: trend_directory.generated_trend_descr[]
     source: |-
-      INSERT INTO trend_directory.generated_table_trend(trend_store_part_id, name, data_type, expression, stored, extra_data, description) (
-          SELECT $1.id, name, data_type, expression, stored, extra_data, description
+      INSERT INTO trend_directory.generated_table_trend(trend_store_part_id, name, data_type, expression, extra_data, description) (
+          SELECT $1.id, name, data_type, expression, extra_data, description
           FROM unnest($2)
       );
 
