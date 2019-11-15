@@ -1561,6 +1561,32 @@ objects:
     - name: entity_aggregation
       data_type: text
       nullable: false
+    - name: extra_data
+      data_type: jsonb
+      nullable: false
+
+- composite_type:
+    name: generated_trend_descr
+    schema: trend_directory
+    columns:
+    - name: name
+      data_type: name
+      nullable: false
+    - name: data_type
+      data_type: text
+      nullable: false
+    - name: description
+      data_type: text
+      nullable: false
+    - name: expression
+      data_type: text
+      nullable: false
+    - name: stored
+      data_type: boolean
+      nullable: false
+    - name: extra_data
+      data_type: jsonb
+      nullable: false
 
 - composite_type:
     name: trend_view_part_descr
@@ -1582,6 +1608,9 @@ objects:
       nullable: false
     - name: trends
       data_type: trend_directory.trend_descr[]
+      nullable: false
+    - name: generated_trends
+      data_type: trend_directory.generated_trend_descr[]
       nullable: false
 
 - table:
@@ -1838,6 +1867,57 @@ objects:
       nullable: false
     primary_key:
       name: trend_pkey
+      columns:
+      - id
+    foreign_keys:
+    - name: table_trend_trend_store_part_id_fkey
+      columns:
+      - trend_store_part_id
+      references:
+        table:
+          name: trend_store_part
+          schema: trend_directory
+        columns:
+        - id
+      on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
+
+- table:
+    name: generated_table_trend
+    schema: trend_directory
+    columns:
+    - name: id
+      data_type: integer
+      generated_identity: by_default
+      nullable: false
+    - name: trend_store_part_id
+      data_type: integer
+      nullable: false
+    - name: name
+      data_type: name
+      nullable: false
+    - name: data_type
+      data_type: text
+      nullable: false
+    - name: expression
+      data_type: text
+      nullable: false
+    - name: stored
+      data_type: boolean
+      nullable: false
+    - name: extra_data
+      data_type: jsonb
+      nullable: false
+      default: "'{}'"
+    - name: description
+      data_type: text
+      nullable: false
+    primary_key:
+      name: generated_table_trend_pkey
       columns:
       - id
     foreign_keys:
@@ -2867,6 +2947,25 @@ objects:
       RETURNING *;
 
 - function:
+    name: column_specs
+    schema: trend_directory
+    return_type: text[]
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    source: |-
+      SELECT array_agg(c) FROM (
+        SELECT format('%I %s', t.name, t.data_type) AS c
+        FROM trend_directory.table_trend t
+        WHERE t.trend_store_part_id = $1.id
+        UNION ALL
+        SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', t.name, t.data_type, t.expression) AS c
+        FROM trend_directory.generated_table_trend t
+        WHERE t.trend_store_part_id = $1.id
+      ) combined_columns;
+
+- function:
     name: create_base_table_sql
     schema: trend_directory
     return_type: text[]
@@ -2883,16 +2982,12 @@ objects:
               'entity_id integer NOT NULL, '
               '"timestamp" timestamp with time zone NOT NULL, '
               'created timestamp with time zone NOT NULL, '
-              'job_id bigint NOT NULL'
+              'job_id bigint NOT NULL, '
               '%s'
               ') PARTITION BY RANGE ("timestamp");',
               trend_directory.base_table_schema(),
               trend_directory.base_table_name($1),
-              (
-                  SELECT string_agg(format(', %I %s', t.name, t.data_type), ' ')
-                  FROM trend_directory.table_trend t
-                  WHERE t.trend_store_part_id = $1.id
-              )
+              array_to_string(trend_directory.column_specs($1), ',')
           ),
           format(
               'ALTER TABLE %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
@@ -3211,7 +3306,7 @@ objects:
     - name: view_name
       data_type: name
     source: |-
-      SELECT (a.attname, format_type(a.atttypid, a.atttypmod), 'deduced from view', 'sum', 'sum')::trend_directory.trend_descr
+      SELECT (a.attname, format_type(a.atttypid, a.atttypmod), 'deduced from view', 'sum', 'sum', '{}')::trend_directory.trend_descr
       FROM pg_class c
       JOIN pg_attribute a ON a.attrelid = c.oid
       WHERE c.relname = $1 AND a.attnum >= 0 AND NOT a.attisdropped;
@@ -3233,7 +3328,8 @@ objects:
           format_type(a.atttypid, a.atttypmod)::text,
           table_trend.description,
           table_trend.time_aggregation,
-          table_trend.entity_aggregation
+          table_trend.entity_aggregation,
+          table_trend.extra_data
       FROM trend_directory.table_trend
       JOIN pg_catalog.pg_class c ON c.relname = $1::text
       JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
@@ -3307,8 +3403,28 @@ objects:
     - data_type: trend_directory.trend_store_part
     - data_type: trend_directory.trend_descr[]
     source: |-
-      INSERT INTO trend_directory.table_trend(name, data_type, trend_store_part_id, description, time_aggregation, entity_aggregation) (
-          SELECT name, data_type, $1.id, description, time_aggregation, entity_aggregation FROM unnest($2)
+      INSERT INTO trend_directory.table_trend(name, data_type, trend_store_part_id, description, time_aggregation, entity_aggregation, extra_data) (
+          SELECT name, data_type, $1.id, description, time_aggregation, entity_aggregation, extra_data
+          FROM unnest($2)
+      );
+
+      SELECT $1;
+
+- function:
+    name: define_generated_table_trends
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    - data_type: trend_directory.generated_trend_descr[]
+    source: |-
+      INSERT INTO trend_directory.generated_table_trend(trend_store_part_id, name, data_type, expression, stored, extra_data, description) (
+          SELECT $1.id, name, data_type, expression, stored, extra_data, description
+          FROM unnest($2)
       );
 
       SELECT $1;
@@ -3506,10 +3622,16 @@ objects:
       data_type: name
     - name: trends
       data_type: trend_directory.trend_descr[]
+    - name: generated_trends
+      data_type: trend_directory.generated_trend_descr[]
     source: |-
-      SELECT trend_directory.define_table_trends(
-          trend_directory.define_trend_store_part($1, $2),
-          $3
+      SELECT 
+      trend_directory.define_generated_table_trends(
+        trend_directory.define_table_trends(
+            trend_directory.define_trend_store_part($1, $2),
+            $3
+        ),
+        $4
       );
 
 - function:
@@ -3608,7 +3730,7 @@ objects:
     - data_type: trend_directory.trend_store
     - data_type: trend_directory.trend_store_part_descr[]
     source: |-
-      SELECT trend_directory.define_trend_store_part($1.id, name, trends)
+      SELECT trend_directory.define_trend_store_part($1.id, name, trends, generated_trends)
       FROM unnest($2);
 
       SELECT $1;
