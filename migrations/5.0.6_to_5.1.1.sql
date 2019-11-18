@@ -3,7 +3,7 @@
 CREATE OR REPLACE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,1,1)::system.version_tuple;
+SELECT (5,1,2)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -51,9 +51,9 @@ CREATE TYPE "trend_directory"."generated_trend_descr" AS (
 
 
 
-ALTER TYPE "trend_directory"."trend_descr" ADD ATTRIBUTE "extra_data" jsonb NOT NULL;
+ALTER TYPE "trend_directory"."trend_descr" ADD ATTRIBUTE "extra_data" jsonb;
 
-ALTER TYPE "trend_directory"."trend_store_part_descr" ADD ATTRIBUTE "generated_trends" trend_directory.generated_trend_descr[] NOT NULL;
+ALTER TYPE "trend_directory"."trend_store_part_descr" ADD ATTRIBUTE "generated_trends" trend_directory.generated_trend_descr[];
 
 CREATE FUNCTION "trend_directory"."column_spec"(trend_directory.table_trend)
     RETURNS text
