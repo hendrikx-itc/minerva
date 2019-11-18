@@ -1422,19 +1422,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization_tag_link"
 
 
 
-CREATE TABLE "trend_directory"."group_priority"
-(
-  "tag_id" integer NOT NULL,
-  "resources" integer NOT NULL DEFAULT 500,
-  PRIMARY KEY (tag_id)
-);
-
-GRANT SELECT ON TABLE "trend_directory"."group_priority" TO minerva;
-
-GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."group_priority" TO minerva_writer;
-
-
-
 CREATE TABLE "trend_directory"."materialization_trend_store_link"
 (
   "materialization_id" integer NOT NULL,
@@ -1872,12 +1859,21 @@ $$ LANGUAGE sql IMMUTABLE STRICT;
 COMMENT ON FUNCTION "trend_directory"."get_default_partition_size"("granularity" interval) IS 'Return the default partition size in seconds for a particular granularity';
 
 
-CREATE FUNCTION "trend_directory"."define_table_trend"("trend_store_part_id" integer, "name" name, "data_type" text, "description" text, "time_aggregation" text, "entity_aggregation" text)
+CREATE FUNCTION "trend_directory"."define_table_trend"("trend_store_part_id" integer, trend_directory.trend_descr)
     RETURNS trend_directory.table_trend
 AS $$
 INSERT INTO trend_directory.table_trend (trend_store_part_id, name, data_type, description, time_aggregation, entity_aggregation)
-VALUES ($1, $2, $3, $4, $5, $6)
+VALUES ($1, $2.name, $2.data_type, $2.description, $2.time_aggregation, $2.entity_aggregation)
 RETURNING table_trend;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."define_generated_table_trend"("trend_store_part_id" integer, trend_directory.generated_trend_descr)
+    RETURNS trend_directory.generated_table_trend
+AS $$
+INSERT INTO trend_directory.generated_table_trend (trend_store_part_id, name, data_type, expression, extra_data, description)
+VALUES ($1, $2.name, $2.data_type, $2.expression, $2.extra_data, $2.description)
+RETURNING generated_table_trend;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2321,52 +2317,86 @@ SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.trend_store_part, trend_directory.table_trend)
-    RETURNS trend_directory.table_trend
+CREATE FUNCTION "trend_directory"."add_column_sql_part"(trend_directory.table_trend)
+    RETURNS text
 AS $$
-SELECT public.action($2,
-    ARRAY[
-        format(
-            'ALTER TABLE %I.%I ADD COLUMN %I %s;',
-            trend_directory.base_table_schema(),
-            trend_directory.base_table_name($1),
-            $2.name,
-            $2.data_type
-        ),
-        format(
-            'ALTER TABLE %I.%I ADD COLUMN %I %s;',
-            trend_directory.staging_table_schema(),
-            trend_directory.staging_table_name($1),
-            $2.name,
-            $2.data_type
-        )
-    ]
+SELECT format('ADD COLUMN %I %s', $1.name, $1.data_type);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."add_trends_to_trend_store_part"(trend_directory.trend_store_part, trend_directory.table_trend[])
+    RETURNS trend_directory.trend_store_part
+AS $$
+SELECT public.action(
+  $1,
+  ARRAY[
+    format(
+      'ALTER TABLE %I.%I %s;',
+      trend_directory.base_table_schema(),
+      trend_directory.base_table_name($1),
+      (SELECT string_agg(trend_directory.add_column_sql_part(t), ',') FROM unnest($2) AS t)
+    ),
+    format(
+      'ALTER TABLE %I.%I %s;',
+      trend_directory.staging_table_schema(),
+      trend_directory.staging_table_name($1),
+      (SELECT string_agg(trend_directory.add_column_sql_part(t), ',') FROM unnest($2) AS t)
+    )
+  ]
 );
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.trend_store_part, name, "data_type" text, "description" text, "time_aggregation" text, "entity_aggregation" text)
-    RETURNS trend_directory.table_trend
-AS $$
-SELECT trend_directory.add_trend_to_trend_store(
-    $1,
-    trend_directory.define_table_trend($1.id, $2, $3, $4, $5, $6)
-)
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."create_table_trend"(trend_directory.trend_store_part, trend_directory.trend_descr)
-    RETURNS trend_directory.table_trend
-AS $$
-SELECT trend_directory.add_trend_to_trend_store($1, $2.name, $2.data_type, $2.description, $2.time_aggregation, $2.entity_aggregation);
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "trend_directory"."create_table_trends"(trend_directory.trend_store_part, trend_directory.trend_descr[])
-    RETURNS SETOF trend_directory.table_trend
+    RETURNS trend_directory.trend_store_part
 AS $$
-SELECT trend_directory.create_table_trend($1, descr)
-FROM unnest($2) descr;
+SELECT trend_directory.add_trends_to_trend_store_part(
+  $1,
+  array_agg(trend_directory.define_table_trend($1.id, t))
+) FROM unnest($2) AS t
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."add_generated_column_sql_part"(trend_directory.generated_table_trend)
+    RETURNS text
+AS $$
+SELECT format(
+  'ADD COLUMN %I %s GENERATED ALWAYS AS (%s) STORED',
+  $1.name, $1.data_type, $1.expression
+);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."add_generated_trends_to_trend_store_part"(trend_directory.trend_store_part, trend_directory.generated_table_trend[])
+    RETURNS trend_directory.trend_store_part
+AS $$
+SELECT public.action(
+  $1,
+  ARRAY[
+    format(
+      'ALTER TABLE %I.%I %s;',
+      trend_directory.base_table_schema(),
+      trend_directory.base_table_name($1),
+      (SELECT string_agg(trend_directory.add_generated_column_sql_part(t), ',') FROM unnest($2) AS t)
+    ),
+    format(
+      'ALTER TABLE %I.%I %s;',
+      trend_directory.staging_table_schema(),
+      trend_directory.staging_table_name($1),
+      (SELECT string_agg(trend_directory.add_generated_column_sql_part(t), ',') FROM unnest($2) AS t)
+    )
+  ]
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."create_generated_table_trends"(trend_directory.trend_store_part, trend_directory.generated_trend_descr[])
+    RETURNS trend_directory.trend_store_part
+AS $$
+SELECT trend_directory.add_generated_trends_to_trend_store_part(
+  $1,
+  array_agg(trend_directory.define_generated_table_trend($1.id, t))
+) FROM unnest($2) AS t
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2380,21 +2410,55 @@ WHERE table_trend.id IS NULL;
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."assure_table_trends_exist"(trend_directory.trend_store_part, trend_directory.trend_descr[])
+CREATE FUNCTION "trend_directory"."missing_generated_table_trends"(trend_directory.trend_store_part, "required" trend_directory.generated_trend_descr[])
+    RETURNS SETOF trend_directory.generated_trend_descr
+AS $$
+SELECT required
+FROM unnest($2) required
+LEFT JOIN trend_directory.generated_table_trend
+ON generated_table_trend.name = required.name AND generated_table_trend.trend_store_part_id = $1.id
+WHERE generated_table_trend.id IS NULL;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."assure_table_trends_exist"(trend_directory.trend_store_part, trend_directory.trend_descr[], trend_directory.generated_trend_descr[])
     RETURNS trend_directory.trend_store_part
 AS $$
-SELECT trend_directory.create_table_trend($1, t)
-FROM trend_directory.missing_table_trends($1, $2) t;
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  missing_trends trend_directory.trend_descr[];
+  missing_generated_trends trend_directory.generated_trend_descr[];
+BEGIN
+  -- Normal trends
+  SELECT array_agg(t) INTO missing_trends
+  FROM trend_directory.missing_table_trends($1, $2) AS t;
+
+  IF array_length(missing_trends, 1) > 0 THEN
+    PERFORM trend_directory.create_table_trends($1, missing_trends);
+  END IF;
+
+  -- Generated trends
+  SELECT array_agg(t) INTO missing_generated_trends
+  FROM trend_directory.missing_generated_table_trends($1, $3) AS t;
+
+  IF array_length(missing_generated_trends, 1) > 0 THEN
+    PERFORM trend_directory.create_generated_table_trends($1, missing_generated_trends);
+  END IF;
+
+  RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."add_missing_trends"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+CREATE FUNCTION "trend_directory"."add_trends"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
     RETURNS trend_directory.trend_store
 AS $$
 SELECT trend_directory.assure_table_trends_exist(
-  trend_directory.get_or_create_trend_store_part($1.id, name), trends)
+  trend_directory.get_or_create_trend_store_part($1.id, name),
+  trends,
+  generated_trends
+)
 FROM unnest($2);
+
 SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
@@ -2596,7 +2660,7 @@ CREATE FUNCTION "trend_directory"."change_trendstore_strong"(trend_directory.tre
 AS $$
 SELECT trend_directory.change_all_trend_data(
   trend_directory.remove_extra_trends(
-  trend_directory.add_missing_trends(
+  trend_directory.add_trends(
   $1, $2
 ), $2
 ), $2);
@@ -2608,7 +2672,7 @@ CREATE FUNCTION "trend_directory"."change_trendstore_weak"(trend_directory.trend
 AS $$
 SELECT trend_directory.change_trend_data_upward(
   trend_directory.remove_extra_trends(
-  trend_directory.add_missing_trends(
+  trend_directory.add_trends(
   $1, $2
 ), $2
 ), $2);
@@ -7758,11 +7822,6 @@ ALTER TABLE "trend_directory"."materialization_tag_link"
   ADD CONSTRAINT "materialization_tag_link_materialization_id_fkey"
   FOREIGN KEY (materialization_id)
   REFERENCES "trend_directory"."materialization" (id) ON DELETE CASCADE;
-
-ALTER TABLE "trend_directory"."group_priority"
-  ADD CONSTRAINT "group_priority_tag_id_fkey"
-  FOREIGN KEY (tag_id)
-  REFERENCES "directory"."tag" (id);
 
 ALTER TABLE "trend_directory"."materialization_trend_store_link"
   ADD CONSTRAINT "materialization_trend_store_link_materialization_id_fkey"

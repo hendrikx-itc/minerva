@@ -2534,37 +2534,6 @@ objects:
       privilege: INSERT,UPDATE,DELETE
 
 - table:
-    name: group_priority
-    schema: trend_directory
-    columns:
-    - name: tag_id
-      data_type: integer
-      nullable: false
-    - name: resources
-      data_type: integer
-      nullable: false
-      default: '500'
-    primary_key:
-      name: group_priority_pkey
-      columns:
-      - tag_id
-    foreign_keys:
-    - name: group_priority_tag_id_fkey
-      columns:
-      - tag_id
-      references:
-        table:
-          name: tag
-          schema: directory
-        columns:
-        - id
-    privileges:
-    - role: minerva
-      privilege: SELECT
-    - role: minerva_writer
-      privilege: INSERT,UPDATE,DELETE
-
-- table:
     name: materialization_trend_store_link
     schema: trend_directory
     description: >
@@ -3244,25 +3213,29 @@ objects:
     return_type: trend_directory.table_trend
     language: sql
     volatility: volatile
-    strict: false
-    secdef: false
     arguments:
     - name: trend_store_part_id
       data_type: integer
-    - name: name
-      data_type: name
-    - name: data_type
-      data_type: text
-    - name: description
-      data_type: text
-    - name: time_aggregation
-      data_type: text
-    - name: entity_aggregation
-      data_type: text
+    - data_type: trend_directory.trend_descr
     source: |-
       INSERT INTO trend_directory.table_trend (trend_store_part_id, name, data_type, description, time_aggregation, entity_aggregation)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES ($1, $2.name, $2.data_type, $2.description, $2.time_aggregation, $2.entity_aggregation)
       RETURNING table_trend;
+
+- function:
+    name: define_generated_table_trend
+    schema: trend_directory
+    return_type: trend_directory.generated_table_trend
+    language: sql
+    volatility: volatile
+    arguments:
+    - name: trend_store_part_id
+      data_type: integer
+    - data_type: trend_directory.generated_trend_descr
+    source: |-
+      INSERT INTO trend_directory.generated_table_trend (trend_store_part_id, name, data_type, expression, extra_data, description)
+      VALUES ($1, $2.name, $2.data_type, $2.expression, $2.extra_data, $2.description)
+      RETURNING generated_table_trend;
 
 - function:
     name: define_trend_view
@@ -4004,80 +3977,50 @@ objects:
       SELECT $1;
 
 - function:
-    name: add_trend_to_trend_store
+    name: add_column_sql_part
     schema: trend_directory
-    return_type: trend_directory.table_trend
+    return_type: text
     language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
+    volatility: stable
     arguments:
-    - data_type: trend_directory.trend_store_part
     - data_type: trend_directory.table_trend
     source: |-
-      SELECT public.action($2,
-          ARRAY[
-              format(
-                  'ALTER TABLE %I.%I ADD COLUMN %I %s;',
-                  trend_directory.base_table_schema(),
-                  trend_directory.base_table_name($1),
-                  $2.name,
-                  $2.data_type
-              ),
-              format(
-                  'ALTER TABLE %I.%I ADD COLUMN %I %s;',
-                  trend_directory.staging_table_schema(),
-                  trend_directory.staging_table_name($1),
-                  $2.name,
-                  $2.data_type
-              )
-          ]
+      SELECT format('ADD COLUMN %I %s', $1.name, $1.data_type);
+
+- function:
+    name: add_trends_to_trend_store_part
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    - data_type: trend_directory.table_trend[]
+    source: |-
+      SELECT public.action(
+        $1,
+        ARRAY[
+          format(
+            'ALTER TABLE %I.%I %s;',
+            trend_directory.base_table_schema(),
+            trend_directory.base_table_name($1),
+            (SELECT string_agg(trend_directory.add_column_sql_part(t), ',') FROM unnest($2) AS t)
+          ),
+          format(
+            'ALTER TABLE %I.%I %s;',
+            trend_directory.staging_table_schema(),
+            trend_directory.staging_table_name($1),
+            (SELECT string_agg(trend_directory.add_column_sql_part(t), ',') FROM unnest($2) AS t)
+          )
+        ]
       );
-
-- function:
-    name: add_trend_to_trend_store
-    schema: trend_directory
-    return_type: trend_directory.table_trend
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.trend_store_part
-    - data_type: name
-    - name: data_type
-      data_type: text
-    - name: description
-      data_type: text
-    - name: time_aggregation
-      data_type: text
-    - name: entity_aggregation
-      data_type: text
-    source: |-
-      SELECT trend_directory.add_trend_to_trend_store(
-          $1,
-          trend_directory.define_table_trend($1.id, $2, $3, $4, $5, $6)
-      )
-
-- function:
-    name: create_table_trend
-    schema: trend_directory
-    return_type: trend_directory.table_trend
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: trend_directory.trend_store_part
-    - data_type: trend_directory.trend_descr
-    source: |-
-      SELECT trend_directory.add_trend_to_trend_store($1, $2.name, $2.data_type, $2.description, $2.time_aggregation, $2.entity_aggregation);
 
 - function:
     name: create_table_trends
     schema: trend_directory
-    return_type: trend_directory.table_trend
-    returns_set: true
+    return_type: trend_directory.trend_store_part
     language: sql
     volatility: volatile
     strict: false
@@ -4086,8 +4029,69 @@ objects:
     - data_type: trend_directory.trend_store_part
     - data_type: trend_directory.trend_descr[]
     source: |-
-      SELECT trend_directory.create_table_trend($1, descr)
-      FROM unnest($2) descr;
+      SELECT trend_directory.add_trends_to_trend_store_part(
+        $1,
+        array_agg(trend_directory.define_table_trend($1.id, t))
+      ) FROM unnest($2) AS t
+
+- function:
+    name: add_generated_column_sql_part
+    schema: trend_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trend_directory.generated_table_trend
+    source: |-
+      SELECT format(
+        'ADD COLUMN %I %s GENERATED ALWAYS AS (%s) STORED',
+        $1.name, $1.data_type, $1.expression
+      );
+
+- function:
+    name: add_generated_trends_to_trend_store_part
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    - data_type: trend_directory.generated_table_trend[]
+    source: |-
+      SELECT public.action(
+        $1,
+        ARRAY[
+          format(
+            'ALTER TABLE %I.%I %s;',
+            trend_directory.base_table_schema(),
+            trend_directory.base_table_name($1),
+            (SELECT string_agg(trend_directory.add_generated_column_sql_part(t), ',') FROM unnest($2) AS t)
+          ),
+          format(
+            'ALTER TABLE %I.%I %s;',
+            trend_directory.staging_table_schema(),
+            trend_directory.staging_table_name($1),
+            (SELECT string_agg(trend_directory.add_generated_column_sql_part(t), ',') FROM unnest($2) AS t)
+          )
+        ]
+      );
+
+- function:
+    name: create_generated_table_trends
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    - data_type: trend_directory.generated_trend_descr[]
+    source: |-
+      SELECT trend_directory.add_generated_trends_to_trend_store_part(
+        $1,
+        array_agg(trend_directory.define_generated_table_trend($1.id, t))
+      ) FROM unnest($2) AS t
 
 - function:
     name: missing_table_trends
@@ -4109,23 +4113,59 @@ objects:
       WHERE table_trend.id IS NULL;
 
 - function:
+    name: missing_generated_table_trends
+    schema: trend_directory
+    return_type: trend_directory.generated_trend_descr
+    returns_set: true
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    - name: required
+      data_type: trend_directory.generated_trend_descr[]
+    source: |-
+      SELECT required
+      FROM unnest($2) required
+      LEFT JOIN trend_directory.generated_table_trend
+      ON generated_table_trend.name = required.name AND generated_table_trend.trend_store_part_id = $1.id
+      WHERE generated_table_trend.id IS NULL;
+
+- function:
     name: assure_table_trends_exist
     schema: trend_directory
     return_type: trend_directory.trend_store_part
-    language: sql
+    language: plpgsql
     volatility: volatile
-    strict: false
-    secdef: false
     arguments:
     - data_type: trend_directory.trend_store_part
     - data_type: trend_directory.trend_descr[]
+    - data_type: trend_directory.generated_trend_descr[]
     source: |-
-      SELECT trend_directory.create_table_trend($1, t)
-      FROM trend_directory.missing_table_trends($1, $2) t;
-      SELECT $1;
+      DECLARE
+        missing_trends trend_directory.trend_descr[];
+        missing_generated_trends trend_directory.generated_trend_descr[];
+      BEGIN
+        -- Normal trends
+        SELECT array_agg(t) INTO missing_trends
+        FROM trend_directory.missing_table_trends($1, $2) AS t;
+
+        IF array_length(missing_trends, 1) > 0 THEN
+          PERFORM trend_directory.create_table_trends($1, missing_trends);
+        END IF;
+
+        -- Generated trends
+        SELECT array_agg(t) INTO missing_generated_trends
+        FROM trend_directory.missing_generated_table_trends($1, $3) AS t;
+
+        IF array_length(missing_generated_trends, 1) > 0 THEN
+          PERFORM trend_directory.create_generated_table_trends($1, missing_generated_trends);
+        END IF;
+
+        RETURN $1;
+      END;
 
 - function:
-    name: add_missing_trends
+    name: add_trends
     schema: trend_directory
     return_type: trend_directory.trend_store
     language: sql
@@ -4138,8 +4178,12 @@ objects:
       data_type: trend_directory.trend_store_part_descr[]
     source: |-
       SELECT trend_directory.assure_table_trends_exist(
-        trend_directory.get_or_create_trend_store_part($1.id, name), trends)
+        trend_directory.get_or_create_trend_store_part($1.id, name),
+        trends,
+        generated_trends
+      )
       FROM unnest($2);
+
       SELECT $1;
 
 - function:
@@ -4482,7 +4526,7 @@ objects:
     source: |-
       SELECT trend_directory.change_all_trend_data(
         trend_directory.remove_extra_trends(
-        trend_directory.add_missing_trends(
+        trend_directory.add_trends(
         $1, $2
       ), $2
       ), $2);
@@ -4502,7 +4546,7 @@ objects:
     source: |-
       SELECT trend_directory.change_trend_data_upward(
         trend_directory.remove_extra_trends(
-        trend_directory.add_missing_trends(
+        trend_directory.add_trends(
         $1, $2
       ), $2
       ), $2);
