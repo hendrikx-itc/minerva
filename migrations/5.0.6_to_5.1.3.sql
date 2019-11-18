@@ -3,7 +3,7 @@
 CREATE OR REPLACE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,1,2)::system.version_tuple;
+SELECT (5,1,3)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -16,6 +16,8 @@ DROP FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.trend
 DROP FUNCTION "trend_directory"."add_trend_to_trend_store"(trend_directory.trend_store_part, name, text, text, text, text);
 
 DROP FUNCTION "trend_directory"."create_table_trend"(trend_directory.trend_store_part, trend_directory.trend_descr);
+
+DROP FUNCTION "trend_directory"."create_table_trends"(trend_directory.trend_store_part, trend_directory.trend_descr[]);
 
 DROP FUNCTION "trend_directory"."assure_table_trends_exist"(trend_directory.trend_store_part, trend_directory.trend_descr[]);
 
@@ -162,6 +164,16 @@ SELECT public.action(
     )
   ]
 );
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."create_table_trends"(trend_directory.trend_store_part, trend_directory.trend_descr[])
+    RETURNS trend_directory.trend_store_part
+AS $$
+SELECT trend_directory.add_trends_to_trend_store_part(
+  $1,
+  array_agg(trend_directory.define_table_trend($1.id, t))
+) FROM unnest($2) AS t
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -557,14 +569,4 @@ SELECT trend_directory.define_trend_store_part($1.id, name, trends, generated_tr
 FROM unnest($2);
 
 SELECT $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE OR REPLACE FUNCTION "trend_directory"."create_table_trends"(trend_directory.trend_store_part, trend_directory.trend_descr[])
-    RETURNS trend_directory.trend_store_part
-AS $$
-SELECT trend_directory.add_trends_to_trend_store_part(
-  $1,
-  array_agg(trend_directory.define_table_trend($1.id, t))
-) FROM unnest($2) AS t
 $$ LANGUAGE sql VOLATILE;
