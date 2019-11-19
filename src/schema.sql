@@ -394,7 +394,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,1,3)::system.version_tuple;
+SELECT (5,1,4)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -2377,12 +2377,6 @@ SELECT public.action(
       'ALTER TABLE %I.%I %s;',
       trend_directory.base_table_schema(),
       trend_directory.base_table_name($1),
-      (SELECT string_agg(trend_directory.add_generated_column_sql_part(t), ',') FROM unnest($2) AS t)
-    ),
-    format(
-      'ALTER TABLE %I.%I %s;',
-      trend_directory.staging_table_schema(),
-      trend_directory.staging_table_name($1),
       (SELECT string_agg(trend_directory.add_generated_column_sql_part(t), ',') FROM unnest($2) AS t)
     )
   ]
