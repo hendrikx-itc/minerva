@@ -450,6 +450,26 @@ objects:
       END;
 
 - function:
+    name: action_count
+    schema: public
+    return_type: integer
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - name: sql
+      data_type: text
+    source: |-
+      DECLARE
+          row_count integer;
+      BEGIN
+          EXECUTE sql;
+
+          GET DIAGNOSTICS row_count = ROW_COUNT;
+
+          RETURN row_count;
+      END;
+
+- function:
     name: action
     schema: public
     return_type: anyelement
@@ -4125,6 +4145,22 @@ objects:
       WHERE generated_table_trend.id IS NULL;
 
 - function:
+    name: missing_generated_table_trends
+    schema: trend_directory
+    return_type: trend_directory.generated_trend_descr
+    returns_set: true
+    language: sql
+    volatility: stable
+    arguments:
+    - name: trend_store_part
+      data_type: name
+    - name: required
+      data_type: trend_directory.generated_trend_descr[]
+    source: |-
+      SELECT trend_directory.missing_generated_table_trends(trend_store_part, $2)
+      FROM trend_directory.trend_store_part WHERE name = $1
+
+- function:
     name: assure_table_trends_exist
     schema: trend_directory
     return_type: trend_directory.trend_store_part
@@ -5653,6 +5689,32 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- table:
+    name: sampled_view_materialization
+    schema: attribute_directory
+    columns:
+    - name: id
+      data_type: integer
+      generated_identity: by_default
+      nullable: false
+    - name: attribute_store_id
+      data_type: integer
+      nullable: false
+    - name: src_view
+      data_type: text
+      nullable: false
+    foreign_keys:
+    - name: sampled_view_materialization_attribute_store_id_fkey
+      columns:
+      - attribute_store_id
+      references:
+        table:
+          name: attribute_store
+          schema: attribute_directory
+        columns:
+        - id
+      on_delete: cascade
 
 - composite_type:
     name: attribute_descr
@@ -7492,7 +7554,7 @@ objects:
 - function:
     name: transfer_staged
     schema: attribute_directory
-    return_type: attribute_directory.attribute_store
+    return_type: integer
     language: plpgsql
     volatility: volatile
     strict: false
@@ -7505,6 +7567,7 @@ objects:
           columns_part text;
           set_columns_part text;
           default_columns text[];
+          row_count integer;
       BEGIN
           table_name = attribute_directory.to_table_name($1);
 
@@ -7522,6 +7585,8 @@ objects:
               table_name, columns_part, columns_part, table_name || '_new'
           );
 
+          GET DIAGNOSTICS row_count = ROW_COUNT;
+
           SELECT array_to_string(array_agg(format('%I = m.%I', name, name)), ', ') INTO set_columns_part
           FROM attribute_directory.attribute
           WHERE attribute_store_id = $1.id;
@@ -7536,7 +7601,7 @@ objects:
 
           EXECUTE format('TRUNCATE attribute_staging.%I', table_name);
 
-          RETURN $1;
+          RETURN row_count;
       END;
 
 - function:
@@ -8840,6 +8905,53 @@ objects:
     privileges:
     - role: minerva
       privilege: SELECT
+
+- function:
+    name: view_to_attribute_staging_sql
+    schema: attribute_directory
+    return_type: text
+    language: sql
+    arguments:
+    - name: view
+      data_type: text
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT format(
+          'INSERT INTO attribute_staging.%1$I(%2$s) SELECT %2$s FROM %3$s',
+          attribute_directory.to_table_name($2),
+          array_to_string(ARRAY['entity_id', 'timestamp']::text[] || array_agg(quote_ident(attribute.name)), ', '),
+          $1::regclass::text
+      )
+      FROM attribute_directory.attribute
+      WHERE attribute_store_id = $2.id;
+
+- function:
+    name: stage_sample
+    schema: attribute_directory
+    return_type: integer
+    language: sql
+    arguments:
+    - data_type: attribute_directory.sampled_view_materialization
+    source: |-
+      SELECT public.action_count(
+          attribute_directory.view_to_attribute_staging_sql($1.src_view, attribute_store)
+      )
+      FROM attribute_directory.attribute_store
+      WHERE id = $1.attribute_store_id
+
+- function:
+    name: materialize
+    schema: attribute_directory
+    return_type: integer
+    language: sql
+    arguments:
+    - data_type: attribute_directory.sampled_view_materialization
+    source: |-
+      SELECT attribute_directory.stage_sample($1);
+
+      SELECT attribute_directory.transfer_staged(attribute_store)
+      FROM attribute_directory.attribute_store
+      WHERE id = $1.attribute_store_id;
 
 ##########################
 ##########################
