@@ -2,7 +2,11 @@ BEGIN;
 
 SELECT plan(6);
 
-SELECT trend_directory.define_trend_store(
+SELECT directory.create_data_source('test2');
+
+SELECT directory.create_entity_type('some_entity_type_name');
+
+SELECT trend_directory.create_trend_store(
     'test2',
     'some_entity_type_name',
     '300 seconds'::interval,

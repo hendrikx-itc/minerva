@@ -1,22 +1,34 @@
 BEGIN;
 
-SELECT plan(7);
+SELECT plan(10);
 
-SELECT has_table('directory'::name, 'entity'::name);
+SELECT has_schema('entity');
 
-SELECT is(directory.get_entity_by_dn('Network=local,Switch=main'), null, 'Entities should not be auto-created');
+SELECT directory.create_entity_type('Network');
 
-SELECT isnt(directory.dn_to_entity('Network=local,Switch=main'), null, 'Entities should be created by dn_to_entity');
+SELECT has_table('entity', 'Network', 'Entity tables should be auto-created when entity types are created');
 
-SELECT isnt(directory.get_entity_by_dn('Network=local,Switch=main'), null, 'Created entities should remain');
+SELECT has_function('entity'::name, 'get_Network'::name, ARRAY['text']);
 
-SELECT is(directory.get_entity_type('Network'), null, 'Non-ultimate entity type is not created when Entity is created');
+SELECT has_function('entity'::name, 'create_Network'::name);
 
-SELECT isnt(directory.get_entity_type('Switch'), null, 'Last entity type is not created when Entity is created');
+SELECT has_function('entity'::name, 'to_Network'::name);
 
-SELECT directory.dn_to_entity('Network=local,Switch=main');
+SELECT results_eq('SELECT name FROM entity."Network"', ARRAY[]::text[], 'Entity table should be initally empty');
 
-SELECT bag_eq('SELECT name from directory.entity', ARRAY['main'], 'entities are created, only one entity is created and name is last value');
+SELECT is(entity."get_Network"('local'), null, 'Get entity should not find non-existing items');
+
+SELECT isnt(entity."to_Network"('local'), null, 'To entity should find non-existing items');
+
+SELECT entity."create_Network"('global');
+
+SELECT isnt(entity."get_Network"('global'), null, 'Get entity should find existing items');
+
+SELECT entity."to_Network"('local');
+
+SELECT entity."to_Network"('global');
+
+SELECT bag_eq('SELECT name FROM entity."Network"', ARRAY['local', 'global'], 'To entity should create entity exactly once');
 
 SELECT * FROM finish();
 ROLLBACK;

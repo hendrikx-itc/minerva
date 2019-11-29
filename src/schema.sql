@@ -1634,6 +1634,13 @@ FROM trend_directory.trend_store WHERE id = $1.trend_store_id;
 $$ LANGUAGE sql STABLE;
 
 
+CREATE FUNCTION "trend_directory"."get_partition_size"(trend_directory.trend_store_part)
+    RETURNS interval
+AS $$
+SELECT partition_size FROM trend_directory.trend_store WHERE trend_store.id = $1.trend_store_id;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION "trend_directory"."create_partition"(trend_directory.trend_store_part, integer)
     RETURNS trend_directory.partition
 AS $$
@@ -1643,6 +1650,13 @@ INSERT INTO trend_directory.partition(trend_store_part_id, index, name, "from", 
 SELECT $1.id, $2, trend_directory.partition_name($1, $2), trend_directory.index_to_timestamp(trend_store.partition_size, $2), trend_directory.index_to_timestamp(trend_store.partition_size, $2 + 1)
 FROM trend_directory.trend_store WHERE id = $1.trend_store_id
 RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."create_partition"(trend_directory.trend_store_part, timestamp with time zone)
+    RETURNS trend_directory.partition
+AS $$
+SELECT trend_directory.create_partition($1, trend_directory.timestamp_to_index(trend_directory.get_partition_size($1), $2));
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -1684,11 +1698,12 @@ SELECT ARRAY[
         'entity_id integer NOT NULL, '
         '"timestamp" timestamp with time zone NOT NULL, '
         'created timestamp with time zone NOT NULL, '
-        'job_id bigint NOT NULL, '
+        'job_id bigint NOT NULL%s'
         '%s'
         ') PARTITION BY RANGE ("timestamp");',
         trend_directory.base_table_schema(),
         trend_directory.base_table_name($1),
+        CASE WHEN array_length(trend_directory.column_specs($1),1) > 0 THEN ', ' END,
         array_to_string(trend_directory.column_specs($1), ',')
     ),
     format(
@@ -1757,7 +1772,7 @@ CREATE FUNCTION "trend_directory"."create_staging_table_sql"(trend_directory.tre
 AS $$
 SELECT ARRAY[
     format(
-        'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone%s);',
+        'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone, created timestamp with time zone, job_id integer%s);',
         trend_directory.staging_table_schema(),
         trend_directory.staging_table_name($1),
         (
@@ -2077,6 +2092,13 @@ DELETE FROM trend_directory.trend_store WHERE id = $1;
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."delete_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval)
+    RETURNS void
+AS $$
+SELECT trend_directory.delete_trend_store((trend_directory.get_trend_store($1, $2, $3)).id);
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION "trend_directory"."initialize_trend_store"(trend_directory.trend_store)
     RETURNS trend_directory.trend_store
 AS $$
@@ -2122,7 +2144,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."get_trend_store_parts"("trend_store_id" integer)
     RETURNS trend_directory.trend_store_part
 AS $$
-SELECT trend_store_part FROM trend_directory.trend_store_part WHERE trend_store_id = $1
+SELECT trend_store_part FROM trend_directory.trend_store_part WHERE trend_store_id = $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -3280,9 +3302,9 @@ BEGIN
             SELECT trend_directory.base_table_name(trend_store_part)
             FROM trend_directory.table_trend
             JOIN trend_directory.trend_store_part ON table_trend.trend_store_part_id = trend_store_part.id
-            WHERE trend.id = NEW.id
+            WHERE table_trend.id = NEW.id
         LOOP
-            EXECUTE format('ALTER TABLE trend_directory.%I RENAME COLUMN %I TO %I', base_table_name, OLD.name, NEW.name);
+            EXECUTE format('ALTER TABLE trend.%I RENAME COLUMN %I TO %I', base_table_name, OLD.name, NEW.name);
         END LOOP;
     END IF;
 
@@ -4404,6 +4426,19 @@ AS $$
 SELECT attribute_store
 FROM attribute_directory.attribute_store
 WHERE data_source_id = $1 AND entity_type_id = $2;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."get_attribute_store"("data_source" text, "entity_type" text)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT attribute_store
+FROM attribute_directory.attribute_store
+LEFT JOIN directory.data_source
+  ON data_source_id = data_source.id
+LEFT JOIN directory.entity_type
+  ON entity_type_id = entity_type.id
+WHERE data_source.name = $1 AND lower(entity_type.name) = lower($2);
 $$ LANGUAGE sql VOLATILE;
 
 

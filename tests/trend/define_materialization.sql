@@ -1,36 +1,25 @@
 BEGIN;
 
-SELECT plan(2);
+SELECT plan(1);
 
+SELECT directory.create_data_source('datasource');
 
-SELECT trend_directory.create_table_trend_store(
+SELECT directory.create_entity_type('entitytype');
+
+SELECT trend_directory.create_trend_store(
     'test-data',
     'Node',
-    '900',
-    86400,
+    '15m'::interval,
+    '1 day'::interval,
     ARRAY[
         (
             'test-trend-store',
             ARRAY[
-                ('x', 'integer', 'some column with integer values')
-            ]::trend_directory.trend_descr[]
+                ('x', 'integer', 'some column with integer values', 'max', 'max', '{}')
+            ]::trend_directory.trend_descr[],
+	    ARRAY[]::trend_directory.generated_trend_descr[]
         )
-    ]::trend_directory.table_trend_store_part_descr[]
-);
-
-SELECT isnt(
-    trend_directory.define_materialization(
-        trend_directory.create_view_trend_store(
-            'test-view-trend-store', 'vtest', 'Node', '900',
-            $view_def$SELECT
-        id(directory.dn_to_entity('Network=G01,Node=A001')) entity_id,
-        '2015-01-21 15:00'::timestamp with time zone AS timestamp,
-        now() AS modified,
-        42 AS x$view_def$
-        ),
-        trend_directory.create_table_trend_store('target-trend-store', 'test-materialized', 'Node', '900', 86400, ARRAY[]::trend_directory.trend_descr[])
-    ),
-    NULL
+    ]::trend_directory.trend_store_part_descr[]
 );
 
 SELECT is(

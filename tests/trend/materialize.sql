@@ -2,44 +2,54 @@ BEGIN;
 
 SELECT plan(3);
 
+SELECT directory.create_data_source('test-data');
 
-SELECT trend_directory.create_table_trend_store(
+SELECT directory.create_entity_type('Node');
+
+SELECT trend_directory.create_trend_store(
     'test-data',
     'Node',
     '900'::interval,
-    86400,
+    '1 day'::interval,
     ARRAY[
         ('test-trend-store-main', ARRAY [
-	     ('x', 'integer', 'some column with integer values')
-        ]::trend_directory.trend_descr[] )
-    ]::trend_directory.table_trend_store_part_descr[]
+	     ('x', 'integer', 'some column with integer values', 'sum', 'sum', '{}')
+        ]::trend_directory.trend_descr[],
+	ARRAY[]::trend_directory.generated_trend_descr[])
+    ]::trend_directory.trend_store_part_descr[]
 );
 
+SELECT trend_directory.create_partition(
+    trend_directory.get_trend_store_part(
+      (trend_directory.get_trend_store('test-data', 'Node', '900'::interval)).id,
+      'test-trend-store-main'
+    ),
+    '2015-01-21 15:00+00'::timestamp);
 
-INSERT INTO trend."test-trend-store-main"(
+SELECT has_table('trend', 'test-trend-store-main_staging', 'staging table should exist');
+
+INSERT INTO trend."test-trend-store-main_staging"(
     entity_id,
     timestamp,
-    modified,
     created,
+    job_id,
     x
 )
 VALUES
-    (id(directory.dn_to_entity('Network=G01,Node=A001')), '2015-01-21 15:00+00', now(), now(), 42),
-    (id(directory.dn_to_entity('Network=G01,Node=A002')), '2015-01-21 15:00+00', now(), now(), 43);
+    (id(entity."to_Node"('A001')), '2015-01-21 15:00+00', now(), 1, 42),
+    (id(entity."to_Node"('A002')), '2015-01-21 15:00+00', now(), 1, 43);
 
-
-SELECT trend_directory.transfer_staged(table_trend_store)
-FROM trend_directory.table_trend_store
-WHERE table_trend_store::text = 'test-trend-store-main';
+SELECT trend_directory.transfer_staged(trend_store_part)
+FROM trend_directory.trend_store_part
+WHERE trend_store_part::text = 'test-trend-store-main';
 
 
 SELECT trend_directory.define_materialization(
     vts,
-    trend_directory.create_table_trend_store('target-trend-store', 'test-kpi', 'Node', '900', 86400, vts)
+    trend_directory.create_trend_store('target-trend-store', 'test-kpi', 'Node', '900', 86400, vts)
 )
-FROM trend_directory.create_view_trend_store(
-        'view-trend-store',
-        'vtest', 'Node', '900',
+FROM trend_directory.create_trend_view(
+        'vtest', 'Node', '900'::interval,
         $view_def$SELECT
     entity_id,
     timestamp,
@@ -54,7 +64,6 @@ SELECT has_table(
     'target-trend-store',
     'materialized trend table should exist'
 );
-
 
 SELECT
     is(trend_directory.materialize(materialization, '2015-01-21 15:00+00'), 2, 'should materialize 2 records')
