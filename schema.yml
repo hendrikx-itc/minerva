@@ -1486,16 +1486,22 @@ objects:
 - function:
     name: remove
     schema: relation_directory
-    return_type: void
-    language: sql
+    return_type: text
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
     arguments:
     - data_type: name
     source: |-
-      SELECT public.action(format('DROP MATERIALIZED VIEW IF EXISTS relation.%I', $1));
-      DELETE FROM relation_directory.type WHERE name = $1;
+      DECLARE
+        result text;
+      BEGIN
+        SELECT name FROM relation_directory.type WHERE name = $1 INTO result;
+        PERFORM public.action(format('DROP MATERIALIZED VIEW IF EXISTS relation.%I', $1));
+        DELETE FROM relation_directory.type WHERE name = $1;
+        RETURN result;
+      END;
 
 - table:
     name: job
