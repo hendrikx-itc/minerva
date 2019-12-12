@@ -930,6 +930,7 @@ $$ LANGUAGE sql VOLATILE STRICT;
 CREATE FUNCTION "relation_directory"."remove"(name)
     RETURNS void
 AS $$
+SELECT public.action(format('DROP MATERIALIZED VIEW IF EXISTS relation.%I', $1));
 DELETE FROM relation_directory.type WHERE name = $1;
 $$ LANGUAGE sql VOLATILE;
 

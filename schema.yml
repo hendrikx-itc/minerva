@@ -1494,6 +1494,7 @@ objects:
     arguments:
     - data_type: name
     source: |-
+      SELECT public.action(format('DROP MATERIALIZED VIEW IF EXISTS relation.%I', $1));
       DELETE FROM relation_directory.type WHERE name = $1;
 
 - table:
