@@ -2439,35 +2439,39 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "trend_directory"."assure_table_trends_exist"(trend_directory.trend_store_part, trend_directory.trend_descr[], trend_directory.generated_trend_descr[])
-    RETURNS trend_directory.trend_store_part
+    RETURNS text[]
 AS $$
 DECLARE
-  missing_trends trend_directory.trend_descr[];
-  missing_generated_trends trend_directory.generated_trend_descr[];
+  result text[];
 BEGIN
-  -- Normal trends
-  SELECT array_agg(t) INTO missing_trends
-  FROM trend_directory.missing_table_trends($1, $2) AS t;
+  CREATE TEMP TABLE missing_trends(trend trend_directory.trend_descr);
+  CREATE TEMP TABLE missing_generated_trends(trend trend_directory.generated_trend_descr);
 
-  IF array_length(missing_trends, 1) > 0 THEN
-    PERFORM trend_directory.create_table_trends($1, missing_trends);
+  -- Normal trends
+  INSERT INTO missing_trends SELECT trend_directory.missing_table_trends($1, $2);
+
+  IF EXISTS (SELECT * FROM missing_trends LIMIT 1) THEN
+    PERFORM trend_directory.create_table_trends($1, ARRAY(SELECT trend FROM missing_trends));
   END IF;
 
   -- Generated trends
-  SELECT array_agg(t) INTO missing_generated_trends
-  FROM trend_directory.missing_generated_table_trends($1, $3) AS t;
+  INSERT INTO missing_generated_trends SELECT trend_directory.missing_generated_table_trends($1, $3);
 
-  IF array_length(missing_generated_trends, 1) > 0 THEN
+  IF EXISTS (SELECT * FROM missing_generated_trends LIMIT 1) THEN
     PERFORM trend_directory.create_generated_table_trends($1, missing_generated_trends);
   END IF;
 
-  RETURN $1;
+  SELECT ARRAY(SELECT (mt).trend.name FROM missing_trends mt UNION SELECT (mt).trend.name FROM missing_generated_trends mt) INTO result;
+  DROP TABLE missing_trends;
+  DROP TABLE missing_generated_trends;
+
+  RETURN result;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."add_trends"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
-    RETURNS trend_directory.trend_store
+    RETURNS text[]
 AS $$
 SELECT trend_directory.assure_table_trends_exist(
   trend_directory.get_or_create_trend_store_part($1.id, name),
@@ -2475,8 +2479,6 @@ SELECT trend_directory.assure_table_trends_exist(
   generated_trends
 )
 FROM unnest($2);
-
-SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2510,7 +2512,7 @@ SELECT table_trend
   FROM trend_directory.table_trend
   LEFT JOIN trend_directory.trend_store_part
   ON table_trend.trend_store_part_id = trend_store_part.id
-  WHERE trend_store_part.trend_store_id = trend_store_id;
+  WHERE trend_store_part.trend_store_id = $1;
 $$ LANGUAGE sql STABLE;
 
 
@@ -2521,37 +2523,63 @@ SELECT trend_directory.get_trends_for_trend_store($1.id);
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."get_trend_if_defined"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text)
-    RETURNS trend_directory.table_trend
+CREATE FUNCTION "trend_directory"."get_trend_if_defined"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[])
+    RETURNS name
 AS $$
-SELECT t FROM trend_directory.table_trend t JOIN unnest($2) t2
-  ON t.name = t2.name
-  WHERE t.id = $1.id
-  AND trend_directory.trend_store_part_name_for_trend(t) = $3;
+SELECT t.name FROM trend_directory.table_trend t JOIN unnest($2) t2
+  ON t.name = t2.name WHERE t.id = $1.id
 $$ LANGUAGE sql VOLATILE;
 
-COMMENT ON FUNCTION "trend_directory"."get_trend_if_defined"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text) IS 'Return the trend, but only if it is a trend defined by trends';
+COMMENT ON FUNCTION "trend_directory"."get_trend_if_defined"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[]) IS 'Return the trend, but only if it is a trend defined by trends';
 
 
-CREATE FUNCTION "trend_directory"."remove_trend_if_extraneous"("trend" trend_directory.table_trend, "parts" trend_directory.trend_store_part_descr[])
-    RETURNS void
+CREATE FUNCTION "trend_directory"."remove_trend_if_extraneous"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[])
+    RETURNS text
 AS $$
-SELECT COALESCE(
-  trend_directory.get_trend_if_defined($1, trends, name),
-  trend_directory.remove_table_trend($1)
-)
-FROM unnest($2);
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result text;
+  defined_trend name;
+BEGIN
+  SELECT trend_directory.get_trend_if_defined($1, $2) INTO defined_trend;
+  IF defined_trend IS NULL THEN
+    SELECT $1.name INTO result;
+    PERFORM trend_directory.remove_table_trend($1);
+  END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
-COMMENT ON FUNCTION "trend_directory"."remove_trend_if_extraneous"("trend" trend_directory.table_trend, "parts" trend_directory.trend_store_part_descr[]) IS 'Remove the trend if it is not one that is described by parts';
+COMMENT ON FUNCTION "trend_directory"."remove_trend_if_extraneous"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[]) IS 'Remove the trend if it is not one that is described by trends';
+
+
+CREATE FUNCTION "trend_directory"."get_trends_for_trend_store_part"("trend_store_part_id" integer)
+    RETURNS SETOF trend_directory.table_trend
+AS $$
+SELECT * FROM trend_directory.table_trend WHERE table_trend.trend_store_part_id = $1;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."get_trends_for_trend_store_part"(trend_directory.trend_store_part)
+    RETURNS SETOF trend_directory.table_trend
+AS $$
+SELECT trend_directory.get_trends_for_trend_store_part($1.id);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."remove_extra_trends"(trend_directory.trend_store_part, trend_directory.trend_descr[])
+    RETURNS text
+AS $$
+SELECT trend_directory.remove_trend_if_extraneous(trend, $2) FROM
+  trend_directory.get_trends_for_trend_store_part($1) trend;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."remove_extra_trends"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
-    RETURNS trend_directory.trend_store
+    RETURNS text
 AS $$
-SELECT trend_directory.remove_trend_if_extraneous(
-  trend_directory.get_trends_for_trend_store($1), $2);
-SELECT $1;
+SELECT trend_directory.remove_extra_trends(
+  trend_directory.get_trend_store_part($1.id, name), trends)
+FROM unnest($2);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2675,24 +2703,18 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."change_trendstore_strong"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
     RETURNS trend_directory.trend_store
 AS $$
-SELECT trend_directory.change_all_trend_data(
-  trend_directory.remove_extra_trends(
-  trend_directory.add_trends(
-  $1, $2
-), $2
-), $2);
+SELECT trend_directory.add_trends($1, $2);
+SELECT trend_directory.remove_extra_trends($1, $2);
+SELECT trend_directory.change_all_trend_data($1, $2);
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_trendstore_weak"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
     RETURNS trend_directory.trend_store
 AS $$
-SELECT trend_directory.change_trend_data_upward(
-  trend_directory.remove_extra_trends(
-  trend_directory.add_trends(
-  $1, $2
-), $2
-), $2);
+SELECT trend_directory.add_trends($1, $2);
+SELECT trend_directory.remove_extra_trends($1, $2);
+SELECT trend_directory.change_trend_data_upward($1, $2);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2803,20 +2825,6 @@ AS $$
 SELECT table_trend
 FROM trend_directory.table_trend
 WHERE trend_store_part_id = $1.id AND name = $2;
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "trend_directory"."get_trends_for_trend_store_part"("trend_store_part_id" integer)
-    RETURNS SETOF trend_directory.table_trend
-AS $$
-SELECT * FROM trend_directory.table_trend WHERE table_trend.trend_store_part_id = $1;
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "trend_directory"."get_trends_for_trend_store_part"(trend_directory.trend_store_part)
-    RETURNS SETOF trend_directory.table_trend
-AS $$
-SELECT trend_directory.get_trends_for_trend_store_part($1.id);
 $$ LANGUAGE sql STABLE;
 
 
