@@ -1,4 +1,6 @@
 #!/bin/bash
+apt-get update
+
 mk-build-deps -t 'apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends -y' -i debian/control
 
 dpkg-buildpackage -rfakeroot
