@@ -7,7 +7,7 @@ SELECT
 	ds.name AS datasource_name,
 	et.name AS entitytype_name,
 	ts.granularity,
-	m.dst_trendstore_id IS MOT NULL AS materialized
+	m.dst_trendstore_id IS NOT NULL AS materialized
 	FROM trend.trend t
 	JOIN trend.trendstore_trend_link ttl ON ttl.trend_id = t.id
 	JOIN trend.trendstore ts ON ts.id = ttl.trendstore_id

@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y \
     patch \
     libpq-dev \
     postgresql-server-dev-9.6 \
-    perl-modules
+    perl-modules \
+    postgresql-9.6-postgis-3
 
 ADD https://github.com/hendrikx-itc/db-deps/archive/v0.8.0.tar.gz /db-deps.tar.gz
 RUN mkdir /db-deps
