@@ -1699,12 +1699,11 @@ SELECT ARRAY[
         'entity_id integer NOT NULL, '
         '"timestamp" timestamp with time zone NOT NULL, '
         'created timestamp with time zone NOT NULL, '
-        'job_id bigint NOT NULL, '
         '%s'
         ') PARTITION BY RANGE ("timestamp");',
         trend_directory.base_table_schema(),
         trend_directory.base_table_name($1),
-        array_to_string(trend_directory.column_specs($1), ',')
+        array_to_string(ARRAY['job_id bigint NOT NULL'] || trend_directory.column_specs($1), ',')
     ),
     format(
         'ALTER TABLE %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
@@ -2567,38 +2566,66 @@ $$ LANGUAGE sql STABLE;
 
 
 CREATE FUNCTION "trend_directory"."remove_extra_trends"(trend_directory.trend_store_part, trend_directory.trend_descr[])
-    RETURNS text
+    RETURNS text[]
 AS $$
-SELECT trend_directory.remove_trend_if_extraneous(trend, $2) FROM
-  trend_directory.get_trends_for_trend_store_part($1) trend;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  trend trend_directory.table_trend;
+  removal_result text;
+  result text[];
+BEGIN
+  FOR trend IN SELECT * FROM trend_directory.get_trends_for_trend_store_part($1)
+  LOOP
+    SELECT trend_directory.remove_trend_if_extraneous(trend, $2) INTO removal_result;
+    IF removal_result IS NOT NULL THEN
+      SELECT result || removal_result INTO result;
+    END IF;
+  END LOOP;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."remove_extra_trends"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
-    RETURNS text
+    RETURNS text[]
 AS $$
-SELECT trend_directory.remove_extra_trends(
-  trend_directory.get_trend_store_part($1.id, name), trends)
-FROM unnest($2);
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result text[];
+  partresult text[];
+BEGIN
+  FOR partresult IN
+    SELECT trend_directory.remove_extra_trends(
+      trend_directory.get_trend_store_part($1.id, name), trends)
+    FROM unnest($2)
+  LOOP
+    SELECT result || partresult INTO result;
+  END LOOP;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_table_trend_data_unsafe"(trend_directory.table_trend, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
-    RETURNS trend_directory.table_trend
+    RETURNS text
 AS $$
+DECLARE
+  result text;
 BEGIN
-  UPDATE trend_directory.table_trend SET
-    data_type = $2,
-    entity_aggregation = $3,
-    time_aggregation = $4
-  WHERE id = $1.id;
-  EXECUTE format('ALTER TABLE trend.%I ALTER %I TYPE %s USING CAST(%I AS %s)',
-    trend_directory.trend_store_part_name_for_trend($1),
-    $1.name,
-    $2,
-    $1.name,
-    $2);
-  RETURN $1;
+  IF $1.data_type <> $2 OR $1.entity_aggregation <> $3 OR $1.time_aggregation <> $4
+  THEN
+    UPDATE trend_directory.table_trend SET
+      data_type = $2,
+      entity_aggregation = $3,
+      time_aggregation = $4
+    WHERE id = $1.id;
+    EXECUTE format('ALTER TABLE trend.%I ALTER %I TYPE %s USING CAST(%I AS %s)',
+      trend_directory.trend_store_part_name_for_trend($1),
+      $1.name,
+      $2,
+      $1.name,
+      $2);
+    SELECT $1.name INTO result;
+  END IF;
+  RETURN result;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
@@ -2652,7 +2679,7 @@ $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trend_directory"."change_table_trend_data_safe"(trend_directory.table_trend, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
-    RETURNS trend_directory.table_trend
+    RETURNS text
 AS $$
 SELECT trend_directory.change_table_trend_data_unsafe(
   $1,
@@ -2663,7 +2690,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_trend_data_unsafe"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text)
-    RETURNS void
+    RETURNS text
 AS $$
 SELECT trend_directory.change_table_trend_data_unsafe($1, t.data_type, t.entity_aggregation, t.time_aggregation)
   FROM unnest($2) t
@@ -2672,7 +2699,7 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_trend_data_safe"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text)
-    RETURNS void
+    RETURNS text
 AS $$
 SELECT trend_directory.change_table_trend_data_safe($1, t.data_type, t.entity_aggregation, t.time_aggregation)
   FROM unnest($2) t
@@ -2681,41 +2708,115 @@ $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_all_trend_data"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
-    RETURNS trend_directory.trend_store
+    RETURNS text[]
 AS $$
-SELECT trend_directory.change_trend_data_unsafe(
-  trend_directory.get_trends_for_trend_store($1), trends, name)
-  FROM unnest($2);
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result text[];
+  partresult text;
+BEGIN
+  FOR partresult IN
+    SELECT trend_directory.change_trend_data_unsafe(
+      trend_directory.get_trends_for_trend_store($1), trends, name)
+    FROM unnest($2)
+  LOOP
+    IF partresult IS NOT null THEN
+      SELECT result || partresult INTO result;
+    END IF;
+  END LOOP;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_trend_data_upward"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
-    RETURNS trend_directory.trend_store
+    RETURNS text[]
 AS $$
-SELECT trend_directory.change_trend_data_safe(
-  trend_directory.get_trends_for_trend_store($1), trends, name)
-  FROM unnest($2);
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result text[];
+  partresult text;
+BEGIN
+  FOR partresult IN
+    SELECT trend_directory.change_trend_data_safe(
+      trend_directory.get_trends_for_trend_store($1), trends, name)
+    FROM unnest($2)
+  LOOP
+    IF partresult IS NOT null THEN
+      SELECT result || partresult INTO result;
+    END IF;
+  END LOOP;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_trendstore_strong"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
-    RETURNS trend_directory.trend_store
+    RETURNS text[]
 AS $$
-SELECT trend_directory.add_trends($1, $2);
-SELECT trend_directory.remove_extra_trends($1, $2);
-SELECT trend_directory.change_all_trend_data($1, $2);
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result text[];
+  partresult text[];
+BEGIN
+  SELECT trend_directory.add_trends($1, $2) INTO partresult;
+  IF array_ndims(partresult) > 0
+  THEN
+    SELECT result || ARRAY['added trends:'] || partresult INTO result;
+  ELSE
+    SELECT result || ARRAY['no trends added'] INTO result;
+  END IF;
+  
+  SELECT trend_directory.remove_extra_trends($1, $2) INTO partresult;
+  IF array_ndims(partresult) > 0
+  THEN
+    SELECT result || ARRAY['removed trends:'] || partresult INTO result;
+  ELSE
+    SELECT result || ARRAY['no trends removed'] INTO result;
+  END IF;
+
+  SELECT trend_directory.change_all_trend_data($1, $2) INTO partresult;
+  IF array_ndims(partresult) > 0
+  THEN
+    SELECT result || ARRAY['changed trends:'] || partresult INTO result;
+  ELSE
+    SELECT result || ARRAY['no trends changed'] INTO result;
+  END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_trendstore_weak"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
-    RETURNS trend_directory.trend_store
+    RETURNS text[]
 AS $$
-SELECT trend_directory.add_trends($1, $2);
-SELECT trend_directory.remove_extra_trends($1, $2);
-SELECT trend_directory.change_trend_data_upward($1, $2);
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result text[];
+  partresult text[];
+BEGIN
+  SELECT trend_directory.add_trends($1, $2) INTO partresult;
+  IF array_ndims(partresult) > 0
+  THEN
+    SELECT result || ARRAY['added trends:'] || partresult INTO result;
+  ELSE
+    SELECT result || ARRAY['no trends added'] INTO result;
+  END IF;
+  
+  SELECT trend_directory.remove_extra_trends($1, $2) INTO partresult;
+  IF array_ndims(partresult) > 0
+  THEN
+    SELECT result || ARRAY['removed trends:'] || partresult INTO result;
+  ELSE
+    SELECT result || ARRAY['no trends removed'] INTO result;
+  END IF;
+
+  SELECT trend_directory.change_trend_data_upward($1, $2) INTO partresult;
+  IF array_ndims(partresult) > 0
+  THEN
+    SELECT result || ARRAY['changed trends:'] || partresult INTO result;
+  ELSE
+    SELECT result || ARRAY['no trends changed'] INTO result;
+  END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."get_most_recent_timestamp"("dest_granularity" interval, "ts" timestamp with time zone)
