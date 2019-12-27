@@ -3007,6 +3007,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
+COMMENT ON FUNCTION "trend_directory"."transfer"("materialization" trend_directory.view_materialization, "timestamp" timestamp with time zone) IS 'Transfer all records of the specified timestamp from the view to the target trend store of the materialization.';
+
 
 CREATE FUNCTION "trend_directory"."transfer"("materialization" trend_directory.function_materialization, "timestamp" timestamp with time zone)
     RETURNS integer

@@ -5037,6 +5037,7 @@ objects:
     name: transfer
     schema: trend_directory
     return_type: integer
+    description: Transfer all records of the specified timestamp from the view to the target trend store of the materialization.
     language: plpgsql
     volatility: volatile
     strict: false
