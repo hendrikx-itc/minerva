@@ -928,10 +928,17 @@ $$ LANGUAGE sql VOLATILE STRICT;
 
 
 CREATE FUNCTION "relation_directory"."remove"(name)
-    RETURNS void
+    RETURNS text
 AS $$
-DELETE FROM relation_directory.type WHERE name = $1;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result text;
+BEGIN
+  SELECT name FROM relation_directory.type WHERE name = $1 INTO result;
+  PERFORM public.action(format('DROP MATERIALIZED VIEW IF EXISTS relation.%I', $1));
+  DELETE FROM relation_directory.type WHERE name = $1;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE TABLE "logging"."job"
