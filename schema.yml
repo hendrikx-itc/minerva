@@ -5172,16 +5172,23 @@ objects:
       DECLARE
           columns_part text;
           row_count integer;
+          job_id integer;
       BEGIN
+          SELECT logging.start_job(format('{"view_materialization": "%s", "timestamp": "%s"}', m::text, $2::text)::jsonb) INTO job_id
+          FROM trend_directory.materialization m WHERE id = $1.materialization_id;
+
           SELECT trend_directory.columns_part($1) INTO columns_part;
 
           EXECUTE format(
-              'INSERT INTO trend.%I (entity_id, timestamp, created, job_id, %s) SELECT entity_id, timestamp, now(), 0, %s FROM %s WHERE timestamp = $1',
+              'INSERT INTO trend.%I (entity_id, timestamp, created, job_id, %s) SELECT entity_id, timestamp, now(), %s, %s FROM %s WHERE timestamp = $1',
               (trend_directory.dst_trend_store_part($1)).name,
               columns_part,
+              job_id,
               columns_part,
               $1.src_view::name
           ) USING timestamp;
+
+          PERFORM logging.end_job(job_id);
 
           GET DIAGNOSTICS row_count = ROW_COUNT;
 
@@ -5205,16 +5212,23 @@ objects:
       DECLARE
           columns_part text;
           row_count integer;
+          job_id integer;
       BEGIN
+          SELECT logging.start_job(format('{"function_materialization": "%s", "timestamp": "%s"}', m::text, $2::text)::jsonb) INTO job_id
+          FROM trend_directory.materialization m WHERE id = $1.materialization_id;
+
           SELECT trend_directory.columns_part($1) INTO columns_part;
 
           EXECUTE format(
-              'INSERT INTO trend.%I (entity_id, timestamp, created, job_id, %s) SELECT entity_id, timestamp, now(), 0, %s FROM %s($1)',
+              'INSERT INTO trend.%I (entity_id, timestamp, created, job_id, %s) SELECT entity_id, timestamp, now(), %s, %s FROM %s($1)',
               (trend_directory.dst_trend_store_part($1)).name,
               columns_part,
+              job_id,
               columns_part,
               $1.src_function::regproc::name
           ) USING timestamp;
+
+          PERFORM logging.end_job(job_id);
 
           GET DIAGNOSTICS row_count = ROW_COUNT;
 
