@@ -1151,7 +1151,7 @@ CREATE TABLE "trend_directory"."modified_log"
   PRIMARY KEY (id)
 );
 
-COMMENT ON TABLE "trend_directory"."modified_log" IS 'The ``modified_log`` table stores records of when what ``trend_store_part`` is modified and for what timestamp. This table is typically populated by data loading tools that call the ``trend_directory.mark_modified`` function. It is not populated automatically when inserting into the trend_store_part tables.
+COMMENT ON TABLE "trend_directory"."modified_log" IS 'The ``modified_log`` table stores records of when what ``trend_store_part`` is modified and for what timestamp. This table is typically populated by data loading tools that call the ``trend_directory.mark_modified`` function. It is not populated automatically when inserting into the trend_store_part tables. The main purpose is to decouple the logging of data changes from actions triggered by those changes. There are no triggers on this table, and any actions should be triggered by changes on the ``trend_directory.modified`` table, which is updated by a separate processed based on the contents of this table.
 ';
 
 COMMENT ON COLUMN "trend_directory"."modified_log"."id" IS 'Unique identifier for the log entry';
@@ -1176,6 +1176,9 @@ CREATE TABLE "trend_directory"."modified"
   "last" timestamp with time zone NOT NULL,
   PRIMARY KEY (trend_store_part_id, timestamp)
 );
+
+COMMENT ON TABLE "trend_directory"."modified" IS 'Stores information on when trend store parts have changed and for what timestamp. The information in this table is updated when the data has changed and any actions like materialization-state-updating can be triggered (using insert, update or delete triggers) from this table, because it is decoupled from the data loading processes.
+';
 
 COMMENT ON COLUMN "trend_directory"."modified"."first" IS 'Time of the first modification';
 
