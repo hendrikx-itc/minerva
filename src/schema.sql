@@ -2223,7 +2223,7 @@ CREATE FUNCTION "trend_directory"."create_trend_store"("data_source_name" text, 
     RETURNS trend_directory.trend_store
 AS $$
 SELECT trend_directory.initialize_trend_store(
-    trend_directory.define_trend_store($1, $2, $3, $4, $5)
+    trend_directory.define_trend_store($1, $2, $3, $4, $5, $6)
 );
 $$ LANGUAGE sql VOLATILE;
 
