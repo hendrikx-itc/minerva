@@ -2072,22 +2072,45 @@ WHERE
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."define_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" interval)
+CREATE FUNCTION "trend_directory"."define_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" interval, "retention_period" interval)
     RETURNS trend_directory.trend_store
 AS $$
-INSERT INTO trend_directory.trend_store (
-    data_source_id,
-    entity_type_id,
-    granularity,
-    partition_size
-)
-VALUES (
-    (directory.name_to_data_source($1)).id,
-    (directory.name_to_entity_type($2)).id,
-    $3,
-    $4
-) RETURNING *;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result trend_directory.trend_store;
+BEGIN
+  IF retention_period IS NULL
+  THEN
+    INSERT INTO trend_directory.trend_store (
+      data_source_id,
+      entity_type_id,
+      granularity,
+      partition_size
+    )
+    VALUES (
+      (directory.name_to_data_source($1)).id,
+      (directory.name_to_entity_type($2)).id,
+      $3,
+      $4
+    ) RETURNING * INTO result;
+  ELSE
+    INSERT INTO trend_directory.trend_store (
+      data_source_id,
+      entity_type_id,
+      granularity,
+      partition_size,
+      retention_period
+    )
+    VALUES (
+      (directory.name_to_data_source($1)).id,
+      (directory.name_to_entity_type($2)).id,
+      $3,
+      $4,
+      $5
+    ) RETURNING * INTO result;
+  END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."delete_trend_store"(integer)
@@ -2186,17 +2209,17 @@ SELECT $1;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."define_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" interval, "trends" trend_directory.trend_store_part_descr[])
+CREATE FUNCTION "trend_directory"."define_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" interval, "retention_period" interval, "trends" trend_directory.trend_store_part_descr[])
     RETURNS trend_directory.trend_store
 AS $$
 SELECT trend_directory.define_trend_store(
-    trend_directory.define_trend_store($1, $2, $3, $4),
-    $5
+    trend_directory.define_trend_store($1, $2, $3, $4, $5),
+    $6
 );
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."create_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" interval, "parts" trend_directory.trend_store_part_descr[])
+CREATE FUNCTION "trend_directory"."create_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" interval, "retention_period" interval, "parts" trend_directory.trend_store_part_descr[])
     RETURNS trend_directory.trend_store
 AS $$
 SELECT trend_directory.initialize_trend_store(

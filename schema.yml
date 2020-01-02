@@ -3554,7 +3554,7 @@ objects:
     name: define_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -3567,19 +3567,44 @@ objects:
       data_type: interval
     - name: partition_size
       data_type: interval
+    - name: retention_period
+      data_type: interval
     source: |-
-      INSERT INTO trend_directory.trend_store (
-          data_source_id,
-          entity_type_id,
-          granularity,
-          partition_size
-      )
-      VALUES (
-          (directory.name_to_data_source($1)).id,
-          (directory.name_to_entity_type($2)).id,
-          $3,
-          $4
-      ) RETURNING *;
+      DECLARE
+        result trend_directory.trend_store;
+      BEGIN
+        IF retention_period IS NULL
+        THEN
+          INSERT INTO trend_directory.trend_store (
+            data_source_id,
+            entity_type_id,
+            granularity,
+            partition_size
+          )
+          VALUES (
+            (directory.name_to_data_source($1)).id,
+            (directory.name_to_entity_type($2)).id,
+            $3,
+            $4
+          ) RETURNING * INTO result;
+        ELSE
+          INSERT INTO trend_directory.trend_store (
+            data_source_id,
+            entity_type_id,
+            granularity,
+            partition_size,
+            retention_period
+          )
+          VALUES (
+            (directory.name_to_data_source($1)).id,
+            (directory.name_to_entity_type($2)).id,
+            $3,
+            $4,
+            $5
+          ) RETURNING * INTO result;
+        END IF;
+        RETURN result;
+      END;
 
 - function:
     name: delete_trend_store
@@ -3777,12 +3802,14 @@ objects:
       data_type: interval
     - name: partition_size
       data_type: interval
+    - name: retention_period
+      data_type: interval
     - name: trends
       data_type: trend_directory.trend_store_part_descr[]
     source: |-
       SELECT trend_directory.define_trend_store(
-          trend_directory.define_trend_store($1, $2, $3, $4),
-          $5
+          trend_directory.define_trend_store($1, $2, $3, $4, $5),
+          $6
       );
 
 - function:
@@ -3801,6 +3828,8 @@ objects:
     - name: granularity
       data_type: interval
     - name: partition_size
+      data_type: interval
+    - name: retention_period
       data_type: interval
     - name: parts
       data_type: trend_directory.trend_store_part_descr[]
