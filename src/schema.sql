@@ -2072,6 +2072,13 @@ WHERE
 $$ LANGUAGE sql STABLE;
 
 
+CREATE FUNCTION "trend_directory"."get_trend_store"("trend_store_id" integer)
+    RETURNS trend_directory.trend_store
+AS $$
+SELECT * FROM trend_directory.trend_store WHERE id = $1;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION "trend_directory"."define_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" interval)
     RETURNS trend_directory.trend_store
 AS $$
@@ -2829,6 +2836,86 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."trend_description"(trend_directory.table_trend)
+    RETURNS trend_directory.trend_descr
+AS $$
+SELECT
+  $1.name::name,
+  $1.data_type,
+  $1.description,
+  $1.time_aggregation,
+  $1.entity_aggregation,
+  $1.extra_data::jsonb;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."move_trend"("new_part" trend_directory.trend_store_part, "trend" trend_directory.table_trend)
+    RETURNS text
+AS $$
+DECLARE
+  new_trend trend_directory.table_trend;
+BEGIN
+  IF new_part IS NULL OR trend IS NULL
+  THEN
+    RETURN 'Moving trend failed';
+  END IF;
+  IF trend.trend_store_part_id = new_part.id
+  THEN
+    RETURN 'Moving trend unnecessary';
+  END IF;
+  PERFORM trend_directory.create_table_trends(
+    new_part, ARRAY[trend_directory.trend_description(trend)]);
+  EXECUTE FORMAT(
+    'UPDATE trend.%I new SET %I = old.%I FROM trend.%I old '
+    'WHERE old.entity_id = new.entity_id '
+    'AND old.timestamp = new.timestamp',
+    new_part.name, trend.name, trend.name,
+    trend_directory.trend_store_part_name_for_trend(trend)
+  );
+  PERFORM trend_directory.remove_table_trend(trend);
+  RETURN 'Moving trend succeeded';
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."move_trend"("new_part" trend_directory.trend_store_part, "trend" trend_directory.table_trend) IS 'Move trend from old_part to new_part.
+Fails and returns false if any of the arguments is NULL
+Effect undefined when trend and new_part are on different trend_stores.';
+
+
+CREATE FUNCTION "trend_directory"."get_table_trend"(trend_directory.trend_store_part, name)
+    RETURNS trend_directory.table_trend
+AS $$
+SELECT table_trend
+FROM trend_directory.table_trend
+WHERE trend_store_part_id = $1.id AND name = $2;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."get_table_trend"(trend_directory.trend_store, name)
+    RETURNS trend_directory.table_trend
+AS $$
+SELECT trend
+FROM trend_directory.table_trend trend, trend_directory.trend_store_part part
+WHERE trend.trend_store_part_id = part.id
+AND part.trend_store_id = $1.id
+AND trend.name = $2;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."move_trend"("trend_store" trend_directory.trend_store, "new_part" name, "trend" name)
+    RETURNS text
+AS $$
+SELECT trend_directory.move_trend(
+  trend_directory.get_trend_store_part($1.id, $2),
+  trend_directory.get_table_trend($1, $3)
+);
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."move_trend"("trend_store" trend_directory.trend_store, "new_part" name, "trend" name) IS 'Move a trend in the trend_store to a new trend_store_part
+by the given name; the boolean specify whether the operation
+has succeeded (it fails if there is no such trend or trend_store_part)';
+
+
 CREATE FUNCTION "trend_directory"."get_most_recent_timestamp"("dest_granularity" interval, "ts" timestamp with time zone)
     RETURNS timestamp with time zone
 AS $$
@@ -2930,12 +3017,13 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
 
-CREATE FUNCTION "trend_directory"."get_table_trend"(trend_directory.trend_store_part, name)
+CREATE FUNCTION "trend_directory"."get_trends_by_name"(trend_directory.trend_store, name)
     RETURNS trend_directory.table_trend
 AS $$
-SELECT table_trend
-FROM trend_directory.table_trend
-WHERE trend_store_part_id = $1.id AND name = $2;
+SELECT t
+FROM trend_directory.table_trend t, trend_directory.trend_store_part p
+WHERE t.trend_store_part_id = p.id AND p.trend_store_id = $1.id
+AND t.name = $2;
 $$ LANGUAGE sql STABLE;
 
 
