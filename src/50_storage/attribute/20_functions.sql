@@ -308,15 +308,16 @@ AS $$
 DECLARE
     row_count integer;
 BEGIN
-    -- For entities with data after the threshold, remove everything before the threshold
+    -- For each entity, remove all records older than the threshold and not
+    -- matching the max timestamp of records of that entity.
     EXECUTE format(
-	'DELETE FROM attribute_history.%I c '
-	'USING ('
-	'  WITH recent AS ('
-        '    SELECT entity_id, max(timestamp) AS max_timestamp '
-	'    FROM attribute.%I GROUP BY entity_id'
-	'  ) SELECT entity_id FROM recent WHERE max_timestamp > $1'
-	') foo WHERE foo.entity_id = c.entity_id AND c.timestamp < $1',
+        'WITH recent AS ('
+        '  SELECT entity_id, max(timestamp) AS max_timestamp '
+	'  FROM attribute_history.%I GROUP BY entity_id'
+	') '
+        'DELETE FROM attribute_history.%I attr '
+        'USING recent '
+	'WHERE recent.entity_id = attr.entity_id AND attr.timestamp < $1 AND attr.timestamp != recent.max_timestamp',
         attribute_directory.to_table_name($1), attribute_directory.to_table_name($1)
     ) USING $2;
 
