@@ -308,6 +308,7 @@ AS $$
 DECLARE
     row_count integer;
 BEGIN
+    -- For entities with data after the threshold, remove everything before the threshold
     EXECUTE format(
 	'DELETE FROM attribute_history.%I c '
 	'USING ('
