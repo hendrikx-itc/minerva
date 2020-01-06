@@ -302,6 +302,30 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE OR REPLACE FUNCTION attribute_directory.remove_until(attribute_directory.attributestore, timestamp with time zone)
+    RETURNS integer
+AS $$
+DECLARE
+    row_count integer;
+BEGIN
+    EXECUTE format(
+	'DELETE FROM attribute_history.%I c '
+	'USING ('
+	'  WITH recent AS ('
+        '    SELECT entity_id, max(timestamp) AS max_timestamp '
+	'    FROM attribute.%I GROUP BY entity_id'
+	'  ) SELECT entity_id FROM recent WHERE max_timestamp > $1'
+	') foo WHERE foo.entity_id = c.entity_id AND c.timestamp < $1',
+        attribute_directory.to_table_name($1), attribute_directory.to_table_name($1)
+    ) USING $2;
+
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    RETURN row_count;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
 CREATE OR REPLACE FUNCTION attribute_directory.changes_view_query(attribute_directory.attributestore)
     RETURNS text
 AS $$
