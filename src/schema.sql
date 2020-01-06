@@ -1723,7 +1723,6 @@ SELECT ARRAY[
         'entity_id integer NOT NULL, '
         '"timestamp" timestamp with time zone NOT NULL, '
         'created timestamp with time zone NOT NULL, '
-        'job_id bigint NOT NULL%s'
         '%s'
         ') PARTITION BY RANGE ("timestamp");',
         trend_directory.base_table_schema(),
@@ -2087,6 +2086,13 @@ WHERE
 $$ LANGUAGE sql STABLE;
 
 
+CREATE FUNCTION "trend_directory"."get_trend_store_id"(trend_directory.trend_store)
+    RETURNS integer
+AS $$
+SELECT $1.id;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."define_trend_store"("data_source_name" text, "entity_type_name" text, "granularity" interval, "partition_size" interval)
     RETURNS trend_directory.trend_store
 AS $$
@@ -2176,6 +2182,13 @@ CREATE FUNCTION "trend_directory"."get_trend_store_part"("trend_store_id" intege
     RETURNS trend_directory.trend_store_part
 AS $$
 SELECT * FROM trend_directory.trend_store_part WHERE trend_store_id = $1 AND name = $2;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."get_trend_store_part_id"(trend_directory.trend_store_part)
+    RETURNS integer
+AS $$
+SELECT $1.id;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2283,19 +2296,9 @@ CREATE FUNCTION "trend_directory"."alter_trend_name"(trend_directory.trend_store
     RETURNS trend_directory.trend_store_part
 AS $$
 UPDATE trend_directory.table_trend
-SET name = $3
-WHERE trend_store_part_id = $1.id AND name = $2;
-
-SELECT public.action(
-    $1,
-    format(
-        'ALTER TABLE %I.%I RENAME %I TO %I',
-        trend_directory.base_table_schema(),
-        trend_directory.base_table_name($1),
-        $2,
-        $3
-    )
-);
+  SET name = $3
+  WHERE trend_store_part_id = $1.id AND name = $2
+  RETURNING $1;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -7054,14 +7057,12 @@ CREATE FUNCTION "trigger"."create_trigger_notification_store"(name)
     RETURNS notification_directory.notification_store
 AS $$
 SELECT trigger.add_insert_trigger(
-    notification_directory.create_staging_table(
         notification_directory.create_notification_store($1, ARRAY[
             ('created', 'timestamp with time zone', 'time of notification creation'),
             ('rule_id', 'integer', 'source rule for this notification'),
             ('weight', 'integer', 'weight/importance of the notification'),
             ('details', 'text', 'extra information')
         ]::notification_directory.attr_def[])
-    )
 );
 $$ LANGUAGE sql VOLATILE;
 

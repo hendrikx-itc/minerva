@@ -3027,7 +3027,6 @@ objects:
               'entity_id integer NOT NULL, '
               '"timestamp" timestamp with time zone NOT NULL, '
               'created timestamp with time zone NOT NULL, '
-              'job_id bigint NOT NULL%s'
               '%s'
               ') PARTITION BY RANGE ("timestamp");',
               trend_directory.base_table_schema(),
@@ -3575,6 +3574,18 @@ objects:
           ts.granularity = $3;
 
 - function:
+    name: get_trend_store_id
+    schema: trend_directory
+    return_type: integer
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store
+    source: SELECT $1.id;
+        
+- function:
     name: define_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store
@@ -3748,6 +3759,18 @@ objects:
       data_type: name
     source: |-
       SELECT * FROM trend_directory.trend_store_part WHERE trend_store_id = $1 AND name = $2;
+
+- function:
+    name: get_trend_store_part_id
+    schema: trend_directory
+    return_type: integer
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    source: SELECT $1.id;
 
 - function:
     name: get_or_create_trend_store_part
@@ -3943,19 +3966,9 @@ objects:
       data_type: name
     source: |-
       UPDATE trend_directory.table_trend
-      SET name = $3
-      WHERE trend_store_part_id = $1.id AND name = $2;
-
-      SELECT public.action(
-          $1,
-          format(
-              'ALTER TABLE %I.%I RENAME %I TO %I',
-              trend_directory.base_table_schema(),
-              trend_directory.base_table_name($1),
-              $2,
-              $3
-          )
-      );
+        SET name = $3
+        WHERE trend_store_part_id = $1.id AND name = $2
+        RETURNING $1;
 
 - composite_type:
     name: column_info
@@ -11451,14 +11464,12 @@ objects:
     - data_type: name
     source: |-
       SELECT trigger.add_insert_trigger(
-          notification_directory.create_staging_table(
               notification_directory.create_notification_store($1, ARRAY[
                   ('created', 'timestamp with time zone', 'time of notification creation'),
                   ('rule_id', 'integer', 'source rule for this notification'),
                   ('weight', 'integer', 'weight/importance of the notification'),
                   ('details', 'text', 'extra information')
               ]::notification_directory.attr_def[])
-          )
       );
 
 - function:
