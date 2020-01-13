@@ -1,6 +1,8 @@
 BEGIN;
 
-SELECT plan(8);
+SELECT plan(10);
+
+SELECT tables_are('entity', ARRAY[]::text[], 'There should be no entity type initially');
 
 SELECT is(directory.get_entity_type('Network'), null, 'Entity types are not automatically created');
 
@@ -11,6 +13,8 @@ SELECT isnt(directory.get_entity_type('Network'), null, 'Entity types exist afte
 SELECT has_table('entity', 'Network', 'Entity tables should be auto-created when entity types are created');
 
 SELECT isnt(directory.name_to_entity_type('Network'), null, 'entity type can be found by name');
+
+SELECT is(directory.get_entity_type_name((directory.name_to_entity_type('Network')).id), 'Network', 'name of entity type found by name should be name sought');
 
 SELECT isnt(directory.name_to_entity_type('Operator'), null, 'non-existing entity types can be found by name');
 

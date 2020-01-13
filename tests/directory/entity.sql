@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(10);
+SELECT plan(11);
 
 SELECT has_schema('entity');
 
@@ -24,11 +24,13 @@ SELECT entity."create_Network"('global');
 
 SELECT isnt(entity."get_Network"('global'), null, 'Get entity should find existing items');
 
+SELECT bag_eq('SELECT name FROM entity."Network"', ARRAY['local', 'global'], 'To entity and create entity should create entity');
+
 SELECT entity."to_Network"('local');
 
 SELECT entity."to_Network"('global');
 
-SELECT bag_eq('SELECT name FROM entity."Network"', ARRAY['local', 'global'], 'To entity should create entity exactly once');
+SELECT bag_eq('SELECT name FROM entity."Network"', ARRAY['local', 'global'], 'To entity should create entity only once');
 
 SELECT * FROM finish();
 ROLLBACK;

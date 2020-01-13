@@ -1,6 +1,10 @@
 BEGIN;
 
-SELECT plan(5);
+SELECT plan(7);
+
+SELECT has_schema('relation');
+
+SELECT tables_are('relation', ARRAY[]::text[], 'relation schema is initially empty');
 
 SELECT is(relation_directory.get_type('X->Y'::name), null, 'get_type has no default (other than null)');
 
@@ -12,7 +16,7 @@ SELECT isnt(relation_directory.name_to_type('Y->Z'::name), null, 'name_to_type c
 
 SELECT isnt(relation_directory.get_type('Y->Z'::name), null, 'get_type is not null when name_to_type has run');
 
-SELECT is(relation_directory.name_to_type('X->Y'::name), relation_directory.get_type('X->Y'), 'get_type and name_to_type deliver same vallue on existing names');
+SELECT is(relation_directory.get_type('X->Y'::name), relation_directory.name_to_type('X->Y'), 'get_type and name_to_type deliver same vallue on existing names');
 
 SELECT * FROM finish();
 ROLLBACK;
