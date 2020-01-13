@@ -6272,28 +6272,6 @@ objects:
       SELECT (attribute_directory.to_table_name($1) || '_curr_ptr')::name;
 
 - function:
-    name: greatest_data_type
-    schema: attribute_directory
-    return_type: varchar
-    language: plpgsql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - name: data_type_a
-      data_type: varchar
-    - name: data_type_b
-      data_type: varchar
-    source: |-
-      BEGIN
-          IF trend_directory.data_type_order(data_type_b) > trend_directory.data_type_order(data_type_a) THEN
-              RETURN data_type_b;
-          ELSE
-              RETURN data_type_a;
-          END IF;
-      END;
-
-- function:
     name: render_hash_query
     schema: attribute_directory
     return_type: text
@@ -7730,7 +7708,7 @@ objects:
       FROM unnest($2) n
       WHERE attribute.name = n.name
       AND attribute.attribute_store_id = $1.id
-      AND attribute.data_type <> attribute_directory.greatest_data_type(n.data_type, attribute.data_type)
+      AND attribute.data_type <> trend_directory.greatest_data_type(n.data_type, attribute.data_type)
       RETURNING attribute.*;
 
 - function:

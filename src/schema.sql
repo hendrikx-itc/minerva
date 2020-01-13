@@ -3727,19 +3727,6 @@ SELECT (attribute_directory.to_table_name($1) || '_curr_ptr')::name;
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "attribute_directory"."greatest_data_type"("data_type_a" varchar, "data_type_b" varchar)
-    RETURNS varchar
-AS $$
-BEGIN
-    IF trend_directory.data_type_order(data_type_b) > trend_directory.data_type_order(data_type_a) THEN
-        RETURN data_type_b;
-    ELSE
-        RETURN data_type_a;
-    END IF;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
-
 CREATE FUNCTION "attribute_directory"."render_hash_query"(attribute_directory.attribute_store)
     RETURNS text
 AS $$
@@ -4666,7 +4653,7 @@ UPDATE attribute_directory.attribute SET data_type = n.data_type
 FROM unnest($2) n
 WHERE attribute.name = n.name
 AND attribute.attribute_store_id = $1.id
-AND attribute.data_type <> attribute_directory.greatest_data_type(n.data_type, attribute.data_type)
+AND attribute.data_type <> trend_directory.greatest_data_type(n.data_type, attribute.data_type)
 RETURNING attribute.*;
 $$ LANGUAGE sql VOLATILE;
 
