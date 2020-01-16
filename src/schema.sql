@@ -1225,6 +1225,26 @@ CREATE UNIQUE INDEX "ix_materialization_uniqueness" ON "trend_directory"."materi
 
 
 
+CREATE FUNCTION "trend_directory"."cleanup_for_materialization"()
+    RETURNS trigger
+AS $$
+BEGIN
+  EXECUTE format(
+    'DROP FUNCTION trend.%I(timestamp with time zone)',
+    trend_directory.fingerprint_function_name(OLD)
+  );
+
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TRIGGER cleanup_on_materialization_delete
+  BEFORE DELETE ON "trend_directory"."materialization"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."cleanup_for_materialization"();
+
+
 CREATE TABLE "trend_directory"."materialization_metrics"
 (
   "materialization_id" integer NOT NULL,
@@ -1300,6 +1320,23 @@ CREATE UNIQUE INDEX "ix_view_materialization_uniqueness" ON "trend_directory"."v
 
 
 
+CREATE FUNCTION "trend_directory"."cleanup_for_view_materialization"()
+    RETURNS trigger
+AS $$
+BEGIN
+    EXECUTE format('DROP VIEW %s', OLD.src_view);
+
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TRIGGER cleanup_on_view_materialization_delete
+  BEFORE DELETE ON "trend_directory"."view_materialization"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."cleanup_for_view_materialization"();
+
+
 CREATE FUNCTION "trend_directory"."define_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval)
     RETURNS trend_directory.materialization
 AS $$
@@ -1310,6 +1347,16 @@ RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."define_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval) IS 'Define a materialization';
+
+
+CREATE FUNCTION "trend_directory"."undefine_materialization"("name" name)
+    RETURNS void
+AS $$
+DELETE FROM trend_directory.materialization
+WHERE materialization::text = $1;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."undefine_materialization"("name" name) IS 'Undefine and remove a materialization';
 
 
 CREATE FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass)
@@ -1358,6 +1405,23 @@ RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc) IS 'Define a materialization that uses a function as source';
+
+
+CREATE FUNCTION "trend_directory"."cleanup_for_function_materialization"()
+    RETURNS trigger
+AS $$
+BEGIN
+    EXECUTE format('DROP FUNCTION %s', OLD.src_function);
+
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TRIGGER cleanup_on_function_materialization_delete
+  BEFORE DELETE ON "trend_directory"."function_materialization"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."cleanup_for_function_materialization"();
 
 
 CREATE TABLE "trend_directory"."materialization_state"
@@ -1576,6 +1640,13 @@ CREATE FUNCTION "trend_directory"."view_name"(trend_directory.trend_view_part)
     RETURNS name
 AS $$
 SELECT $1.name;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."fingerprint_function_name"(trend_directory.materialization)
+    RETURNS name
+AS $$
+SELECT format('%s_fingerprint', $1::text)::name;
 $$ LANGUAGE sql VOLATILE;
 
 

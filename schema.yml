@@ -2155,6 +2155,35 @@ objects:
         - id
       on_delete: cascade
 
+- function:
+    name: cleanup_for_materialization
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    source: |-
+      BEGIN
+        EXECUTE format(
+          'DROP FUNCTION trend.%I(timestamp with time zone)',
+          trend_directory.fingerprint_function_name(OLD)
+        );
+
+        RETURN OLD;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: materialization
+    name: cleanup_on_materialization_delete
+    function:
+      schema: trend_directory
+      name: cleanup_for_materialization
+    when: before
+    events:
+    - delete
+    affecteach: row
+
 - table:
     name: materialization_metrics
     schema: trend_directory
@@ -2292,6 +2321,32 @@ objects:
       on_delete: cascade
 
 - function:
+    name: cleanup_for_view_materialization
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    source: |-
+      BEGIN
+          EXECUTE format('DROP VIEW %s', OLD.src_view);
+
+          RETURN OLD;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: view_materialization
+    name: cleanup_on_view_materialization_delete
+    function:
+      schema: trend_directory
+      name: cleanup_for_view_materialization
+    when: before
+    events:
+    - delete
+    affecteach: row
+
+- function:
     name: define_materialization
     schema: trend_directory
     return_type: trend_directory.materialization
@@ -2312,6 +2367,20 @@ objects:
       VALUES ($1, $2, $3, $4)
       ON CONFLICT DO NOTHING
       RETURNING *;
+
+- function:
+    name: undefine_materialization
+    schema: trend_directory
+    return_type: void
+    language: sql
+    description: Undefine and remove a materialization
+    volatility: volatile
+    arguments:
+      - name: name
+        data_type: name
+    source: |-
+      DELETE FROM trend_directory.materialization
+      WHERE materialization::text = $1;
 
 - function:
     name: define_view_materialization
@@ -2405,6 +2474,32 @@ objects:
       VALUES((trend_directory.define_materialization($1, $2, $3, $4)).id, $5::text)
       ON CONFLICT DO NOTHING
       RETURNING *;
+
+- function:
+    name: cleanup_for_function_materialization
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    source: |-
+      BEGIN
+          EXECUTE format('DROP FUNCTION %s', OLD.src_function);
+
+          RETURN OLD;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: function_materialization
+    name: cleanup_on_function_materialization_delete
+    function:
+      schema: trend_directory
+      name: cleanup_for_function_materialization
+    when: before
+    events:
+    - delete
+    affecteach: row
 
 - table:
     name: materialization_state
@@ -2793,6 +2888,19 @@ objects:
     - data_type: trend_directory.trend_view_part
     source: |-
       SELECT $1.name;
+
+- function:
+    name: fingerprint_function_name
+    schema: trend_directory
+    return_type: name
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.materialization
+    source: |-
+      SELECT format('%s_fingerprint', $1::text)::name;
 
 - function:
     name: to_char
