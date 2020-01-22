@@ -8035,31 +8035,51 @@ objects:
     - data_type: attribute_directory.attribute_store
     description: Remove all subsequent records with duplicate attribute values and
       update the modified of the first
-    source: "DECLARE\n    table_name name := attribute_directory.to_table_name($1);\n\
-      \    compacted_tmp_table_name name := table_name || '_compacted_tmp';\n    compacted_view_name\
-      \ name := attribute_directory.compacted_view_name($1);\n    default_columns\
-      \ text[] := ARRAY['entity_id', 'timestamp', '\"end\"', 'hash', 'modified'];\n\
-      \    attribute_columns text[];\n    columns_part text;\n    row_count integer;\n\
-      BEGIN\n    SELECT array_agg(quote_ident(name)) INTO attribute_columns\n    FROM\
-      \ attribute_directory.attribute\n    WHERE attribute_store_id = $1.id;\n\n \
-      \   columns_part = array_to_string(default_columns || attribute_columns, ',');\n\
-      \n    EXECUTE format(\n        'TRUNCATE attribute_history.%I',\n        compacted_tmp_table_name\n\
-      \    );\n\n    EXECUTE format(\n        'INSERT INTO attribute_history.%I(%s)\
-      \ '\n        'SELECT %s FROM attribute_history.%I;',\n        compacted_tmp_table_name,\
-      \ columns_part,\n        columns_part, compacted_view_name\n    );\n\n    EXECUTE\
-      \ format(\n        'UPDATE attribute_history.%I '\n\t'SET modified = now()',\n\
-      \tcompacted_tmp_table_name\n    );\n\n    GET DIAGNOSTICS row_count = ROW_COUNT;\n\
-      \n    RAISE NOTICE 'compacted % rows', row_count;\n\n    EXECUTE format(\n \
-      \       'DELETE FROM attribute_history.%I history '\n        'USING attribute_history.%I\
-      \ tmp '\n        'WHERE '\n        '\thistory.entity_id = tmp.entity_id AND\
-      \ '\n        '\thistory.timestamp >= tmp.timestamp AND '\n        '\thistory.timestamp\
-      \ <= tmp.\"end\";',\n        table_name, compacted_tmp_table_name\n    );\n\n\
-      \    columns_part = array_to_string(\n        ARRAY['entity_id', 'timestamp',\
-      \ 'modified', 'hash'] || attribute_columns,\n        ','\n    );\n\n    EXECUTE\
-      \ format(\n        'INSERT INTO attribute_history.%I(%s) '\n        'SELECT\
-      \ %s '\n        'FROM attribute_history.%I',\n        table_name, columns_part,\n\
-      \        columns_part,\n        compacted_tmp_table_name\n    );\n\n    PERFORM\
-      \ attribute_directory.mark_compacted($1.id);\n\n    RETURN $1;\nEND;"
+    source: |-
+      DECLARE
+        table_name name := attribute_directory.to_table_name($1);
+        compacted_tmp_table_name name := table_name || '_compacted_tmp';
+        compacted_view_name name := attribute_directory.compacted_view_name($1);
+        default_columns text[] := ARRAY['entity_id', 'timestamp', '"end"', 'hash', 'modified'];
+        attribute_columns text[];
+        columns_part text;row_count integer;
+      BEGIN
+        SELECT array_agg(quote_ident(name)) INTO attribute_columns
+          FROM attribute_directory.attribute
+          WHERE attribute_store_id = $1.id;
+        columns_part = array_to_string(default_columns || attribute_columns, ',');
+        EXECUTE format(
+          'TRUNCATE attribute_history.%I',
+          compacted_tmp_table_name
+        );
+        EXECUTE format(
+          'INSERT INTO attribute_history.%I(%s) SELECT %s FROM attribute_history.%I;',
+          compacted_tmp_table_name, columns_part, columns_part, compacted_view_name
+        );
+        EXECUTE format(
+          'UPDATE attribute_history.%I SET modified = now()',
+          compacted_tmp_table_name
+        );
+        GET DIAGNOSTICS row_count = ROW_COUNT;
+        RAISE NOTICE 'compacted % rows', row_count;
+        EXECUTE format(
+          'DELETE FROM attribute_history.%I history '
+          'USING attribute_history.%I tmp '
+          'WHERE history.entity_id = tmp.entity_id AND '
+          'history.timestamp >= tmp.timestamp AND  '
+          'history.timestamp <= tmp."end";',
+          table_name, compacted_tmp_table_name
+        );
+        columns_part = array_to_string(
+          ARRAY['entity_id', 'timestamp', 'modified', 'hash'] || attribute_columns, ','
+          );
+        EXECUTE format(
+          'INSERT INTO attribute_history.%I(%s) SELECT %s FROM attribute_history.%I',
+          table_name, columns_part, columns_part, compacted_tmp_table_name
+        );
+        PERFORM attribute_directory.mark_compacted($1.id);
+        RETURN $1;
+      END;
 
 - function:
     name: materialize_curr_ptr
