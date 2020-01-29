@@ -2161,6 +2161,7 @@ objects:
     return_type: trigger
     language: plpgsql
     volatility: volatile
+    arguments: []
     source: |-
       BEGIN
         EXECUTE format(
@@ -2326,6 +2327,7 @@ objects:
     return_type: trigger
     language: plpgsql
     volatility: volatile
+    arguments: []
     source: |-
       BEGIN
           EXECUTE format('DROP VIEW %s', OLD.src_view);
@@ -2481,6 +2483,7 @@ objects:
     return_type: trigger
     language: plpgsql
     volatility: volatile
+    arguments: []
     source: |-
       BEGIN
           EXECUTE format('DROP FUNCTION %s', OLD.src_function);
