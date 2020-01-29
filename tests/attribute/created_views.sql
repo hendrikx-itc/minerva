@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(17);
+SELECT plan(21);
 
 SELECT attribute_directory.create_attribute_store(
     'some_data_source_name',
@@ -10,6 +10,10 @@ SELECT attribute_directory.create_attribute_store(
 	('y', 'text', 'some column with text values')
     ]::attribute_directory.attribute_descr[]
 );
+
+SELECT has_view('attribute_staging', 'some_data_source_name_some_entity_type_name_new', 'staging-new view should be created');
+
+SELECT has_view('attribute_staging', 'some_data_source_name_some_entity_type_name_modified', 'staging-modified view should be created');
 
 INSERT INTO attribute_history.some_data_source_name_some_entity_type_name ("entity_id", "timestamp", "modified", "first_appearance", "x", "y") VALUES
     (
@@ -147,13 +151,13 @@ INSERT INTO attribute_staging.some_data_source_name_some_entity_type_name ("enti
 SELECT bag_eq(
     $$SELECT x FROM attribute_staging.some_data_source_name_some_entity_type_name_new$$,
     ARRAY [3],
-    'staging-new should only contains timestamps where no data have been included yet'
+    'staging-new should only contain timestamps where no data have been included yet'
 );
 
 SELECT bag_eq(
     $$SELECT x FROM attribute_staging.some_data_source_name_some_entity_type_name_modified$$,
     ARRAY [9,42],
-    'staging-modified should only contains timestamps where data has already been included, whether changed or unchanged'
+    'staging-modified should only contain timestamps where data has already been included, whether changed or unchanged'
 );
 
 INSERT INTO attribute_history.some_data_source_name_some_entity_type_name_curr_ptr ("entity_id", "timestamp") VALUES
@@ -202,6 +206,13 @@ SELECT bag_eq(
 	],
     'curr_selection should give last date for each entity'
 );
+
+SELECT attribute_directory.delete_attribute_store(
+    attribute_directory.get_attribute_store('some_data_source_name', 'some_entity_type_name'));
+
+SELECT hasnt_view('attribute_staging', 'some_data_source_name_some_entity_type_name_new', 'staging-new view should be removed');
+
+SELECT hasnt_view('attribute_staging', 'some_data_source_name_some_entity_type_name_modified', 'staging-modified view should be removed');
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(18);
+SELECT plan(19);
 
 SELECT attribute_directory.create_attribute_store(
     'some_data_source_name',
@@ -181,6 +181,20 @@ SELECT function_returns(
 	],
     'text'
 );
+
+SELECT attribute_directory.delete_attribute_store(
+    attribute_directory.get_attribute_store('some_data_source_name', 'some_entity_type_name')
+    );
+
+SELECT hasnt_function(
+    'attribute_history'
+    'values_hash',
+    ARRAY[
+	'attribute_history.some_data_source_name_some_entity_type_name'
+	],
+    'values_hash should be removed'
+);
+    
 
 SELECT * FROM finish();
 ROLLBACK;

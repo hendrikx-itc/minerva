@@ -1,0 +1,10 @@
+#!/bin/bash
+TESTS_DIR="/tests"
+RESULTS_DIR="/test_results"
+
+filename=`pwd`/$1
+without_prefix=${filename#*$TESTS_DIR}
+without_prefix_and_ext=${without_prefix%.sql}
+tapfilename="$RESULTS_DIR$without_prefix_and_ext.tap"
+echo "* $filename -> $tapfilename"
+PGUSER=postgres PGDATABASE=minerva pg_prove --verbose $filename > $tapfilename

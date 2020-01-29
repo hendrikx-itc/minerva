@@ -1,43 +1,46 @@
 BEGIN;
 
-SELECT plan(2);
+SELECT plan(5);
 
+SELECT results_eq('SELECT COUNT(*)::integer FROM trend_directory.materialization', ARRAY[0], 'No materialization should be predefined');
 
-SELECT trend_directory.create_table_trend_store(
+SELECT directory.create_data_source('datasource');
+
+SELECT directory.create_entity_type('entitytype');
+
+SELECT trend_directory.create_trend_store(
     'test-data',
     'Node',
-    '900',
-    86400,
+    '15m'::interval,
+    '1 day'::interval,
     ARRAY[
         (
             'test-trend-store',
             ARRAY[
-                ('x', 'integer', 'some column with integer values')
-            ]::trend_directory.trend_descr[]
+                ('x', 'integer', 'some column with integer values', 'max', 'max', '{}')
+            ]::trend_directory.trend_descr[],
+	    ARRAY[]::trend_directory.generated_trend_descr[]
         )
-    ]::trend_directory.table_trend_store_part_descr[]
+    ]::trend_directory.trend_store_part_descr[]
 );
 
-SELECT isnt(
-    trend_directory.define_materialization(
-        trend_directory.create_view_trend_store(
-            'test-view-trend-store', 'vtest', 'Node', '900',
-            $view_def$SELECT
-        id(directory.dn_to_entity('Network=G01,Node=A001')) entity_id,
-        '2015-01-21 15:00'::timestamp with time zone AS timestamp,
-        now() AS modified,
-        42 AS x$view_def$
-        ),
-        trend_directory.create_table_trend_store('target-trend-store', 'test-materialized', 'Node', '900', 86400, ARRAY[]::trend_directory.trend_descr[])
-    ),
-    NULL
-);
+SELECT trend_directory.create_trend_store_part(
+    trend_directory.get_trend_store_id(trend_directory.get_trend_store('test-data', 'Node', '15m'::interval)),
+    'Part');
 
-SELECT is(
-    '''this code'''::text,
-    '''testable code'''::text,
-    'tests to be written when the code has been made working'
-);
+SELECT results_eq('SELECT COUNT(*)::integer FROM trend_directory.materialization', ARRAY[0], 'No materialization should be automatically created');
+
+SELECT results_eq('SELECT COUNT(*)::integer FROM trend_directory.materialization_metrics', ARRAY[0], 'No materialization metrics should be created without materialization');
+
+SELECT trend_directory.define_materialization(
+    trend_directory.get_trend_store_part_id(trend_directory.get_trend_store_part(trend_directory.get_trend_store_id(trend_directory.get_trend_store('test-data', 'Node', '15m'::interval)), 'Part')),
+    '15m'::interval,
+    '1h'::interval,
+    '15m'::interval);
+
+SELECT results_eq('SELECT COUNT(*)::integer FROM trend_directory.materialization', ARRAY[1], 'Define_materialization should create a single materialization');
+
+SELECT bag_eq('SELECT id FROM trend_directory.materialization', 'SELECT materialization_id FROM trend_directory.materialization_metrics', 'defining a materialization should define its metrics');
 
 SELECT * FROM finish();
 ROLLBACK;

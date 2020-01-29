@@ -2,17 +2,17 @@ BEGIN;
 
 SELECT plan(3);
 
-SELECT relation_directory.create_type('A->B');
+SELECT relation_directory.register_type('A->B');
 
-SELECT has_table('relation'::name, 'A->B'::name, 'relation table should exist');
+SELECT bag_eq($$SELECT name FROM relation_directory.type;$$, ARRAY['A->B']);
 
 SELECT relation_directory.remove('A->B');
 
-SELECT hasnt_table('relation'::name, 'A->B'::name, 'relation table should no longer exist');
+SELECT bag_eq($$SELECT name FROM relation_directory.type;$$, ARRAY[]::text[]);
 
-SELECT relation_directory.create_type('A->B');
+SELECT relation_directory.name_to_type('A->B');
 
-SELECT has_table('relation'::name, 'A->B'::name, 'relation table should be re-created');
+SELECT bag_eq($$SELECT name FROM relation_directory.type;$$, ARRAY['A->B']);
 
 SELECT * FROM finish();
 ROLLBACK;
