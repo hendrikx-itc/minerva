@@ -2155,6 +2155,36 @@ objects:
         - id
       on_delete: cascade
 
+- function:
+    name: cleanup_for_materialization
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    arguments: []
+    source: |-
+      BEGIN
+        EXECUTE format(
+          'DROP FUNCTION trend.%I(timestamp with time zone)',
+          trend_directory.fingerprint_function_name(OLD)
+        );
+
+        RETURN OLD;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: materialization
+    name: cleanup_on_materialization_delete
+    function:
+      schema: trend_directory
+      name: cleanup_for_materialization
+    when: before
+    events:
+    - delete
+    affecteach: row
+
 - table:
     name: materialization_metrics
     schema: trend_directory
@@ -2292,6 +2322,33 @@ objects:
       on_delete: cascade
 
 - function:
+    name: cleanup_for_view_materialization
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    arguments: []
+    source: |-
+      BEGIN
+          EXECUTE format('DROP VIEW %s', OLD.src_view);
+
+          RETURN OLD;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: view_materialization
+    name: cleanup_on_view_materialization_delete
+    function:
+      schema: trend_directory
+      name: cleanup_for_view_materialization
+    when: before
+    events:
+    - delete
+    affecteach: row
+
+- function:
     name: define_materialization
     schema: trend_directory
     return_type: trend_directory.materialization
@@ -2312,6 +2369,20 @@ objects:
       VALUES ($1, $2, $3, $4)
       ON CONFLICT DO NOTHING
       RETURNING *;
+
+- function:
+    name: undefine_materialization
+    schema: trend_directory
+    return_type: void
+    language: sql
+    description: Undefine and remove a materialization
+    volatility: volatile
+    arguments:
+      - name: name
+        data_type: name
+    source: |-
+      DELETE FROM trend_directory.materialization
+      WHERE materialization::text = $1;
 
 - function:
     name: define_view_materialization
@@ -2405,6 +2476,33 @@ objects:
       VALUES((trend_directory.define_materialization($1, $2, $3, $4)).id, $5::text)
       ON CONFLICT DO NOTHING
       RETURNING *;
+
+- function:
+    name: cleanup_for_function_materialization
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    arguments: []
+    source: |-
+      BEGIN
+          EXECUTE format('DROP FUNCTION %s', OLD.src_function);
+
+          RETURN OLD;
+      END;
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: function_materialization
+    name: cleanup_on_function_materialization_delete
+    function:
+      schema: trend_directory
+      name: cleanup_for_function_materialization
+    when: before
+    events:
+    - delete
+    affecteach: row
 
 - table:
     name: materialization_state
@@ -2793,6 +2891,19 @@ objects:
     - data_type: trend_directory.trend_view_part
     source: |-
       SELECT $1.name;
+
+- function:
+    name: fingerprint_function_name
+    schema: trend_directory
+    return_type: name
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.materialization
+    source: |-
+      SELECT format('%s_fingerprint', $1::text)::name;
 
 - function:
     name: to_char
@@ -6515,7 +6626,7 @@ objects:
     - data_type: attribute_directory.attribute_store
     source: |-
       SELECT format(
-          'SELECT h.* FROM attribute_history.%I h JOIN attribute_history.%I c ON h.entity_id = c.entity_id AND h.timestamp = c.timestamp',
+          'SELECT h.* FROM attribute_history.%I h JOIN attribute_history.%I c ON h.id = c.id',
           attribute_directory.to_table_name($1),
           attribute_directory.curr_ptr_table_name($1)
       );
@@ -6605,13 +6716,12 @@ objects:
     source: |-
       SELECT ARRAY[
           format('CREATE TABLE attribute_history.%I (
-      entity_id integer NOT NULL,
-      timestamp timestamp with time zone NOT NULL,
-      PRIMARY KEY (entity_id, timestamp))',
+              id integer,
+              PRIMARY KEY (id))',
               attribute_directory.curr_ptr_table_name($1)
           ),
           format(
-              'CREATE INDEX ON attribute_history.%I (entity_id, timestamp)',
+              'CREATE INDEX ON attribute_history.%I (id)',
               attribute_directory.curr_ptr_table_name($1)
           ),
           format(
@@ -6689,9 +6799,10 @@ objects:
           view_sql text;
       BEGIN
           view_sql = format(
-              'SELECT max(timestamp) AS timestamp, entity_id '
+              'SELECT DISTINCT ON (entity_id) '
+              'id '
               'FROM attribute_history.%I '
-              'GROUP BY entity_id',
+              'ORDER BY entity_id, timestamp DESC',
               table_name
           );
 
@@ -6890,11 +7001,16 @@ objects:
       SELECT ARRAY[
           format(
               'CREATE TABLE attribute_history.%I (
+              id integer GENERATED BY DEFAULT AS IDENTITY,
               first_appearance timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
               modified timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
               hash character varying,
-              PRIMARY KEY (entity_id, timestamp)
+              PRIMARY KEY (id)
               ) INHERITS (attribute_base.%I)', attribute_directory.to_table_name($1), attribute_directory.to_table_name($1)
+          ),
+          format(
+              'CREATE INDEX ON attribute_history.%I (id)',
+              attribute_directory.to_table_name($1)
           ),
           format(
               'CREATE INDEX ON attribute_history.%I (first_appearance)',
@@ -8037,48 +8153,66 @@ objects:
       update the modified of the first
     source: |-
       DECLARE
-        table_name name := attribute_directory.to_table_name($1);
-        compacted_tmp_table_name name := table_name || '_compacted_tmp';
-        compacted_view_name name := attribute_directory.compacted_view_name($1);
-        default_columns text[] := ARRAY['entity_id', 'timestamp', '"end"', 'hash', 'modified'];
-        attribute_columns text[];
-        columns_part text;row_count integer;
+          table_name name := attribute_directory.to_table_name($1);
+          compacted_tmp_table_name name := table_name || '_compacted_tmp';
+          compacted_view_name name := attribute_directory.compacted_view_name($1);
+          default_columns text[] := ARRAY['entity_id', 'timestamp', '\"end\"', 'hash', 'modified'];
+          attribute_columns text[];
+          columns_part text;
+          row_count integer;
       BEGIN
-        SELECT array_agg(quote_ident(name)) INTO attribute_columns
-          FROM attribute_directory.attribute
-          WHERE attribute_store_id = $1.id;
-        columns_part = array_to_string(default_columns || attribute_columns, ',');
-        EXECUTE format(
-          'TRUNCATE attribute_history.%I',
-          compacted_tmp_table_name
-        );
-        EXECUTE format(
-          'INSERT INTO attribute_history.%I(%s) SELECT %s FROM attribute_history.%I;',
-          compacted_tmp_table_name, columns_part, columns_part, compacted_view_name
-        );
-        EXECUTE format(
-          'UPDATE attribute_history.%I SET modified = now()',
-          compacted_tmp_table_name
-        );
-        GET DIAGNOSTICS row_count = ROW_COUNT;
-        RAISE NOTICE 'compacted % rows', row_count;
-        EXECUTE format(
-          'DELETE FROM attribute_history.%I history '
-          'USING attribute_history.%I tmp '
-          'WHERE history.entity_id = tmp.entity_id AND '
-          'history.timestamp >= tmp.timestamp AND  '
-          'history.timestamp <= tmp."end";',
-          table_name, compacted_tmp_table_name
-        );
-        columns_part = array_to_string(
-          ARRAY['entity_id', 'timestamp', 'modified', 'hash'] || attribute_columns, ','
+          SELECT array_agg(quote_ident(name)) INTO attribute_columns
+              FROM attribute_directory.attribute
+              WHERE attribute_store_id = $1.id;
+             
+          columns_part = array_to_string(default_columns || attribute_columns, ',');
+          EXECUTE format(
+              'TRUNCATE attribute_history.%I',
+              compacted_tmp_table_name
           );
-        EXECUTE format(
-          'INSERT INTO attribute_history.%I(%s) SELECT %s FROM attribute_history.%I',
-          table_name, columns_part, columns_part, compacted_tmp_table_name
-        );
-        PERFORM attribute_directory.mark_compacted($1.id);
-        RETURN $1;
+
+          EXECUTE format(
+              'INSERT INTO attribute_history.%I(%s) '
+                   'SELECT %s FROM attribute_history.%I;',
+              compacted_tmp_table_name, columns_part,
+              columns_part, compacted_view_name
+          );
+
+          EXECUTE format(
+              'UPDATE attribute_history.%I SET modified = now()',
+              compacted_tmp_table_name
+          );
+
+          GET DIAGNOSTICS row_count = ROW_COUNT;
+
+          RAISE NOTICE 'compacted % rows', row_count;
+
+          EXECUTE format(
+              'DELETE FROM attribute_history.%I history '
+              'USING attribute_history.%I tmp '
+              'WHERE '
+                   'history.entity_id = tmp.entity_id AND '
+                   'history.timestamp >= tmp.timestamp AND '
+                   'history.timestamp <= tmp."end";',
+              table_name, compacted_tmp_table_name
+          );
+
+          columns_part = array_to_string(
+              ARRAY['entity_id', 'timestamp', 'modified', 'hash'] || attribute_columns
+          );
+
+          EXECUTE format(
+              'INSERT INTO attribute_history.%I(%s) '
+              'SELECT %s '
+              'FROM attribute_history.%I',
+              table_name, columns_part,
+              columns_part,
+              compacted_tmp_table_name
+          );
+
+          PERFORM attribute_directory.mark_compacted($1.id);
+
+          RETURN $1;
       END;
 
 - function:
@@ -8103,8 +8237,8 @@ objects:
 
           EXECUTE format('TRUNCATE attribute_history.%I', table_name);
           EXECUTE format(
-              'INSERT INTO attribute_history.%I (entity_id, timestamp) '
-              'SELECT entity_id, timestamp '
+              'INSERT INTO attribute_history.%I (id) '
+              'SELECT id '
               'FROM attribute_history.%I', table_name, view_name
           );
 
@@ -8217,13 +8351,14 @@ objects:
       SELECT ARRAY[
               format(
                   'CREATE FUNCTION attribute_history.%I(timestamp with time zone)
-      RETURNS TABLE(entity_id integer, "timestamp" timestamp with time zone)
+      RETURNS TABLE(id integer)
       AS $$
-          SELECT entity_id, max(timestamp)
+          SELECT DISTINCT ON (entity_id)
+              id
           FROM
               attribute_history.%I
           WHERE timestamp <= $1
-          GROUP BY entity_id;
+          ORDER BY entity_id, timestamp DESC;
       $$ LANGUAGE sql STABLE',
                   attribute_directory.at_ptr_function_name($1),
                   attribute_directory.to_table_name($1)
@@ -8297,12 +8432,13 @@ objects:
       SELECT ARRAY[
           format(
               'CREATE FUNCTION attribute_history.%I(entity_id integer, timestamp with time zone)
-      RETURNS timestamp with time zone
+      RETURNS integer
       AS $$
-          SELECT max(timestamp)
+          SELECT id
           FROM
               attribute_history.%I
-          WHERE timestamp <= $2 AND entity_id = $1;
+          WHERE timestamp <= $2 AND entity_id = $1
+          ORDER BY timestamp DESC LIMIT 1;
       $$ LANGUAGE sql STABLE',
               attribute_directory.at_ptr_function_name($1),
               attribute_directory.to_table_name($1)
@@ -8374,33 +8510,33 @@ objects:
     - data_type: attribute_directory.attribute_store
     source: |-
       SELECT public.action(
-              $1,
-              format(
-                  'CREATE FUNCTION attribute_history.%I(timestamp with time zone)
-          RETURNS SETOF attribute_history.%I
-      AS $$
-      SELECT a.*
-      FROM
-          attribute_history.%I a
-      JOIN
-          attribute_history.%I($1) at
-      ON at.entity_id = a.entity_id AND at.timestamp = a.timestamp;
-      $$ LANGUAGE sql STABLE;',
-                  attribute_directory.at_function_name($1),
-                  attribute_directory.to_table_name($1),
-                  attribute_directory.to_table_name($1),
-                  attribute_directory.at_ptr_function_name($1)
-              )
-          );
+          $1,
+          format(
+              'CREATE FUNCTION attribute_history.%I(timestamp with time zone)
+              RETURNS SETOF attribute_history.%I
+              AS $$
+                  SELECT a.*
+                  FROM
+                      attribute_history.%I a
+                  JOIN
+                      attribute_HISTORY.%I($1) at
+                  ON at.id = a.id
+              $$ LANGUAGE sql STABLE;',
+              attribute_directory.at_function_name($1),
+              attribute_directory.to_table_name($1),
+              attribute_directory.to_table_name($1),
+              attribute_directory.at_ptr_function_name($1)
+          )
+      );
 
-          SELECT public.action(
-              $1,
-              format(
-                  'ALTER FUNCTION attribute_history.%I(timestamp with time zone) '
-                  'OWNER TO minerva_writer',
-                  attribute_directory.at_function_name($1)
-              )
-          );
+      SELECT public.action(
+          $1,
+          format(
+              'ALTER FUNCTION attribute_history.%I(timestamp with time zone) '
+              'OWNER TO minerva_writer',
+              attribute_directory.at_function_name($1)
+          )
+      );
 
 - function:
     name: drop_at_func
@@ -8472,7 +8608,7 @@ objects:
       SELECT *
       FROM
           attribute_history.%I
-      WHERE timestamp = attribute_history.%I($1, $2) AND entity_id = $1;
+      WHERE id = attribute_history.%I($1, $2);
       $$ LANGUAGE sql STABLE;',
                   attribute_directory.at_function_name($1),
                   attribute_directory.to_table_name($1),

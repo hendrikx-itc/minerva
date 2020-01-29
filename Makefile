@@ -24,6 +24,10 @@ install:\
 	$(MIGRATION_FILES) \
 	$(SCRIPT_FILES)
 
+sql: src/schema.sql
+
+src/schema.sql: schema.yml
+	db-schema compile sql -o src/$(@F) schema.yml
 
 $(DIRS):
 	mkdir -p $@
