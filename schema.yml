@@ -3041,6 +3041,17 @@ objects:
       FROM trend_directory.trend_store WHERE id = $1.trend_store_id;
 
 - function:
+    name: get_partition_size
+    schema: trend_directory
+    return_type: interval
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    source: |-
+      SELECT partition_size FROM trend_directory.trend_store WHERE trend_store.id = $1.trend_store_id;
+
+- function:
     name: create_partition
     schema: trend_directory
     return_type: trend_directory.partition
@@ -3056,6 +3067,18 @@ objects:
       SELECT $1.id, $2, trend_directory.partition_name($1, $2), trend_directory.index_to_timestamp(trend_store.partition_size, $2), trend_directory.index_to_timestamp(trend_store.partition_size, $2 + 1)
       FROM trend_directory.trend_store WHERE id = $1.trend_store_id
       RETURNING *;
+
+- function:
+    name: create_partition
+    schema: trend_directory
+    return_type: trend_directory.partition
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    - data_type: timestamp with time zone
+    source: |-
+      SELECT trend_directory.create_partition($1, trend_directory.timestamp_to_index(trend_directory.get_partition_size($1), $2));
 
 - function:
     name: column_spec
@@ -3217,7 +3240,7 @@ objects:
     source: |-
       SELECT ARRAY[
           format(
-              'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone%s);',
+              'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone, created timestamp with time zone, job_id integer%s);',
               trend_directory.staging_table_schema(),
               trend_directory.staging_table_name($1),
               (
@@ -3662,6 +3685,18 @@ objects:
           ts.granularity = $3;
 
 - function:
+    name: get_trend_store_id
+    schema: trend_directory
+    return_type: integer
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store
+    source: SELECT $1.id;
+        
+- function:
     name: define_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store
@@ -3708,6 +3743,24 @@ objects:
       WHERE trend_store_id = $1;
 
       DELETE FROM trend_directory.trend_store WHERE id = $1;
+
+- function:
+    name: delete_trend_store
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - name: data_source_name
+      data_type: text
+    - name: entity_type_name
+      data_type: text
+    - name: granularity
+      data_type: interval
+    source: |-
+      SELECT trend_directory.delete_trend_store((trend_directory.get_trend_store($1, $2, $3)).id);
 
 - function:
     name: initialize_trend_store
@@ -3800,7 +3853,7 @@ objects:
     - name: trend_store_id
       data_type: integer
     source: |-
-      SELECT trend_store_part FROM trend_directory.trend_store_part WHERE trend_store_id = $1
+      SELECT trend_store_part FROM trend_directory.trend_store_part WHERE trend_store_id = $1;
 
 - function:
     name: get_trend_store_part
@@ -3817,6 +3870,18 @@ objects:
       data_type: name
     source: |-
       SELECT * FROM trend_directory.trend_store_part WHERE trend_store_id = $1 AND name = $2;
+
+- function:
+    name: get_trend_store_part_id
+    schema: trend_directory
+    return_type: integer
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    source: SELECT $1.id;
 
 - function:
     name: get_or_create_trend_store_part
@@ -4012,19 +4077,9 @@ objects:
       data_type: name
     source: |-
       UPDATE trend_directory.table_trend
-      SET name = $3
-      WHERE trend_store_part_id = $1.id AND name = $2;
-
-      SELECT public.action(
-          $1,
-          format(
-              'ALTER TABLE %I.%I RENAME %I TO %I',
-              trend_directory.base_table_schema(),
-              trend_directory.base_table_name($1),
-              $2,
-              $3
-          )
-      );
+        SET name = $3
+        WHERE trend_store_part_id = $1.id AND name = $2
+        RETURNING $1;
 
 - composite_type:
     name: column_info
@@ -5776,9 +5831,9 @@ objects:
                   SELECT trend_directory.base_table_name(trend_store_part)
                   FROM trend_directory.table_trend
                   JOIN trend_directory.trend_store_part ON table_trend.trend_store_part_id = trend_store_part.id
-                  WHERE trend.id = NEW.id
+                  WHERE table_trend.id = NEW.id
               LOOP
-                  EXECUTE format('ALTER TABLE trend_directory.%I RENAME COLUMN %I TO %I', base_table_name, OLD.name, NEW.name);
+                  EXECUTE format('ALTER TABLE trend.%I RENAME COLUMN %I TO %I', base_table_name, OLD.name, NEW.name);
               END LOOP;
           END IF;
 
@@ -6326,28 +6381,6 @@ objects:
     - data_type: attribute_directory.attribute_store
     source: |-
       SELECT (attribute_directory.to_table_name($1) || '_curr_ptr')::name;
-
-- function:
-    name: greatest_data_type
-    schema: attribute_directory
-    return_type: varchar
-    language: plpgsql
-    volatility: immutable
-    strict: false
-    secdef: false
-    arguments:
-    - name: data_type_a
-      data_type: varchar
-    - name: data_type_b
-      data_type: varchar
-    source: |-
-      BEGIN
-          IF trend_directory.data_type_order(data_type_b) > trend_directory.data_type_order(data_type_a) THEN
-              RETURN data_type_b;
-          ELSE
-              RETURN data_type_a;
-          END IF;
-      END;
 
 - function:
     name: render_hash_query
@@ -7661,6 +7694,28 @@ objects:
       WHERE data_source_id = $1 AND entity_type_id = $2;
 
 - function:
+    name: get_attribute_store
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: data_source
+      data_type: text
+    - name: entity_type
+      data_type: text
+    source: |-
+      SELECT attribute_store
+      FROM attribute_directory.attribute_store
+      LEFT JOIN directory.data_source
+        ON data_source_id = data_source.id
+      LEFT JOIN directory.entity_type
+        ON entity_type_id = entity_type.id
+      WHERE data_source.name = $1 AND lower(entity_type.name) = lower($2);
+
+- function:
     name: define_attribute_store
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -7769,7 +7824,7 @@ objects:
       FROM unnest($2) n
       WHERE attribute.name = n.name
       AND attribute.attribute_store_id = $1.id
-      AND attribute.data_type <> attribute_directory.greatest_data_type(n.data_type, attribute.data_type)
+      AND attribute.data_type <> trend_directory.greatest_data_type(n.data_type, attribute.data_type)
       RETURNING attribute.*;
 
 - function:
@@ -11543,14 +11598,12 @@ objects:
     - data_type: name
     source: |-
       SELECT trigger.add_insert_trigger(
-          notification_directory.create_staging_table(
               notification_directory.create_notification_store($1, ARRAY[
                   ('created', 'timestamp with time zone', 'time of notification creation'),
                   ('rule_id', 'integer', 'source rule for this notification'),
                   ('weight', 'integer', 'weight/importance of the notification'),
                   ('details', 'text', 'extra information')
               ]::notification_directory.attr_def[])
-          )
       );
 
 - function:
