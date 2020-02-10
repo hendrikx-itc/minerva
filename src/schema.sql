@@ -1223,6 +1223,10 @@ COMMENT ON COLUMN "trend_directory"."materialization"."enabled" IS 'Indicates if
 
 CREATE UNIQUE INDEX "ix_materialization_uniqueness" ON "trend_directory"."materialization" USING btree (dst_trend_store_part_id);
 
+GRANT SELECT ON TABLE "trend_directory"."materialization" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization" TO minerva_writer;
+
 
 
 CREATE FUNCTION "trend_directory"."cleanup_for_materialization"()
@@ -1256,6 +1260,10 @@ CREATE TABLE "trend_directory"."materialization_metrics"
 COMMENT ON TABLE "trend_directory"."materialization_metrics" IS 'Metrics on individual materializations.';
 
 COMMENT ON COLUMN "trend_directory"."materialization_metrics"."materialization_id" IS 'The ID of the materialization';
+
+GRANT SELECT ON TABLE "trend_directory"."materialization_metrics" TO minerva;
+
+GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization_metrics" TO minerva_writer;
 
 
 

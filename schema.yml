@@ -2154,6 +2154,11 @@ objects:
         columns:
         - id
       on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
 
 - function:
     name: cleanup_for_materialization
@@ -2218,6 +2223,11 @@ objects:
         columns:
         - id
       on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
 
 - function:
     name: create_metrics_for_materialization
