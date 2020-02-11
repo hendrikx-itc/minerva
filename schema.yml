@@ -6011,7 +6011,61 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+    
+- function:
+    name: get_attribute_store
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - name: data_source_id
+      data_type: integer
+    - name: entity_type_id
+      data_type: integer
+    source: |-
+      SELECT attribute_store
+      FROM attribute_directory.attribute_store
+      WHERE data_source_id = $1 AND entity_type_id = $2;
 
+- function:
+    name: get_attribute_store
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: data_source
+      data_type: text
+    - name: entity_type
+      data_type: text
+    source: |-
+      SELECT attribute_store
+      FROM attribute_directory.attribute_store
+      LEFT JOIN directory.data_source
+        ON data_source_id = data_source.id
+      LEFT JOIN directory.entity_type
+        ON entity_type_id = entity_type.id
+      WHERE data_source.name = $1 AND lower(entity_type.name) = lower($2);
+
+- function:
+    name: get_attribute_store
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: stable
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    source: |
+      SELECT attribute_store
+      FROM attribute_directory.attribute_store
+      WHERE id = $1
+    
 - table:
     name: sampled_view_materialization
     schema: attribute_directory
@@ -6213,7 +6267,7 @@ objects:
       data_type: integer
       nullable: false
     - name: compacted
-      data_type: timestamp with time zone
+      data_type: integer
       nullable: false
     primary_key:
       name: attribute_store_compacted_pkey
@@ -6352,6 +6406,19 @@ objects:
     - data_type: attribute_directory.attribute_store
     source: |-
       SELECT (attribute_directory.to_table_name($1) || '_compacted')::name;
+
+- function:
+    name: to_compact_view_name
+    schema: attribute_directory
+    return_type: name
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT (attribute_directory.to_table_name($1) || '_to_compact')::name;
 
 - function:
     name: curr_ptr_view_name
@@ -6511,6 +6578,7 @@ objects:
     - data_type: attribute_directory.attribute_store
     source: |-
       SELECT format('SELECT
+          min(id) AS id,
           public.first(entity_id) AS entity_id,
           min(timestamp) AS "start",
           max(timestamp) AS "end",
@@ -6519,10 +6587,10 @@ objects:
           count(*) AS run_length
       FROM
       (
-          SELECT entity_id, timestamp, first_appearance, modified, sum(change) OVER w2 AS run
+          SELECT id, entity_id, timestamp, first_appearance, modified, sum(change) OVER w2 AS run
           FROM
           (
-              SELECT entity_id, timestamp, first_appearance, modified, CASE WHEN hash <> lag(hash) OVER w THEN 1 ELSE 0 END AS change
+              SELECT id, entity_id, timestamp, first_appearance, modified, CASE WHEN hash <> lag(hash) OVER w THEN 1 ELSE 0 END AS change
               FROM attribute_history.%I
               WINDOW w AS (PARTITION BY entity_id ORDER BY timestamp asc)
           ) t
@@ -7376,6 +7444,26 @@ objects:
       WHERE attribute_store_id = $1;
 
 - function:
+    name: last_history_id
+    schema: attribute_directory
+    return_type: integer
+    language: plpgsql
+    volatility: stable
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    source: |-
+      DECLARE
+        result integer;
+      BEGIN
+        EXECUTE FORMAT(
+          'SELECT COALESCE(MAX(id), 0) FROM attribute_history.%I', 
+          attribute_directory.to_table_name(attribute_directory.get_attribute_store($1))
+        ) INTO result;
+        RETURN result;
+      END;
+
+- function:
     name: update_compacted
     schema: attribute_directory
     return_type: attribute_directory.attribute_store_compacted
@@ -7387,11 +7475,11 @@ objects:
     - name: attribute_store_id
       data_type: integer
     - name: compacted
-      data_type: timestamp with time zone
+      data_type: integer
     source: |-
       UPDATE attribute_directory.attribute_store_compacted
-      SET compacted = greatest(compacted, $2)
-      WHERE attribute_store_id = $1
+        SET compacted = greatest(compacted, $2)
+        WHERE attribute_store_id = $1
       RETURNING attribute_store_compacted;
 
 - function:
@@ -7406,7 +7494,7 @@ objects:
     - name: attribute_store_id
       data_type: integer
     - name: compacted
-      data_type: timestamp with time zone
+      data_type: integer
     source: |-
       INSERT INTO attribute_directory.attribute_store_compacted (attribute_store_id, compacted)
       VALUES ($1, $2)
@@ -7424,25 +7512,9 @@ objects:
     - name: attribute_store_id
       data_type: integer
     - name: compacted
-      data_type: timestamp with time zone
-    source: |-
-      SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_directory.store_compacted($1, $2));
-
-- function:
-    name: mark_compacted
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store_compacted
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: attribute_store_id
       data_type: integer
     source: |-
-      SELECT attribute_directory.mark_compacted(attribute_store_id, modified)
-      FROM attribute_directory.attribute_store_modified
-      WHERE attribute_store_id = $1;
+      SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_directory.store_compacted($1, $2));
 
 - function:
     name: update_modified
@@ -7686,46 +7758,6 @@ objects:
       END;
 
 - function:
-    name: get_attribute_store
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: data_source_id
-      data_type: integer
-    - name: entity_type_id
-      data_type: integer
-    source: |-
-      SELECT attribute_store
-      FROM attribute_directory.attribute_store
-      WHERE data_source_id = $1 AND entity_type_id = $2;
-
-- function:
-    name: get_attribute_store
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: data_source
-      data_type: text
-    - name: entity_type
-      data_type: text
-    source: |-
-      SELECT attribute_store
-      FROM attribute_directory.attribute_store
-      LEFT JOIN directory.data_source
-        ON data_source_id = data_source.id
-      LEFT JOIN directory.entity_type
-        ON entity_type_id = entity_type.id
-      WHERE data_source.name = $1 AND lower(entity_type.name) = lower($2);
-
-- function:
     name: define_attribute_store
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -7958,6 +7990,7 @@ objects:
       SELECT ARRAY[
           format(
               'CREATE UNLOGGED TABLE attribute_history.%I ('
+              '    id integer,'
               '    "end" timestamp with time zone,'
               '    modified timestamp with time zone,'
               '    hash text'
@@ -8042,7 +8075,7 @@ objects:
           'JOIN attribute_history.%I history ON history.entity_id = rl.entity_id AND history.timestamp = rl.start '
           'WHERE run_length > 1',
           array_to_string(
-              ARRAY['rl.entity_id', 'rl.start AS timestamp', 'rl."end"', 'rl.modified', 'history.hash'] || array_agg(quote_ident(name)),
+              ARRAY['rl.id', 'rl.entity_id', 'rl.start AS timestamp', 'rl."end"', 'rl.modified', 'history.hash'] || array_agg(quote_ident(name)),
               ', '
           ),
           attribute_directory.run_length_view_name($1),
@@ -8120,10 +8153,155 @@ objects:
       );
 
 - function:
+    name: to_compact_view_query
+    schema: attribute_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT FORMAT(
+        'SELECT entity_id, MIN(id) AS first_id '
+        'FROM attribute_history.%I '
+        'WHERE id > attribute_directory.last_compacted(%s) '
+        'GROUP BY entity_id',
+        attribute_directory.to_table_name($1),
+        $1.id
+      );
+
+- function:
+    name: create_to_compact_view_sql
+    schema: attribute_directory
+    return_type: text[]
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT ARRAY[
+          format(
+              'CREATE VIEW attribute_history.%I AS %s',
+              attribute_directory.to_compact_view_name($1),
+              attribute_directory.to_compact_view_query($1)
+          ),
+          format(
+              'ALTER TABLE attribute_history.%I OWNER TO minerva_writer',
+              attribute_directory.to_compact_view_name($1)
+          )
+      ];
+
+- function:
+    name: create_to_compact_view
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT public.action(
+          $1,
+          attribute_directory.create_to_compact_view_sql($1)
+      );
+    
+- function:
+    name: drop_to_compact_view_sql
+    schema: attribute_directory
+    return_type: text
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT format('DROP VIEW attribute_history.%I', attribute_directory.to_compact_view_name($1));
+
+- function:
+    name: drop_to_compact_view
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT public.action(
+          $1,
+          attribute_directory.drop_to_compact_view_sql($1)
+      );
+
+- function:
+    name: insert_into_compacted_sql
+    schema: attribute_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT FORMAT(
+        'INSERT INTO attribute_directory.attribute_store_compacted '
+        '(attribute_store_id, compacted) '
+        'VALUES (%s, 0)',
+        $1.id
+      );
+
+- function:
+    name: remove_from_compacted_sql
+    schema: attribute_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT FORMAT(
+        'DELETE FROM attribute_directory.attribute_store_compacted '
+        'WHERE attribute_store_id = %s',
+        $1.id
+      );
+        
+- function:
+    name: insert_into_compacted
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT public.action(
+          $1,
+          attribute_directory.insert_into_compacted_sql($1)
+      );
+
+- function:
+    name: remove_from_compacted
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    source: |-
+      SELECT public.action(
+          $1,
+          attribute_directory.remove_from_compacted_sql($1)
+      );
+    
+- function:
     name: requires_compacting
     schema: attribute_directory
     return_type: bool
-    language: sql
+    language: plpgsql
     volatility: stable
     strict: false
     secdef: false
@@ -8131,10 +8309,15 @@ objects:
     - name: attribute_store_id
       data_type: integer
     source: |-
-      SELECT modified <> compacted OR compacted IS NULL
-      FROM attribute_directory.attribute_store_modified mod
-      LEFT JOIN attribute_directory.attribute_store_compacted cmp ON mod.attribute_store_id = cmp.attribute_store_id
-      WHERE mod.attribute_store_id = $1;
+      DECLARE
+        result bool;
+      BEGIN
+        SELECT attribute_directory.last_history_id($1) > compacted
+          FROM attribute_directory.attribute_store_compacted
+          WHERE attribute_store_compacted.attribute_store_id = $1
+        INTO result;
+        RETURN COALESCE(result, attribute_directory.last_history_id($1) > 0);
+      END;
 
 - function:
     name: requires_compacting
@@ -8150,6 +8333,18 @@ objects:
       SELECT attribute_directory.requires_compacting($1.id);
 
 - function:
+    name: last_compacted
+    schema: attribute_directory
+    return_type: integer
+    language: sql
+    volatility: stable
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    source: |-
+      SELECT COALESCE(compacted, 0) FROM attribute_directory.attribute_store_compacted WHERE attribute_store_id = $1;
+
+- function:
     name: compact
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -8159,23 +8354,35 @@ objects:
     secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
-    description: Remove all subsequent records with duplicate attribute values and
+    - name: max_compacting
+      data_type: integer
+    description: Remove at most max_compacting subsequent records with duplicate attribute values and
       update the modified of the first
     source: |-
       DECLARE
+          last_to_compact integer;
           table_name name := attribute_directory.to_table_name($1);
           compacted_tmp_table_name name := table_name || '_compacted_tmp';
           compacted_view_name name := attribute_directory.compacted_view_name($1);
-          default_columns text[] := ARRAY['entity_id', 'timestamp', '\"end\"', 'hash', 'modified'];
+          to_compact_name name := attribute_directory.to_compact_view_name($1);
+          default_columns text[] := ARRAY['id', 'entity_id', 'timestamp', '"end"', 'hash', 'modified'];
+          extended_default_columns text[] := ARRAY[compacted_view_name || '.id', compacted_view_name || '.entity_id', 'timestamp', '"end"', 'hash', 'modified'];
           attribute_columns text[];
           columns_part text;
+          extended_columns_part text;
           row_count integer;
       BEGIN
+          SELECT attribute_directory.last_compacted($1.id) + max_compacting INTO last_to_compact;
+          IF max_compacting = 0 OR attribute_directory.last_history_id($1.id) < last_to_compact
+              THEN last_to_compact = attribute_directory.last_history_id($1.id);
+          END IF;
+          
           SELECT array_agg(quote_ident(name)) INTO attribute_columns
               FROM attribute_directory.attribute
               WHERE attribute_store_id = $1.id;
              
           columns_part = array_to_string(default_columns || attribute_columns, ',');
+          extended_columns_part = array_to_string(extended_default_columns || attribute_columns, ',');
           EXECUTE format(
               'TRUNCATE attribute_history.%I',
               compacted_tmp_table_name
@@ -8183,9 +8390,15 @@ objects:
 
           EXECUTE format(
               'INSERT INTO attribute_history.%I(%s) '
-                   'SELECT %s FROM attribute_history.%I;',
+                   'SELECT %s FROM attribute_history.%I '
+                   'JOIN attribute_history.%I '
+                   'ON %I.entity_id = %I.entity_id '
+                   'WHERE first_id <= %s;',
               compacted_tmp_table_name, columns_part,
-              columns_part, compacted_view_name
+              extended_columns_part,
+              compacted_view_name, to_compact_name,
+              compacted_view_name, to_compact_name,
+              last_to_compact
           );
 
           EXECUTE format(
@@ -8208,7 +8421,8 @@ objects:
           );
 
           columns_part = array_to_string(
-              ARRAY['entity_id', 'timestamp', 'modified', 'hash'] || attribute_columns
+              ARRAY['id', 'entity_id', 'timestamp', 'modified', 'hash'] || attribute_columns,
+              ','
           );
 
           EXECUTE format(
@@ -8220,10 +8434,25 @@ objects:
               compacted_tmp_table_name
           );
 
-          PERFORM attribute_directory.mark_compacted($1.id);
+          PERFORM attribute_directory.mark_compacted($1.id, last_to_compact);
 
           RETURN $1;
       END;
+
+- function:
+    name: compact
+    schema: attribute_directory
+    return_type: attribute_directory.attribute_store
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    description: Remove all subsequent records with duplicate attribute values and
+      update the modified of the first
+    source: |-
+      SELECT attribute_directory.compact($1, 0);
 
 - function:
     name: materialize_curr_ptr
@@ -8665,6 +8894,8 @@ objects:
       SELECT attribute_directory.create_curr_ptr_view($1);
       SELECT attribute_directory.create_curr_view($1);
       SELECT attribute_directory.create_compacted_view($1);
+      SELECT attribute_directory.create_to_compact_view($1);
+      SELECT attribute_directory.insert_into_compacted($1);
       SELECT $1;
 
 - function:
@@ -8678,12 +8909,14 @@ objects:
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
+      SELECT attribute_directory.drop_to_compact_view($1);
       SELECT attribute_directory.drop_compacted_view($1);
       SELECT attribute_directory.drop_curr_view($1);
       SELECT attribute_directory.drop_curr_ptr_view($1);
       SELECT attribute_directory.drop_staging_modified_view($1);
       SELECT attribute_directory.drop_staging_new_view($1);
       SELECT attribute_directory.drop_hash_function($1);
+      SELECT attribute_directory.remove_from_compacted($1);
       SELECT $1;
 
 - function:
