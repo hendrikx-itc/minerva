@@ -8366,7 +8366,9 @@ objects:
           compacted_view_name name := attribute_directory.compacted_view_name($1);
           to_compact_name name := attribute_directory.to_compact_view_name($1);
           default_columns text[] := ARRAY['id', 'entity_id', 'timestamp', '"end"', 'hash', 'modified'];
-          extended_default_columns text[] := ARRAY[compacted_view_name || '.id', compacted_view_name || '.entity_id', 'timestamp', '"end"', 'hash', 'modified'];
+          extended_default_columns text[] := ARRAY[
+              format('%I.id', compacted_view_name), format('%I.entity_id', compacted_view_name), 'timestamp', '"end"', 'hash', 'modified'
+          ];
           attribute_columns text[];
           columns_part text;
           extended_columns_part text;
