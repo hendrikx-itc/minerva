@@ -9,7 +9,7 @@ the commands provided in this repository.
 
 ### Prerequisites
 
- - [Docker](https://www.docker.com) (incl. [Docker Compose](https://docs.docker.com/compose/install/)
+ - [Docker](https://www.docker.com) (incl. [Docker Compose](https://docs.docker.com/compose/install/))
  - PostgreSQL client `psql`
 
 ### Initialize environment
