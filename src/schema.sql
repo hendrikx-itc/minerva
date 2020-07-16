@@ -4180,7 +4180,8 @@ CREATE FUNCTION "attribute_directory"."base_columns"()
 AS $$
 SELECT ARRAY[
     'entity_id integer NOT NULL',
-    '"timestamp" timestamp with time zone NOT NULL'
+    '"timestamp" timestamp with time zone NOT NULL',
+    '"end" timestamp with time zone DEFAULT NULL'
 ];
 $$ LANGUAGE sql IMMUTABLE;
 
@@ -4848,6 +4849,7 @@ SELECT ARRAY[
         'CREATE UNLOGGED TABLE attribute_history.%I ('
         '    id integer,'
         '    "end" timestamp with time zone,'
+        '    first_appearance timestamp with time zone,'
         '    modified timestamp with time zone,'
         '    hash text'
         ') INHERITS (attribute_base.%I)',
@@ -4907,7 +4909,7 @@ SELECT format(
     'JOIN attribute_history.%I history ON history.entity_id = rl.entity_id AND history.timestamp = rl.start '
     'WHERE run_length > 1',
     array_to_string(
-        ARRAY['rl.id', 'rl.entity_id', 'rl.start AS timestamp', 'rl."end"', 'rl.modified', 'history.hash'] || array_agg(quote_ident(name)),
+        ARRAY['rl.id', 'rl.entity_id', 'rl.start AS timestamp', 'rl."end"', 'rl.first_appearance', 'rl.modified', 'history.hash'] || array_agg(quote_ident(name)),
         ', '
     ),
     attribute_directory.run_length_view_name($1),
@@ -5102,9 +5104,9 @@ DECLARE
     compacted_tmp_table_name name := table_name || '_compacted_tmp';
     compacted_view_name name := attribute_directory.compacted_view_name($1);
     to_compact_name name := attribute_directory.to_compact_view_name($1);
-    default_columns text[] := ARRAY['id', 'entity_id', 'timestamp', '"end"', 'hash', 'modified'];
+    default_columns text[] := ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'];
     extended_default_columns text[] := ARRAY[
-        format('%I.id', compacted_view_name), format('%I.entity_id', compacted_view_name), 'timestamp', '"end"', 'hash', 'modified'
+        format('%I.id', compacted_view_name), format('%I.entity_id', compacted_view_name), 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'
     ];
     attribute_columns text[];
     columns_part text;
@@ -5150,6 +5152,13 @@ BEGIN
     RAISE NOTICE 'compacted % rows', row_count;
 
     EXECUTE format(
+        'UPDATE attribute_history.%I '
+        'SET "end" = "timestamp" '
+        'WHERE "end" IS NULL;',
+        table_name
+    );
+
+    EXECUTE format(
         'DELETE FROM attribute_history.%I history '
         'USING attribute_history.%I tmp '
         'WHERE '
@@ -5160,7 +5169,7 @@ BEGIN
     );
 
     columns_part = array_to_string(
-        ARRAY['id', 'entity_id', 'timestamp', 'modified', 'hash'] || attribute_columns,
+        ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'] || attribute_columns,
         ','
     );
 
