@@ -1438,6 +1438,7 @@ CREATE TABLE "trend_directory"."materialization_state"
   "timestamp" timestamp with time zone NOT NULL,
   "source_fingerprint" jsonb,
   "processed_fingerprint" jsonb,
+  "max_modified" timestamp with time zone,
   "job_id" bigint,
   PRIMARY KEY (materialization_id, timestamp)
 );
@@ -1453,6 +1454,8 @@ COMMENT ON COLUMN "trend_directory"."materialization_state"."source_fingerprint"
 
 COMMENT ON COLUMN "trend_directory"."materialization_state"."processed_fingerprint" IS 'Snapshot of the source_fingerprint at the time of the most recent materialization
 ';
+
+COMMENT ON COLUMN "trend_directory"."materialization_state"."max_modified" IS 'Date of last data received';
 
 COMMENT ON COLUMN "trend_directory"."materialization_state"."job_id" IS 'ID of the most recent job for this materialization';
 
@@ -1492,12 +1495,19 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."function_materialization_
 
 
 
+CREATE FUNCTION "trend_directory"."max_modified"()
+    RETURNS timestamp with time zone
+AS $$
+SELECT max(timestamp) FROM trend_directory.modified;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION "trend_directory"."update_source_fingerprint"(trend_directory.materialization, timestamp with time zone)
     RETURNS void
 AS $$
-INSERT INTO trend_directory.materialization_state(materialization_id, timestamp, source_fingerprint, processed_fingerprint, job_id)
-VALUES ($1.id, $2, (trend_directory.source_fingerprint($1, $2)).body, null, null)
-ON CONFLICT ON CONSTRAINT materialization_state_pkey DO UPDATE SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body;
+INSERT INTO trend_directory.materialization_state(materialization_id, timestamp, source_fingerprint, max_modified, processed_fingerprint, job_id)
+VALUES ($1.id, $2, (trend_directory.source_fingerprint($1, $2)).body, trend_directory.max_modified(), null, null)
+ON CONFLICT ON CONSTRAINT materialization_state_pkey DO UPDATE SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body, max_modified = trend_directory.max_modified();
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."update_source_fingerprint"(trend_directory.materialization, timestamp with time zone) IS 'Update the fingerprint of the sources in the materialization_state table.';
