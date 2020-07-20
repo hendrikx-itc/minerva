@@ -2625,9 +2625,15 @@ objects:
     name: max_modified
     schema: trend_directory
     return_type: timestamp with time zone
+    arguments:
+    - data_type: trend_directory.materialization
+    - data_type: timestamp with time zone
     language: sql
     volatility: stable
-    source: SELECT max(timestamp) FROM trend_directory.modified;
+    source: |-
+      SELECT max(last) FROM trend_directory.modified
+        WHERE trend_store_part_id = $1.dst_trend_store_part_id
+        AND timestamp < $2;
 
 - function:
     name: update_source_fingerprint
@@ -2641,8 +2647,8 @@ objects:
     - data_type: timestamp with time zone
     source: |-
       INSERT INTO trend_directory.materialization_state(materialization_id, timestamp, source_fingerprint, max_modified, processed_fingerprint, job_id)
-      VALUES ($1.id, $2, (trend_directory.source_fingerprint($1, $2)).body, trend_directory.max_modified(), null, null)
-      ON CONFLICT ON CONSTRAINT materialization_state_pkey DO UPDATE SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body, max_modified = trend_directory.max_modified();
+      VALUES ($1.id, $2, (trend_directory.source_fingerprint($1, $2)).body, trend_directory.max_modified($1, $2), null, null)
+      ON CONFLICT ON CONSTRAINT materialization_state_pkey DO UPDATE SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body, max_modified = trend_directory.max_modified($1, $2);
 
 - table:
     name: materialization_tag_link

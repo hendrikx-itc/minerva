@@ -1495,10 +1495,12 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."function_materialization_
 
 
 
-CREATE FUNCTION "trend_directory"."max_modified"()
+CREATE FUNCTION "trend_directory"."max_modified"(trend_directory.materialization, timestamp with time zone)
     RETURNS timestamp with time zone
 AS $$
-SELECT max(timestamp) FROM trend_directory.modified;
+SELECT max(last) FROM trend_directory.modified
+  WHERE trend_store_part_id = $1.dst_trend_store_part_id
+  AND timestamp < $2;
 $$ LANGUAGE sql STABLE;
 
 
@@ -1506,8 +1508,8 @@ CREATE FUNCTION "trend_directory"."update_source_fingerprint"(trend_directory.ma
     RETURNS void
 AS $$
 INSERT INTO trend_directory.materialization_state(materialization_id, timestamp, source_fingerprint, max_modified, processed_fingerprint, job_id)
-VALUES ($1.id, $2, (trend_directory.source_fingerprint($1, $2)).body, trend_directory.max_modified(), null, null)
-ON CONFLICT ON CONSTRAINT materialization_state_pkey DO UPDATE SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body, max_modified = trend_directory.max_modified();
+VALUES ($1.id, $2, (trend_directory.source_fingerprint($1, $2)).body, trend_directory.max_modified($1, $2), null, null)
+ON CONFLICT ON CONSTRAINT materialization_state_pkey DO UPDATE SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body, max_modified = trend_directory.max_modified($1, $2);
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."update_source_fingerprint"(trend_directory.materialization, timestamp with time zone) IS 'Update the fingerprint of the sources in the materialization_state table.';
