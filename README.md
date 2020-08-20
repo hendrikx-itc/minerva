@@ -9,10 +9,11 @@ the commands provided in this repository.
 
 ### Prerequisites
 
- - [Docker](https://www.docker.com) (incl. [Docker Compose](https://docs.docker.com/compose/install/))
- - PostgreSQL client `psql`
+- [Docker](https://www.docker.com) (incl. [Docker Compose](https://docs.docker.com/compose/install/)) *required
+- PostgreSQL client `psql` *required
+- Docker image `hendrikxitc/minerva`
 
-### Initialize environment
+## Initialize environment without Docker
 
 Initialize the environment so that commands are available in the search path:
 
@@ -20,7 +21,7 @@ Initialize the environment so that commands are available in the search path:
 source bin/activate
 ```
 
-### Start container with Minerva database
+## Start Minerva database without Docker image
 
 Now a Minerva database can be started in a Docker container using:
 
@@ -44,15 +45,22 @@ Now you can use the `stop` command to stop the container that is running in the 
 db stop
 ```
 
-### Connect to Minerva database
+## Start Minerva database with Docker image
 
-To connect to the Minerva database and look around, you can use the PostgreSQL
-client `psql`. When you are in a terminal session with the Minerva environment
-initialized, you can just type:
-
-```bash
-psql
+```Docker
+docker pull hendrikxitc/minerva:latest
 ```
 
-This works because all environment variables have been set so that psql knows
-where to connect (PGDATABASE etc.).
+Now start the container as follow:
+
+```Docker
+docker run --name minerva50db \
+-e POSTGRES_HOST_AUTH_METHOD=trust \
+-p 127.0.0.1:2345:5432 hendrikxitc/minerva
+```
+
+Validate if your intance is working.
+
+```Postgres
+psql -U postgres -h 127.0.0.1 -p 2345 minerva
+```
