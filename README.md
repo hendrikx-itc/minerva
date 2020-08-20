@@ -47,8 +47,6 @@ db stop
 
 ## Start Minerva database with Docker image
 
-First pull the latest `Minerva` image.
-
 ```Docker
 docker pull hendrikxitc/minerva:latest
 ```
