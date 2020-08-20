@@ -1,28 +1,28 @@
 BEGIN;
 
-SELECT plan(2);
+SELECT plan(1);
 
 
-SELECT trend_directory.create_view_trend_store(
-    'test-source', 'test-type', '900',
+SELECT trend_directory.create_trend_view(
+    'test-source', 'test-type', '15m'::interval,
     ARRAY[
         (
             'test-view-trend-store',
             ARRAY[
-                ('x', 'integer', 'some column with integer values'),
-		('y', 'double precision', 'some column with numerical values')
+                ('x', 'integer', 'some column with integer values', 'sum', 'sum', '{}'),
+		('y', 'double precision', 'some column with numerical values', 'max', 'max', '{}')
             ]::trend_directory.trend_descr[]
         )
-    ]::trend_directory.view_trend_store_part_descr[]
-);
-
-SELECT has_view(
-    'trend',
-    'test-view-trend-store',
-    'view should be created'
+    ]::trend_directory.trend_view_part_descr[]
 );
 
 /* tests not yet made because the code did not exist */
+
+--SELECT has_view(
+--    'trend',
+--    'test-view-trend-store',
+--    'view should be created'
+--);
 
 SELECT is(
     '''this code'''::text,

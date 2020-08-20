@@ -10,7 +10,7 @@ do
   without_prefix_and_ext=${without_prefix%.sql}
   tapfilepath="$RESULTS_DIR$without_prefix_and_ext.tap"
   echo "* $filepath -> $tapfilepath"
-  PGUSER=postgres PGDATABASE=gis pg_prove --verbose $filepath > $tapfilepath
+  PGUSER=postgres PGDATABASE=minerva pg_prove --verbose $filepath > $tapfilepath
 done
 
 exit 0

@@ -10,6 +10,10 @@ services:
     environment:
       - POSTGRES_PASSWORD=password
     volumes:
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf
       - ./tests:/tests
       - ./test_results:/test_results
       - ./src:/minerva
+    tmpfs:
+      - /var/lib/postgresql/data
+    command: ["-c", "config_file=/etc/postgresql/postgresql.conf"]
