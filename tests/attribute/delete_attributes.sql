@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(43);
+SELECT plan(37);
 
 SELECT attribute_directory.create_attribute_store(
     'ds1',
@@ -15,68 +15,35 @@ SELECT attribute_directory.create_attribute_store(
     'ds2',
     'type2',
     ARRAY[
-        ('x', 'integer', 'some column with integer values')
-    ]::attribute_directory.attribute_descr[]
-);
-
-SELECT attribute_directory.create_attribute_store(
-    'ds3',
-    'type3',
-    ARRAY[
-        ('x', 'integer', 'some column with integer values')
+        ('x', 'integer', 'some column with integer values'),
+	('y', 'integer', 'another column with integer values')
     ]::attribute_directory.attribute_descr[]
 );
 
 SELECT bag_eq(
     $$ SELECT name FROM directory.data_source $$,
-    ARRAY['ds1','ds2','ds3'],
+    ARRAY['ds1','ds2'],
     'Creating attribute stores should create the associated data source'
 );
 
 SELECT bag_eq(
     $$ SELECT name FROM directory.entity_type $$,
-    ARRAY['type1','type2','type3'],
+    ARRAY['type1','type2'],
     'Creating attribute stores should create the associated data source'
 );
 
-SELECT lives_ok(
-    $$ DELETE FROM directory.data_source WHERE name = 'ds2' $$,
-    'Deletion of data sources should be possible'
-);
+SELECT directory.delete_data_source('ds2');
 
 SELECT bag_eq(
     $$ SELECT e.name FROM attribute_directory.attribute_store atts, directory.entity_type e WHERE atts.entity_type_id = e.id $$,
-    ARRAY ['type1','type3'],
+    ARRAY ['type1'],
     'Deletion of data sources should cause deletion of the connected attribute store'
 );
 
 SELECT bag_eq(
     $$ SELECT name FROM directory.entity_type $$,
-    ARRAY ['type1', 'type2', 'type3'],
+    ARRAY ['type1', 'type2'],
     'Deletion of data sources should not cause deletion of entity types'
-);
-
-SELECT lives_ok(
-    $$ DELETE FROM directory.entity_type WHERE name = 'type3' $$,
-    'Deletion of entity types should be possible'
-);
-
-SELECT bag_eq(
-    $$ SELECT ds.name FROM attribute_directory.attribute_store atts, directory.data_source ds WHERE atts.data_source_id = ds.id $$,
-    ARRAY ['ds1'],
-    'Deletion of entity types should cause deletion of the connected attribute store'
-);
-
-SELECT bag_eq(
-    $$ SELECT name FROM directory.data_source $$,
-    ARRAY['ds1','ds3'],
-    'Deletion of entity types should not cause deletion of data sources'
-);
-
-SELECT bag_eq(
-    $$ SELECT name FROM attribute_directory.attribute; $$,
-    ARRAY['x','y'],
-    'Attributes should be present only for attribute stores that still exist'
 );
 
 SELECT columns_are(
@@ -91,10 +58,8 @@ SELECT columns_are(
     'attribute base columns should be as defined'
 );
 
-SELECT lives_ok(
-    $$ DELETE FROM attribute_directory.attribute WHERE name = 'x'; $$,
-    'Deletion of attributes should be possible'
-);
+SELECT attribute_directory.drop_attribute(
+    attribute_directory.get_attribute_store('ds1', 'type1'), 'x');
 
 SELECT bag_eq(
     $$ SELECT name FROM attribute_directory.attribute; $$,
