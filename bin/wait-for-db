@@ -1,0 +1,6 @@
+#!/bin/bash
+
+until psql -c "SELECT 'Ok'" 2>&1 > /dev/null; do
+    echo "Waiting for database to come online..."
+    sleep 1.0
+done

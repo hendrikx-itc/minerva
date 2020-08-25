@@ -1,10 +1,16 @@
 BEGIN;
 
-SELECT plan(5);
+SELECT plan(9);
 
 SET minerva.trigger_mark_modified TO on;
 
 SELECT attribute_directory.create_attribute_store('ds2', 'type2', ARRAY[('x','integer','some column')]::attribute_directory.attribute_descr[]);
+
+SELECT results_eq(
+    $$SELECT attribute_directory.requires_compacting(id) FROM attribute_directory.attribute_store$$,
+    ARRAY[false],
+    'newly created attribute store without content should not need compacting'
+);
 
 INSERT INTO attribute_history.ds2_type2 ("entity_id", "timestamp", "modified", "x") values
     (10, '2017-01-01 00:00:00', '2017-01-01 00:00:00', 1),
@@ -66,6 +72,43 @@ SELECT results_eq(
     $$SELECT attribute_directory.requires_compacting(id) FROM attribute_directory.attribute_store$$,
     ARRAY[false],
     'compacting should not be necessary after compacting'
+);
+
+INSERT INTO attribute_history.ds2_type2 ("entity_id", "timestamp", "modified", "x") values
+    (10, '2017-01-01 11:00:00', '2017-01-01 11:30:00', 6);
+
+SELECT results_eq(
+    $$SELECT attribute_directory.requires_compacting(id) FROM attribute_directory.attribute_store$$,
+    ARRAY[true],
+    'compacting should be necessary after a new insertion'
+);
+
+INSERT INTO attribute_history.ds2_type2 ("entity_id", "timestamp", "modified", "x") values
+    (10, '2017-01-01 12:00:00', '2017-01-01 12:00:00', 6),
+    (10, '2017-01-01 13:00:00', '2017-01-01 13:00:00', 6),
+    (10, '2017-01-01 14:00:00', '2017-01-01 14:00:00', 7),
+    (10, '2017-01-01 15:00:00', '2017-01-01 15:00:00', 7),
+    (11, '2017-01-01 12:00:00', '2017-01-01 12:00:00', 5),
+    (11, '2017-01-01 13:00:00', '2017-01-01 13:00:00', 6),
+    (11, '2017-01-01 14:00:00', '2017-01-01 14:00:00', 6),
+    (11, '2017-01-01 15:00:00', '2017-01-01 15:00:00', 6);
+
+SELECT attribute_directory.compact(a, 4)
+FROM attribute_directory.attribute_store a;
+
+SELECT results_eq(
+    $$SELECT attribute_directory.requires_compacting(id) FROM attribute_directory.attribute_store$$,
+    ARRAY[true],
+    'partial compacting should not compact everything'
+);
+
+SELECT attribute_directory.compact(a, 3)
+FROM attribute_directory.attribute_store a;
+
+SELECT results_eq(
+    $$SELECT attribute_directory.requires_compacting(id) FROM attribute_directory.attribute_store$$,
+    ARRAY[false],
+    'partial compacting that includes every uncompacted entity should compact everything'
 );
 
 SELECT * FROM finish();

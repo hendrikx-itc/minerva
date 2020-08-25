@@ -21,6 +21,7 @@ SELECT columns_are(
     'attribute_history',
     'some_data_source_name_some_entity_type_name',
     ARRAY[
+        'id',
         'entity_id',
         'timestamp',
         'modified',
@@ -113,8 +114,7 @@ SELECT columns_are(
     'attribute_history',
     'some_data_source_name_some_entity_type_name_curr_ptr',
     ARRAY[
-        'entity_id',
-        'timestamp'
+        'id'
     ]
 );
 
@@ -128,7 +128,7 @@ SELECT columns_are(
     'attribute_history',
     'some_data_source_name_some_entity_type_name_changes',
     ARRAY[
-	'entity_id',
+        'entity_id',
 	'timestamp',
 	'change'
 	]
@@ -197,6 +197,7 @@ SELECT columns_are(
     'attribute',
     'some_data_source_name_some_entity_type_name',
     ARRAY[
+        'id',
         'entity_id',
 	'timestamp',
         'modified',
@@ -237,9 +238,8 @@ SELECT columns_are(
     'attribute_history',
     'some_data_source_name_some_entity_type_name_curr_selection',
     ARRAY[
-        'entity_id',
-	'timestamp'
-	]
+         'id'
+         ]
 );
 
 PREPARE second_try AS SELECT attribute_directory.create_attribute_store(
