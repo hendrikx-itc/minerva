@@ -17,6 +17,7 @@ SELECT columns_are(
     'attribute_history',
     'test_Node',
     ARRAY[
+        'id',
         'entity_id',
         'timestamp',
         'modified',
@@ -42,6 +43,7 @@ SELECT columns_are(
     'attribute_history',
     'test_Node',
     ARRAY[
+        'id',
         'entity_id',
         'timestamp',
         'modified',
@@ -71,6 +73,7 @@ SELECT columns_are(
     'attribute_history',
     'test_Node',
     ARRAY[
+        'id',
         'entity_id',
         'timestamp',
         'modified',
