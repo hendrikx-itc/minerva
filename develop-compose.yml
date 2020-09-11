@@ -3,7 +3,7 @@ services:
   db:
     build:
       context: ./
-      dockerfile: develop.dockerfile
+      dockerfile: Dockerfile
     container_name: minerva50db
     ports:
       - "16050:5432"
