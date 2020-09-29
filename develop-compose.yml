@@ -3,7 +3,7 @@ services:
   db:
     build:
       context: ./
-      dockerfile: develop.dockerfile
+      dockerfile: Dockerfile
     container_name: minerva50db
     ports:
       - "16050:5432"
@@ -14,6 +14,4 @@ services:
       - ./tests:/tests
       - ./test_results:/test_results
       - ./src:/minerva
-    tmpfs:
-      - /var/lib/postgresql/data
     command: ["-c", "config_file=/etc/postgresql/postgresql.conf"]
