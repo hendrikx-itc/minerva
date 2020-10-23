@@ -8102,6 +8102,64 @@ END; $$;
 SET minerva.trigger_mark_modified TO on;
 
 
+CREATE TYPE "trend"."trend_data" AS (
+  "timestamp" timestamptz,
+  "entity_id" integer,
+  "counters" numeric[]
+);
+
+
+
+CREATE FUNCTION "trend_directory"."get_table_name_for_trend"("trend" text, "entity" text, "granularity" interval)
+    RETURNS name
+AS $$
+SELECT tsp.name FROM trend_directory.table_trend t
+  JOIN trend_directory.trend_store_part tsp ON tsp.id = t.trend_store_part_id
+  JOIN trend_directory.trend_store ts ON ts.id = tsp.trend_store_id
+  JOIN directory.entity_type et ON et.id = ts.entity_type_id
+  WHERE t.name = $1
+    AND ts.granularity = $3
+    AND et.name = $2;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend"."create_dynamic_source_description"("trend" text, "counter" integer, "entity" text, "granularity" interval)
+    RETURNS text
+AS $$
+SELECT FORMAT( 'trend.%I t%s %s ', trend_directory.get_table_name_for_trend($1, $3, $4), $2, CASE $2 WHEN 1 THEN '' ELSE FORMAT('ON t%s.entity_id = t1.entity_id AND t%s.timestamp = t1.timestamp', $2, $2) END );
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend"."get_dynamic_trend_data_sql"("timestamp" timestamptz, "entity_type_name" text, "granularity" interval, "counter_names" text[])
+    RETURNS text
+AS $$
+WITH ref as (
+  SELECT
+    FORMAT('t%s.%I::numeric', i, c) as column_description,
+    trend.create_dynamic_source_description(c, i::integer, $2, $3) as join_data             
+  FROM unnest($4) WITH ORDINALITY as counters(c,i)
+)
+SELECT FORMAT(
+    'SELECT ''%s''::timestamp, t1.entity_id, ARRAY[%s] '
+    'FROM %s'
+    'JOIN entity.%I ent ON ent.id = t1.entity_id '
+    'WHERE t1.timestamp = ''%s'';',
+  $1,
+  string_agg(column_description, ', '),
+  string_agg(join_data, ' JOIN '),
+  $2,
+  $1
+  ) FROM ref;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend"."get_dynamic_trend_data"("timestamp" timestamp with time zone, "entity_type_name" text, "granularity" interval, "counter_names" text[])
+    RETURNS setof trend.trend_data
+AS $$
+DECLARE r trend.trend_data%rowtype; BEGIN FOR r IN EXECUTE trend.get_dynamic_trend_data_sql($1, $2, $3, $4) LOOP RETURN NEXT r; END LOOP; RETURN; END;
+$$ LANGUAGE plpgsql STABLE;
+
+
 CREATE FUNCTION "trend"."mapping_id"(timestamp with time zone)
     RETURNS timestamp with time zone
 AS $$
