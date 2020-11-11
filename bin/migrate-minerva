@@ -10,7 +10,10 @@ import re
 
 import psycopg2
 
-MINERVA_ROOT='/usr/share/minerva'
+MINERVA_ROOT=(
+    os.environ.get("MINERVA_ROOT")
+    or '/usr/share/minerva'
+)
 
 class Version:
     def __init__(self, major, minor, bugfix):
