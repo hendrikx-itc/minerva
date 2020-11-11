@@ -5428,7 +5428,7 @@ objects:
               columns_part,
               job_id,
               columns_part,
-              $1.src_function::regproc::name
+              $1.src_function::regproc
           ) USING timestamp;
 
           PERFORM logging.end_job(job_id);
