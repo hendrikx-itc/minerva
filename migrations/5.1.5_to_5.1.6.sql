@@ -654,7 +654,7 @@ DROP FUNCTION "attribute_directory"."mark_compacted"(integer, timestamp with tim
 DROP FUNCTION "attribute_directory"."mark_compacted"(integer);
 
 ALTER TABLE "attribute_directory"."attribute_store_compacted" DROP COLUMN "compacted";
-ALTER TABLE "attribute_directory"."attribute_store_compacted" ADD COLUMN "compacted" integer NOT NULL;
+ALTER TABLE "attribute_directory"."attribute_store_compacted" ADD COLUMN "compacted" integer NOT NULL DEFAULT 0;
 
 
 CREATE FUNCTION "attribute_directory"."get_attribute_store"("data_source" text, "entity_type" text)
