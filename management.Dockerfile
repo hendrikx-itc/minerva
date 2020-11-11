@@ -1,21 +1,17 @@
 FROM postgres:12
 MAINTAINER Hendrikx ITC
 
-RUN apt update && apt install -y \
-    git \
+RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     libpq-dev \
-    netcat \
     libyaml-cpp-dev
 
-RUN pip3 install pyyaml
-
 COPY docker-resources/usr/bin/* /usr/bin/
-COPY docker-resources/init-minerva-db-develop.sh /docker-entrypoint-initdb.d/
+COPY docker-resources/init-minerva-db-and-instance.sh /docker-entrypoint-initdb.d/
 COPY src /minerva
 
-RUN git clone https://github.com/hendrikx-itc/python-minerva-etl.git
-RUN cd python-minerva-etl && python3 setup.py install
+RUN pip3 install minerva-etl
 
 VOLUME /custom
+VOLUME /instance
