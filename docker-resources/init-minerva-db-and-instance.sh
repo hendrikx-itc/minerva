@@ -6,4 +6,10 @@ export PYTHONUNBUFFERED=1
 
 create-minerva-database
 
-minerva initialize -i /instance
+if [[ ! -z "$LOAD_SAMPLE_DATA" ]]
+then
+    minerva initialize -i /instance --load-sample-data
+else
+    minerva initialize -i /instance
+fi
+
