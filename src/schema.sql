@@ -409,7 +409,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,1,5)::system.version_tuple;
+SELECT (5,1,6)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -2613,8 +2613,8 @@ AS $$
 BEGIN
   EXECUTE FORMAT('ALTER TABLE trend.%I DROP COLUMN %I',
     trend_directory.trend_store_part_name_for_trend(trend), trend.name);
-  EXECUTE FORMAT('ALTER TABLE trend.%I_staging DROP COLUMN %I',
-    trend_directory.trend_store_part_name_for_trend(trend), trend.name);
+  EXECUTE FORMAT('ALTER TABLE trend.%I DROP COLUMN %I',
+    trend_directory.trend_store_part_name_for_trend(trend)::text || '_staging', trend.name);
   DELETE FROM trend_directory.table_trend WHERE id = trend.id;
   RETURN t FROM trend_directory.table_trend t WHERE 0=1;
 END;
@@ -3271,7 +3271,7 @@ BEGIN
         columns_part,
         job_id,
         columns_part,
-        $1.src_function::regproc::name
+        $1.src_function::regproc
     ) USING timestamp;
 
     PERFORM logging.end_job(job_id);
