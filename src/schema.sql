@@ -1554,7 +1554,7 @@ COMMENT ON COLUMN "trend_directory"."materialization_trend_store_link"."timestam
 
 
 CREATE FUNCTION "trend_directory"."completeness"(name, "start" timestamp with time zone, "end" timestamp with time zone)
-    RETURNS "TABLE("timestamp" timestamp with time zone, count bigint)"
+    RETURNS TABLE("timestamp" timestamp with time zone, count bigint)
 AS $$
 DECLARE
     gran interval;
