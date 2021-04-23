@@ -3300,9 +3300,9 @@ BEGIN
         $1.src_view::name
     ) USING timestamp;
 
-    PERFORM logging.end_job(job_id);
-
     GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    PERFORM logging.end_job(job_id);
 
     RETURN row_count;
 END;
@@ -3333,9 +3333,9 @@ BEGIN
         $1.src_function::regproc
     ) USING timestamp;
 
-    PERFORM logging.end_job(job_id);
-
     GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    PERFORM logging.end_job(job_id);
 
     RETURN row_count;
 END;
