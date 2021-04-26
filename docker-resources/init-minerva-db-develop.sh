@@ -4,4 +4,3 @@ export PGUSER=postgres
 export ADD_PGTAB_EXTENSION=true
 
 create-minerva-database
-minerva initialize
