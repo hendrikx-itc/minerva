@@ -1553,48 +1553,6 @@ COMMENT ON COLUMN "trend_directory"."materialization_trend_store_link"."timestam
 
 
 
-CREATE FUNCTION "trend_directory"."completeness"(name, "start" timestamp with time zone, "end" timestamp with time zone)
-    RETURNS "TABLE("timestamp" timestamp with time zone, count bigint)"
-AS $$
-DECLARE
-    gran interval;
-    truncated_start timestamptz;
-    truncated_end timestamptz;
-BEGIN
-    SELECT granularity INTO gran
-    FROM trend_directory.trend_store_part tsp
-    JOIN trend_directory.trend_store ts ON ts.id = tsp.trend_store_id
-    WHERE tsp.name = $1;
-
-    CASE gran
-    WHEN '1month' THEN
-        SELECT date_trunc('month', $2) INTO truncated_start;
-        SELECT date_trunc('month', $3) INTO truncated_end;
-    WHEN '1w' THEN
-        SELECT date_trunc('week', $2) INTO truncated_start;
-        SELECT date_trunc('week', $3) INTO truncated_end;
-    WHEN '1d' THEN
-        SELECT date_trunc('day', $2) INTO truncated_start;
-        SELECT date_trunc('day', $3) INTO truncated_end;
-    WHEN '1h' THEN
-        SELECT date_trunc('hour', $2) INTO truncated_start;
-        SELECT date_trunc('hour', $3) INTO truncated_end;
-    ELSE
-        SELECT trend_directory.index_to_timestamp(gran, trend_directory.timestamp_to_index(gran, $2)) INTO truncated_start;
-        SELECT trend_directory.index_to_timestamp(gran, trend_directory.timestamp_to_index(gran, $3)) INTO truncated_end;
-    END CASE;
-
-    RETURN QUERY EXECUTE format('
-    with trend_data as (
-        select timestamp, count(*) as count from trend.%I where timestamp >= $1 and timestamp <= $2 group by timestamp
-    )
-    select t, coalesce(count, 0) from generate_series($1, $2, $3) t left join trend_data d on d.timestamp = t order by t asc;', $1)
-    USING truncated_start, truncated_end, gran;
-$$ LANGUAGE plpgsql VOLATILE;
-
-COMMENT ON FUNCTION "trend_directory"."completeness"(name, "start" timestamp with time zone, "end" timestamp with time zone) IS 'Return table with record counts grouped by timestamp';
-
-
 CREATE FUNCTION "trend_directory"."map_timestamp"(trend_directory.materialization_trend_store_link, timestamp with time zone)
     RETURNS timestamp with time zone
 AS $$
@@ -3342,9 +3300,9 @@ BEGIN
         $1.src_view::name
     ) USING timestamp;
 
-    PERFORM logging.end_job(job_id);
-
     GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    PERFORM logging.end_job(job_id);
 
     RETURN row_count;
 END;
@@ -3375,9 +3333,9 @@ BEGIN
         $1.src_function::regproc
     ) USING timestamp;
 
-    PERFORM logging.end_job(job_id);
-
     GET DIAGNOSTICS row_count = ROW_COUNT;
+
+    PERFORM logging.end_job(job_id);
 
     RETURN row_count;
 END;
