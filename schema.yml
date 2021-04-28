@@ -2094,6 +2094,45 @@ objects:
       privilege: INSERT,UPDATE,DELETE
 
 - table:
+    name: trend_store_part_stats
+    schema: trend_directory
+    columns:
+    - name: trend_store_part_id
+      data_type: integer
+      nullable: false
+    - name: timestamp
+      data_type: timestamp with time zone
+      nullable: false
+    - name: modified
+      data_type: timestamp with time zone
+      description: Time of the last modification
+      nullable: false
+    - name: count
+      data_type: integer
+      nullable: false
+    primary_key:
+      name: trend_store_part_stats_pkey
+      columns:
+      - trend_store_part_id
+      - timestamp
+    foreign_keys:
+    - name: trend_store_part_stats_trend_store_part_id_fkey
+      columns:
+      - trend_store_part_id
+      references:
+        table:
+          name: trend_store_part
+          schema: trend_directory
+        columns:
+        - id
+      on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE   
+
+- table:
     name: materialization
     schema: trend_directory
     description: |-
@@ -2905,6 +2944,21 @@ objects:
     - data_type: trend_directory.trend_store_part
     source: |-
       SELECT $1.name;
+
+- function:
+    name: base_table_name_by_trend_store_part_id
+    schema: trend_directory
+    return_type: name
+    language: sql
+    volatility: immutable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: integer
+      name: trend_store_part_id
+    source: |-
+      SELECT name FROM trend_directory.trend_store_part
+        WHERE id = $1;
 
 - function:
     name: view_name
@@ -5374,6 +5428,66 @@ objects:
       INSERT INTO trend_directory.modified_log(trend_store_part_id, timestamp, modified)
       VALUES ($1, $2, now());
 
+- function:
+    name: find_trend_store_part_stats_to_update
+    schema: trend_directory
+    return_type: setof trend_directory.trend_store_part_stats
+    language: sql
+    volatility: stable
+    source: |-
+      SELECT tsps.*
+        FROM trend_directory.trend_store_part_stats tsps
+        JOIN trend_directory.modified m
+        ON tsps.trend_store_part_id = m.trend_store_part_id
+          AND tsps.timestamp = m.timestamp
+        WHERE tsps.modified < m.last
+
+- function:
+    name: get_count
+    schema: trend_directory
+    return_type: integer
+    language: plpgsql
+    volatility: stable
+    arguments:
+    - name: trend_store_part_id
+      data_type: integer
+    - name: timestamp
+      data_type: timestamptz
+    source: |-
+      DECLARE
+        result integer;
+      BEGIN
+        EXECUTE FORMAT('SELECT COUNT(*)::integer FROM trend.%I WHERE timestamp = ''%s''',
+          trend_directory.base_table_name_by_trend_store_part_id($1),
+          $2) INTO result;
+        RETURN result;
+      END;
+
+- function:
+    name: recalculate_trend_store_part_stats
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part_stats
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trend_directory.trend_store_part_stats
+    source: |-
+      UPDATE trend_directory.trend_store_part_stats
+        SET modified = now(), count = trend_directory.get_count($1.trend_store_part_id, $1.timestamp)
+        WHERE trend_store_part_id = $1.trend_store_part_id
+          AND timestamp = $1.timestamp
+      RETURNING $1;
+
+- function:
+    name: recalculate_changed_trend_store_part_stats
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    source: |-
+      SELECT trend_directory.recalculate_trend_store_part_stats(tsps)
+        FROM trend_directory.find_trend_store_part_stats_to_update() tsps;
+
 - composite_type:
     name: transfer_result
     schema: trend_directory
@@ -5994,6 +6108,20 @@ objects:
           RETURN OLD;
       END;
 
+- function:
+    name: create_stats_on_creation
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    arguments: []
+    source: |-
+      BEGIN
+        INSERT INTO trend_directory.trend_store_part_stats (trend_store_part_id, timestamp, modified, count)
+          VALUES (NEW.trend_store_part_id, NEW.timestamp, now(), trend_directory.get_count(NEW.trend_store_part_id, NEW.timestamp));
+        RETURN NEW;
+      END;
+
 - trigger:
     table:
       schema: trend_directory
@@ -6044,6 +6172,19 @@ objects:
     when: before
     events:
     - delete
+    affecteach: row
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: modified
+    name: create_stats_on_creation
+    function:
+      schema: trend_directory
+      name: create_stats_on_creation
+    when: after
+    events:
+    - insert
     affecteach: row
 
 #######################
