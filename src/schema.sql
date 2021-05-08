@@ -3267,16 +3267,14 @@ COMMENT ON FUNCTION "trend_directory"."mark_modified"("trend_store_id" integer, 
 ';
 
 
-CREATE FUNCTION "trend_directory"."find_trend_store_part_stats_to_update"()
-    RETURNS setof trend_directory.trend_store_part_stats
-AS $$
-SELECT tsps.*
+CREATE VIEW "trend_directory"."trend_store_part_stats_to_update" AS
+SELECT tsps.trend_store_part_id,
+    tsps.timestamp
   FROM trend_directory.trend_store_part_stats tsps
   JOIN trend_directory.modified m
   ON tsps.trend_store_part_id = m.trend_store_part_id
     AND tsps.timestamp = m.timestamp
-  WHERE tsps.modified < m.last
-$$ LANGUAGE sql STABLE;
+  WHERE tsps.modified < m.last;
 
 
 CREATE FUNCTION "trend_directory"."get_count"("trend_store_part_id" integer, "timestamp" timestamptz)
@@ -3293,23 +3291,28 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."recalculate_trend_store_part_stats"(trend_directory.trend_store_part_stats)
-    RETURNS trend_directory.trend_store_part_stats
-AS $$
-UPDATE trend_directory.trend_store_part_stats
-  SET modified = now(), count = trend_directory.get_count($1.trend_store_part_id, $1.timestamp)
-  WHERE trend_store_part_id = $1.trend_store_part_id
-    AND timestamp = $1.timestamp
-RETURNING $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "trend_directory"."recalculate_changed_trend_store_part_stats"()
+CREATE FUNCTION "trend_directory"."recalculate_trend_store_part_stats"("trend_store_part_id" integer, "timestamp" timestamptz)
     RETURNS void
 AS $$
-SELECT trend_directory.recalculate_trend_store_part_stats(tsps)
-  FROM trend_directory.find_trend_store_part_stats_to_update() tsps;
+UPDATE trend_directory.trend_store_part_stats
+  SET modified = now(), count = trend_directory.get_count($1, $2)
+  WHERE trend_store_part_id = $1
+    AND timestamp = $2;
 $$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."create_missing_trend_store_part_stats"()
+    RETURNS void
+AS $$
+INSERT INTO trend_directory.trend_store_part_stats (trend_store_part_id, timestamp, modified, count)
+  SELECT m.trend_store_part_id, m.timestamp, '2000-01-01 00:00:00+02', 0
+    FROM trend_directory.modified m
+      LEFT JOIN trend_directory.trend_store_part_stats s
+      ON s.trend_store_part_id = m.trend_store_part_id AND s.timestamp = m.timestamp
+      WHERE s IS NULL;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."create_missing_trend_store_part_stats"() IS 'Create trend_store_part_stat where it does not exist yet.';
 
 
 CREATE TYPE "trend_directory"."transfer_result" AS (
@@ -3738,7 +3741,7 @@ CREATE FUNCTION "trend_directory"."create_stats_on_creation"()
 AS $$
 BEGIN
   INSERT INTO trend_directory.trend_store_part_stats (trend_store_part_id, timestamp, modified, count)
-    VALUES (NEW.trend_store_part_id, NEW.timestamp, now(), trend_directory.get_count(NEW.trend_store_part_id, NEW.timestamp));
+    VALUES (NEW.trend_store_part_id, NEW.timestamp, '2000-01-01 00:00:00+02', 1);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
