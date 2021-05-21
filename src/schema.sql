@@ -3301,6 +3301,14 @@ UPDATE trend_directory.trend_store_part_stats
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."update_trend_store_part_stats"()
+    RETURNS void
+AS $$
+SELECT trend_directory.recalculate_trend_store_part_stats(trend_store_part_id, timestamp)
+  FROM trend_directory.trend_store_part_stats_to_update;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."create_missing_trend_store_part_stats"()
     RETURNS void
 AS $$

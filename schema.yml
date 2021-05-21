@@ -5479,6 +5479,16 @@ objects:
           AND timestamp = $2;
 
 - function:
+    name: update_trend_store_part_stats
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    source: |-
+      SELECT trend_directory.recalculate_trend_store_part_stats(trend_store_part_id, timestamp)
+        FROM trend_directory.trend_store_part_stats_to_update;
+
+- function:
     name: create_missing_trend_store_part_stats
     schema: trend_directory
     return_type: void
