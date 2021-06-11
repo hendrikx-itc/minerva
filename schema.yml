@@ -628,7 +628,7 @@ objects:
     secdef: false
     arguments: []
     source: |-
-      SELECT (5,1,7)::system.version_tuple;
+      SELECT (5,2,0)::system.version_tuple;
 
 - function:
     name: get_setting
@@ -2792,6 +2792,59 @@ objects:
       columns:
       - materialization_id
       - trend_store_part_id
+
+- function:
+    name: completeness
+    schema: trend_directory
+    return_type: TABLE("timestamp" timestamptz, "count" bigint)
+    description: Return table with record counts grouped by timestamp
+    language: plpgsql
+    volatility: volatile
+    arguments:
+      - data_type: name
+      - name: start
+        data_type: timestamp with time zone
+      - name: end
+        data_type: timestamp with time zone
+    source: |-
+        DECLARE
+            gran interval;
+            truncated_start timestamptz;
+            truncated_end timestamptz;
+        BEGIN
+            SELECT granularity INTO gran
+            FROM trend_directory.trend_store_part tsp
+            JOIN trend_directory.trend_store ts ON ts.id = tsp.trend_store_id
+            WHERE tsp.name = $1;
+
+            CASE gran
+            WHEN '1month' THEN
+                SELECT date_trunc('month', $2) INTO truncated_start;
+                SELECT date_trunc('month', $3) INTO truncated_end;
+            WHEN '1w' THEN
+                SELECT date_trunc('week', $2) INTO truncated_start;
+                SELECT date_trunc('week', $3) INTO truncated_end;
+            WHEN '1d' THEN
+                SELECT date_trunc('day', $2) INTO truncated_start;
+                SELECT date_trunc('day', $3) INTO truncated_end;
+            WHEN '1h' THEN
+                SELECT date_trunc('hour', $2) INTO truncated_start;
+                SELECT date_trunc('hour', $3) INTO truncated_end;
+            ELSE
+                SELECT trend_directory.index_to_timestamp(gran, trend_directory.timestamp_to_index(gran, $2)) INTO truncated_start;
+                SELECT trend_directory.index_to_timestamp(gran, trend_directory.timestamp_to_index(gran, $3)) INTO truncated_end;
+            END CASE;
+
+            RETURN QUERY
+            WITH trend_data AS (
+                SELECT s.timestamp, s.count from trend_directory.trend_store_part_stats s
+                JOIN trend_directory.trend_store_part p ON s.trend_store_part_id = p.id
+                WHERE s.timestamp >= truncated_start and s.timestamp <= truncated_end and p.name = $1
+            )
+            SELECT t, coalesce(d.count, 0)::bigint
+                FROM generate_series(truncated_start, truncated_end, gran) t
+                LEFT JOIN trend_data d on d.timestamp = t ORDER BY t asc;
+        END;
 
 - function:
     name: map_timestamp
