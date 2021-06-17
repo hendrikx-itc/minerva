@@ -7636,8 +7636,8 @@ DECLARE
 BEGIN
     EXECUTE format(
 $query$
-INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
-SELECT staging.entity_id, staging.timestamp, staging.created, staging.rule_id, staging.weight, staging.details
+INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details, data)
+SELECT staging.entity_id, staging.timestamp, staging.created, staging.rule_id, staging.weight, staging.details, staging.data
 FROM notification.%I staging
 LEFT JOIN notification.%I target ON target.entity_id = staging.entity_id AND target.timestamp = staging.timestamp AND target.rule_id = staging.rule_id
 WHERE target.entity_id IS NULL;
