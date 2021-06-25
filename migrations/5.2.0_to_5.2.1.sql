@@ -1,5 +1,12 @@
 
 
+CREATE OR REPLACE FUNCTION "system"."version"()
+    RETURNS system.version_tuple
+AS $$
+SELECT (5,2,1)::system.version_tuple;
+$$ LANGUAGE sql IMMUTABLE;
+
+
 CREATE OR REPLACE FUNCTION "trend_directory"."create_staging_table_sql"(trend_directory.trend_store_part)
     RETURNS text[]
 AS $$
