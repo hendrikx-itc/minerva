@@ -1957,7 +1957,7 @@ CREATE FUNCTION "trend_directory"."create_staging_table_sql"(trend_directory.tre
 AS $$
 SELECT ARRAY[
     format(
-        'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone, created timestamp with time zone, job_id integer%s);',
+        'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone, created timestamp with time zone, job_id bigint%s);',
         trend_directory.staging_table_schema(),
         trend_directory.staging_table_name($1),
         (
@@ -3411,7 +3411,7 @@ AS $$
 DECLARE
     columns_part text;
     row_count integer;
-    job_id integer;
+    job_id bigint;
 BEGIN
     SELECT logging.start_job(format('{"view_materialization": "%s", "timestamp": "%s"}', m::text, $2::text)::jsonb) INTO job_id
     FROM trend_directory.materialization m WHERE id = $1.materialization_id;
@@ -3444,7 +3444,7 @@ AS $$
 DECLARE
     columns_part text;
     row_count integer;
-    job_id integer;
+    job_id bigint;
 BEGIN
     SELECT logging.start_job(format('{"function_materialization": "%s", "timestamp": "%s"}', m::text, $2::text)::jsonb) INTO job_id
     FROM trend_directory.materialization m WHERE id = $1.materialization_id;
