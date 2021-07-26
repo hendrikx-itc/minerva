@@ -628,7 +628,7 @@ objects:
     secdef: false
     arguments: []
     source: |-
-      SELECT (5,2,1)::system.version_tuple;
+      SELECT (5,2,2)::system.version_tuple;
 
 - function:
     name: get_setting
@@ -4591,7 +4591,7 @@ objects:
     name: add_trends
     schema: trend_directory
     return_type: text[]
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -4600,12 +4600,22 @@ objects:
     - name: parts
       data_type: trend_directory.trend_store_part_descr[]
     source: |-
-      SELECT trend_directory.assure_table_trends_exist(
-        trend_directory.get_or_create_trend_store_part($1.id, name),
-        trends,
-        generated_trends
-      )
-      FROM unnest($2);
+      DECLARE
+        result text[];
+        partresult text[];
+      BEGIN
+        FOR partresult IN
+          SELECT trend_directory.assure_table_trends_exist(
+            trend_directory.get_or_create_trend_store_part($1.id, name),
+            trends,
+            generated_trends
+          )
+          FROM unnest($2)
+        LOOP
+          SELECT result || partresult INTO result;
+        END LOOP;
+        RETURN result;
+      END;
 
 - function:
     name: remove_table_trend
@@ -5491,7 +5501,7 @@ objects:
         JOIN trend_directory.modified m
         ON tsps.trend_store_part_id = m.trend_store_part_id
           AND tsps.timestamp = m.timestamp
-        WHERE tsps.modified < m.last;
+        WHERE tsps.modified < m.last + interval '1 second';
 
 - function:
     name: get_count

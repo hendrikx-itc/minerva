@@ -409,7 +409,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,2,1)::system.version_tuple;
+SELECT (5,2,2)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -2728,13 +2728,23 @@ $$ LANGUAGE plpgsql VOLATILE;
 CREATE FUNCTION "trend_directory"."add_trends"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
     RETURNS text[]
 AS $$
-SELECT trend_directory.assure_table_trends_exist(
-  trend_directory.get_or_create_trend_store_part($1.id, name),
-  trends,
-  generated_trends
-)
-FROM unnest($2);
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  result text[];
+  partresult text[];
+BEGIN
+  FOR partresult IN
+    SELECT trend_directory.assure_table_trends_exist(
+      trend_directory.get_or_create_trend_store_part($1.id, name),
+      trends,
+      generated_trends
+    )
+    FROM unnest($2)
+  LOOP
+    SELECT result || partresult INTO result;
+  END LOOP;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."remove_table_trend"("trend" trend_directory.table_trend)
@@ -3320,7 +3330,7 @@ SELECT tsps.trend_store_part_id,
   JOIN trend_directory.modified m
   ON tsps.trend_store_part_id = m.trend_store_part_id
     AND tsps.timestamp = m.timestamp
-  WHERE tsps.modified < m.last;
+  WHERE tsps.modified < m.last + interval '1 second';
 
 
 CREATE FUNCTION "trend_directory"."get_count"("trend_store_part_id" integer, "timestamp" timestamptz)
