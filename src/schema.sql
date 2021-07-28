@@ -2747,6 +2747,19 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."add_trends"("part" trend_directory.trend_store_part_descr)
+    RETURNS text[]
+AS $$
+SELECT trend_directory.assure_table_trends_exist(
+  trend_store_part,
+  $1.trends,
+  $1.generated_trends
+)
+FROM trend_directory.trend_store_part
+WHERE name = $1.name;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."remove_table_trend"("trend" trend_directory.table_trend)
     RETURNS trend_directory.table_trend
 AS $$
@@ -2870,6 +2883,18 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."remove_extra_trends"("part" trend_directory.trend_store_part_descr)
+    RETURNS text[]
+AS $$
+SELECT trend_directory.remove_extra_trends(
+  trend_store_part,
+  $1.trends
+)
+FROM trend_directory.trend_store_part
+WHERE name = $1.name;
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."change_table_trend_data_unsafe"(trend_directory.table_trend, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
     RETURNS text
 AS $$
@@ -2924,10 +2949,12 @@ BEGIN
             RETURN 8;
         WHEN 'integer[]' THEN
             RETURN 9;
-        WHEN 'text[]' THEN
+        WHEN 'numeric[]' THEN
             RETURN 10;
-        WHEN 'text' THEN
+        WHEN 'text[]' THEN
             RETURN 11;
+        WHEN 'text' THEN
+            RETURN 12;
         WHEN NULL THEN
             RETURN NULL;
         ELSE
@@ -3020,6 +3047,34 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE FUNCTION "trend_directory"."trend_has_update"("trend" trend_directory.table_trend, "trend_update" trend_directory.trend_descr)
+    RETURNS boolean
+AS $$
+SELECT
+  $1.data_type != $2.data_type
+  OR
+  $1.time_aggregation != $2.time_aggregation
+  OR
+  $1.entity_aggregation != $2.entity_aggregation;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_trend_data_upward"("part" trend_directory.trend_store_part_descr)
+    RETURNS text[]
+AS $$
+SELECT array_agg(trend_directory.change_table_trend_data_safe(
+  table_trend,
+  t.data_type,
+  t.entity_aggregation,
+  t.time_aggregation
+))
+FROM trend_directory.trend_store_part
+JOIN trend_directory.table_trend ON table_trend.trend_store_part_id = trend_store_part.id
+JOIN UNNEST($1.trends) AS t ON t.name = table_trend.name
+WHERE trend_store_part.name = $1.name AND trend_directory.trend_has_update(table_trend, t);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."change_trendstore_strong"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
     RETURNS text[]
 AS $$
@@ -3085,6 +3140,31 @@ BEGIN
   ELSE
     SELECT result || ARRAY['no trends changed'] INTO result;
   END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TYPE "trend_directory"."change_trend_store_part_result" AS (
+  "added_trends" text[],
+  "removed_trends" text[],
+  "changed_trends" text[]
+);
+
+
+
+CREATE FUNCTION "trend_directory"."change_trend_store_part_weak"("part" trend_directory.trend_store_part_descr)
+    RETURNS trend_directory.change_trend_store_part_result
+AS $$
+DECLARE
+  result trend_directory.change_trend_store_part_result;
+BEGIN
+  SELECT trend_directory.add_trends($1) INTO result.added_trends;
+
+  SELECT trend_directory.remove_extra_trends($1) INTO result.removed_trends;
+
+  SELECT trend_directory.change_trend_data_upward($1) INTO result.changed_trends;
+
   RETURN result;
 END;
 $$ LANGUAGE plpgsql VOLATILE;

@@ -4618,6 +4618,26 @@ objects:
       END;
 
 - function:
+    name: add_trends
+    schema: trend_directory
+    return_type: text[]
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: part
+      data_type: trend_directory.trend_store_part_descr
+    source: |-
+        SELECT trend_directory.assure_table_trends_exist(
+          trend_store_part,
+          $1.trends,
+          $1.generated_trends
+        )
+        FROM trend_directory.trend_store_part
+        WHERE name = $1.name;
+
+- function:
     name: remove_table_trend
     schema: trend_directory
     return_type: trend_directory.table_trend
@@ -4816,6 +4836,25 @@ objects:
       END;
 
 - function:
+    name: remove_extra_trends
+    schema: trend_directory
+    return_type: text[]
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: part
+      data_type: trend_directory.trend_store_part_descr
+    source: |-
+        SELECT trend_directory.remove_extra_trends(
+          trend_store_part,
+          $1.trends
+        )
+        FROM trend_directory.trend_store_part
+        WHERE name = $1.name;
+
+- function:
     name: change_table_trend_data_unsafe
     schema: trend_directory
     return_type: text
@@ -4890,10 +4929,12 @@ objects:
                   RETURN 8;
               WHEN 'integer[]' THEN
                   RETURN 9;
-              WHEN 'text[]' THEN
+              WHEN 'numeric[]' THEN
                   RETURN 10;
-              WHEN 'text' THEN
+              WHEN 'text[]' THEN
                   RETURN 11;
+              WHEN 'text' THEN
+                  RETURN 12;
               WHEN NULL THEN
                   RETURN NULL;
               ELSE
@@ -5044,6 +5085,47 @@ objects:
       END;
 
 - function:
+    name: trend_has_update
+    schema: trend_directory
+    return_type: boolean
+    language: sql
+    arguments:
+    - name: trend
+      data_type: trend_directory.table_trend
+    - name: trend_update
+      data_type: trend_directory.trend_descr
+    source: |-
+      SELECT
+        $1.data_type != $2.data_type
+        OR
+        $1.time_aggregation != $2.time_aggregation
+        OR
+        $1.entity_aggregation != $2.entity_aggregation;
+
+- function:
+    name: change_trend_data_upward
+    schema: trend_directory
+    return_type: text[]
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: part
+      data_type: trend_directory.trend_store_part_descr
+    source: |-
+      SELECT array_agg(trend_directory.change_table_trend_data_safe(
+        table_trend,
+        t.data_type,
+        t.entity_aggregation,
+        t.time_aggregation
+      ))
+      FROM trend_directory.trend_store_part
+      JOIN trend_directory.table_trend ON table_trend.trend_store_part_id = trend_store_part.id
+      JOIN UNNEST($1.trends) AS t ON t.name = table_trend.name
+      WHERE trend_store_part.name = $1.name AND trend_directory.trend_has_update(table_trend, t);
+
+- function:
     name: change_trendstore_strong
     schema: trend_directory
     return_type: text[]
@@ -5126,6 +5208,44 @@ objects:
         ELSE
           SELECT result || ARRAY['no trends changed'] INTO result;
         END IF;
+        RETURN result;
+      END;
+
+- composite_type:
+    name: change_trend_store_part_result
+    schema: trend_directory
+    columns:
+    - name: added_trends
+      data_type: text[]
+      nullable: true
+    - name: removed_trends
+      data_type: text[]
+      nullable: true
+    - name: changed_trends
+      data_type: text[]
+      nullable: true
+
+- function:
+    name: change_trend_store_part_weak
+    schema: trend_directory
+    return_type: trend_directory.change_trend_store_part_result
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: part
+      data_type: trend_directory.trend_store_part_descr
+    source: |-
+      DECLARE
+        result trend_directory.change_trend_store_part_result;
+      BEGIN
+        SELECT trend_directory.add_trends($1) INTO result.added_trends;
+
+        SELECT trend_directory.remove_extra_trends($1) INTO result.removed_trends;
+
+        SELECT trend_directory.change_trend_data_upward($1) INTO result.changed_trends;
+
         RETURN result;
       END;
 
