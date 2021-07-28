@@ -2883,14 +2883,19 @@ BEGIN
       entity_aggregation = $3,
       time_aggregation = $4
     WHERE id = $1.id;
+    SELECT $1.name INTO result;
+  END IF;
+
+  IF $1.data_type <> $2
+  THEN
     EXECUTE format('ALTER TABLE trend.%I ALTER %I TYPE %s USING CAST(%I AS %s)',
       trend_directory.trend_store_part_name_for_trend($1),
       $1.name,
       $2,
       $1.name,
       $2);
-    SELECT $1.name INTO result;
   END IF;
+
   RETURN result;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
