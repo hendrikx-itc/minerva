@@ -409,7 +409,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,2,2)::system.version_tuple;
+SELECT (5,2,3)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 

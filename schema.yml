@@ -628,7 +628,7 @@ objects:
     secdef: false
     arguments: []
     source: |-
-      SELECT (5,2,2)::system.version_tuple;
+      SELECT (5,2,3)::system.version_tuple;
 
 - function:
     name: get_setting
