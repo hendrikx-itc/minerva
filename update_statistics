@@ -1,0 +1,22 @@
+#! /usr/bin/python3
+# -*- coding: utf-8 -*-
+# program to update all statistics of trend store parts in a Minerva system
+
+import psycopg2
+import psycopg2.extras
+
+conn = psycopg2.connect(dsn='')
+cursor = conn.cursor()
+cursor.execute('SELECT * FROM trend_directory.trend_store_part_stats_to_update')
+to_update = cursor.fetchall()
+cursor.close()
+conn.commit()
+print('Found {} trend store part statistics to update'.format(len(to_update)))
+for (index,(id, timestamp)) in enumerate(to_update):
+    if index and not index % 1000:
+        print('{} from {} done.'.format(index,len(to_update)))
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT trend_directory.recalculate_trend_store_part_stats({id}, '{timestamp}')")
+    cursor.close()
+    conn.commit()
+print('Finished updating trend store part statistics')

@@ -628,7 +628,7 @@ objects:
     secdef: false
     arguments: []
     source: |-
-      SELECT (5,1,7)::system.version_tuple;
+      SELECT (5,2,3)::system.version_tuple;
 
 - function:
     name: get_setting
@@ -2094,6 +2094,45 @@ objects:
       privilege: INSERT,UPDATE,DELETE
 
 - table:
+    name: trend_store_part_stats
+    schema: trend_directory
+    columns:
+    - name: trend_store_part_id
+      data_type: integer
+      nullable: false
+    - name: timestamp
+      data_type: timestamp with time zone
+      nullable: false
+    - name: modified
+      data_type: timestamp with time zone
+      description: Time of the last modification
+      nullable: false
+    - name: count
+      data_type: integer
+      nullable: false
+    primary_key:
+      name: trend_store_part_stats_pkey
+      columns:
+      - trend_store_part_id
+      - timestamp
+    foreign_keys:
+    - name: trend_store_part_stats_trend_store_part_id_fkey
+      columns:
+      - trend_store_part_id
+      references:
+        table:
+          name: trend_store_part
+          schema: trend_directory
+        columns:
+        - id
+      on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE   
+
+- table:
     name: materialization
     schema: trend_directory
     description: |-
@@ -2755,6 +2794,59 @@ objects:
       - trend_store_part_id
 
 - function:
+    name: completeness
+    schema: trend_directory
+    return_type: TABLE("timestamp" timestamptz, "count" bigint)
+    description: Return table with record counts grouped by timestamp
+    language: plpgsql
+    volatility: volatile
+    arguments:
+      - data_type: name
+      - name: start
+        data_type: timestamp with time zone
+      - name: end
+        data_type: timestamp with time zone
+    source: |-
+        DECLARE
+            gran interval;
+            truncated_start timestamptz;
+            truncated_end timestamptz;
+        BEGIN
+            SELECT granularity INTO gran
+            FROM trend_directory.trend_store_part tsp
+            JOIN trend_directory.trend_store ts ON ts.id = tsp.trend_store_id
+            WHERE tsp.name = $1;
+
+            CASE gran
+            WHEN '1month' THEN
+                SELECT date_trunc('month', $2) INTO truncated_start;
+                SELECT date_trunc('month', $3) INTO truncated_end;
+            WHEN '1w' THEN
+                SELECT date_trunc('week', $2) INTO truncated_start;
+                SELECT date_trunc('week', $3) INTO truncated_end;
+            WHEN '1d' THEN
+                SELECT date_trunc('day', $2) INTO truncated_start;
+                SELECT date_trunc('day', $3) INTO truncated_end;
+            WHEN '1h' THEN
+                SELECT date_trunc('hour', $2) INTO truncated_start;
+                SELECT date_trunc('hour', $3) INTO truncated_end;
+            ELSE
+                SELECT trend_directory.index_to_timestamp(gran, trend_directory.timestamp_to_index(gran, $2)) INTO truncated_start;
+                SELECT trend_directory.index_to_timestamp(gran, trend_directory.timestamp_to_index(gran, $3)) INTO truncated_end;
+            END CASE;
+
+            RETURN QUERY
+            WITH trend_data AS (
+                SELECT s.timestamp, s.count from trend_directory.trend_store_part_stats s
+                JOIN trend_directory.trend_store_part p ON s.trend_store_part_id = p.id
+                WHERE s.timestamp >= truncated_start and s.timestamp <= truncated_end and p.name = $1
+            )
+            SELECT t, coalesce(d.count, 0)::bigint
+                FROM generate_series(truncated_start, truncated_end, gran) t
+                LEFT JOIN trend_data d on d.timestamp = t ORDER BY t asc;
+        END;
+
+- function:
     name: map_timestamp
     schema: trend_directory
     return_type: timestamp with time zone
@@ -2905,6 +2997,21 @@ objects:
     - data_type: trend_directory.trend_store_part
     source: |-
       SELECT $1.name;
+
+- function:
+    name: base_table_name_by_trend_store_part_id
+    schema: trend_directory
+    return_type: name
+    language: sql
+    volatility: immutable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: integer
+      name: trend_store_part_id
+    source: |-
+      SELECT name FROM trend_directory.trend_store_part
+        WHERE id = $1;
 
 - function:
     name: view_name
@@ -3267,7 +3374,7 @@ objects:
     source: |-
       SELECT ARRAY[
           format(
-              'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone, created timestamp with time zone, job_id integer%s);',
+              'CREATE UNLOGGED TABLE %I.%I (entity_id integer, "timestamp" timestamp with time zone, created timestamp with time zone, job_id bigint%s);',
               trend_directory.staging_table_schema(),
               trend_directory.staging_table_name($1),
               (
@@ -4484,7 +4591,7 @@ objects:
     name: add_trends
     schema: trend_directory
     return_type: text[]
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -4493,12 +4600,42 @@ objects:
     - name: parts
       data_type: trend_directory.trend_store_part_descr[]
     source: |-
-      SELECT trend_directory.assure_table_trends_exist(
-        trend_directory.get_or_create_trend_store_part($1.id, name),
-        trends,
-        generated_trends
-      )
-      FROM unnest($2);
+      DECLARE
+        result text[];
+        partresult text[];
+      BEGIN
+        FOR partresult IN
+          SELECT trend_directory.assure_table_trends_exist(
+            trend_directory.get_or_create_trend_store_part($1.id, name),
+            trends,
+            generated_trends
+          )
+          FROM unnest($2)
+        LOOP
+          SELECT result || partresult INTO result;
+        END LOOP;
+        RETURN result;
+      END;
+
+- function:
+    name: add_trends
+    schema: trend_directory
+    return_type: text[]
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: part
+      data_type: trend_directory.trend_store_part_descr
+    source: |-
+        SELECT trend_directory.assure_table_trends_exist(
+          trend_store_part,
+          $1.trends,
+          $1.generated_trends
+        )
+        FROM trend_directory.trend_store_part
+        WHERE name = $1.name;
 
 - function:
     name: remove_table_trend
@@ -4699,6 +4836,25 @@ objects:
       END;
 
 - function:
+    name: remove_extra_trends
+    schema: trend_directory
+    return_type: text[]
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: part
+      data_type: trend_directory.trend_store_part_descr
+    source: |-
+        SELECT trend_directory.remove_extra_trends(
+          trend_store_part,
+          $1.trends
+        )
+        FROM trend_directory.trend_store_part
+        WHERE name = $1.name;
+
+- function:
     name: change_table_trend_data_unsafe
     schema: trend_directory
     return_type: text
@@ -4725,14 +4881,19 @@ objects:
             entity_aggregation = $3,
             time_aggregation = $4
           WHERE id = $1.id;
+          SELECT $1.name INTO result;
+        END IF;
+
+        IF $1.data_type <> $2
+        THEN
           EXECUTE format('ALTER TABLE trend.%I ALTER %I TYPE %s USING CAST(%I AS %s)',
             trend_directory.trend_store_part_name_for_trend($1),
             $1.name,
             $2,
             $1.name,
             $2);
-          SELECT $1.name INTO result;
         END IF;
+
         RETURN result;
       END;
 
@@ -4768,10 +4929,12 @@ objects:
                   RETURN 8;
               WHEN 'integer[]' THEN
                   RETURN 9;
-              WHEN 'text[]' THEN
+              WHEN 'numeric[]' THEN
                   RETURN 10;
-              WHEN 'text' THEN
+              WHEN 'text[]' THEN
                   RETURN 11;
+              WHEN 'text' THEN
+                  RETURN 12;
               WHEN NULL THEN
                   RETURN NULL;
               ELSE
@@ -4922,6 +5085,47 @@ objects:
       END;
 
 - function:
+    name: trend_has_update
+    schema: trend_directory
+    return_type: boolean
+    language: sql
+    arguments:
+    - name: trend
+      data_type: trend_directory.table_trend
+    - name: trend_update
+      data_type: trend_directory.trend_descr
+    source: |-
+      SELECT
+        $1.data_type != $2.data_type
+        OR
+        $1.time_aggregation != $2.time_aggregation
+        OR
+        $1.entity_aggregation != $2.entity_aggregation;
+
+- function:
+    name: change_trend_data_upward
+    schema: trend_directory
+    return_type: text[]
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: part
+      data_type: trend_directory.trend_store_part_descr
+    source: |-
+      SELECT array_agg(trend_directory.change_table_trend_data_safe(
+        table_trend,
+        t.data_type,
+        t.entity_aggregation,
+        t.time_aggregation
+      ))
+      FROM trend_directory.trend_store_part
+      JOIN trend_directory.table_trend ON table_trend.trend_store_part_id = trend_store_part.id
+      JOIN UNNEST($1.trends) AS t ON t.name = table_trend.name
+      WHERE trend_store_part.name = $1.name AND trend_directory.trend_has_update(table_trend, t);
+
+- function:
     name: change_trendstore_strong
     schema: trend_directory
     return_type: text[]
@@ -5004,6 +5208,44 @@ objects:
         ELSE
           SELECT result || ARRAY['no trends changed'] INTO result;
         END IF;
+        RETURN result;
+      END;
+
+- composite_type:
+    name: change_trend_store_part_result
+    schema: trend_directory
+    columns:
+    - name: added_trends
+      data_type: text[]
+      nullable: true
+    - name: removed_trends
+      data_type: text[]
+      nullable: true
+    - name: changed_trends
+      data_type: text[]
+      nullable: true
+
+- function:
+    name: change_trend_store_part_weak
+    schema: trend_directory
+    return_type: trend_directory.change_trend_store_part_result
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: part
+      data_type: trend_directory.trend_store_part_descr
+    source: |-
+      DECLARE
+        result trend_directory.change_trend_store_part_result;
+      BEGIN
+        SELECT trend_directory.add_trends($1) INTO result.added_trends;
+
+        SELECT trend_directory.remove_extra_trends($1) INTO result.removed_trends;
+
+        SELECT trend_directory.change_trend_data_upward($1) INTO result.changed_trends;
+
         RETURN result;
       END;
 
@@ -5374,6 +5616,82 @@ objects:
       INSERT INTO trend_directory.modified_log(trend_store_part_id, timestamp, modified)
       VALUES ($1, $2, now());
 
+- view:
+    name: trend_store_part_stats_to_update
+    schema: trend_directory
+    query: |-
+      SELECT tsps.trend_store_part_id,
+          tsps.timestamp
+        FROM trend_directory.trend_store_part_stats tsps
+        JOIN trend_directory.modified m
+        ON tsps.trend_store_part_id = m.trend_store_part_id
+          AND tsps.timestamp = m.timestamp
+        WHERE tsps.modified < m.last + interval '1 second';
+
+- function:
+    name: get_count
+    schema: trend_directory
+    return_type: integer
+    language: plpgsql
+    volatility: stable
+    arguments:
+    - name: trend_store_part_id
+      data_type: integer
+    - name: timestamp
+      data_type: timestamptz
+    source: |-
+      DECLARE
+        result integer;
+      BEGIN
+        EXECUTE FORMAT('SELECT COUNT(*)::integer FROM trend.%I WHERE timestamp = ''%s''',
+          trend_directory.base_table_name_by_trend_store_part_id($1),
+          $2) INTO result;
+        RETURN result;
+      END;
+
+- function:
+    name: recalculate_trend_store_part_stats
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: integer
+      name: trend_store_part_id
+    - data_type: timestamptz
+      name: timestamp
+    source: |-
+      UPDATE trend_directory.trend_store_part_stats
+        SET modified = now(), count = trend_directory.get_count($1, $2)
+        WHERE trend_store_part_id = $1
+          AND timestamp = $2;
+
+- function:
+    name: update_trend_store_part_stats
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    source: |-
+      SELECT trend_directory.recalculate_trend_store_part_stats(trend_store_part_id, timestamp)
+        FROM trend_directory.trend_store_part_stats_to_update;
+
+- function:
+    name: create_missing_trend_store_part_stats
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    description: |-
+      Create trend_store_part_stat where it does not exist yet.
+    source: |-
+      INSERT INTO trend_directory.trend_store_part_stats (trend_store_part_id, timestamp, modified, count)
+        SELECT m.trend_store_part_id, m.timestamp, '2000-01-01 00:00:00+02', 0
+          FROM trend_directory.modified m
+            LEFT JOIN trend_directory.trend_store_part_stats s
+            ON s.trend_store_part_id = m.trend_store_part_id AND s.timestamp = m.timestamp
+            WHERE s IS NULL;
+
 - composite_type:
     name: transfer_result
     schema: trend_directory
@@ -5448,7 +5766,7 @@ objects:
       DECLARE
           columns_part text;
           row_count integer;
-          job_id integer;
+          job_id bigint;
       BEGIN
           SELECT logging.start_job(format('{"view_materialization": "%s", "timestamp": "%s"}', m::text, $2::text)::jsonb) INTO job_id
           FROM trend_directory.materialization m WHERE id = $1.materialization_id;
@@ -5488,7 +5806,7 @@ objects:
       DECLARE
           columns_part text;
           row_count integer;
-          job_id integer;
+          job_id bigint;
       BEGIN
           SELECT logging.start_job(format('{"function_materialization": "%s", "timestamp": "%s"}', m::text, $2::text)::jsonb) INTO job_id
           FROM trend_directory.materialization m WHERE id = $1.materialization_id;
@@ -5994,6 +6312,20 @@ objects:
           RETURN OLD;
       END;
 
+- function:
+    name: create_stats_on_creation
+    schema: trend_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    arguments: []
+    source: |-
+      BEGIN
+        INSERT INTO trend_directory.trend_store_part_stats (trend_store_part_id, timestamp, modified, count)
+          VALUES (NEW.trend_store_part_id, NEW.timestamp, '2000-01-01 00:00:00+02', 1);
+        RETURN NEW;
+      END;
+
 - trigger:
     table:
       schema: trend_directory
@@ -6044,6 +6376,19 @@ objects:
     when: before
     events:
     - delete
+    affecteach: row
+
+- trigger:
+    table:
+      schema: trend_directory
+      name: modified
+    name: create_stats_on_creation
+    function:
+      schema: trend_directory
+      name: create_stats_on_creation
+    when: after
+    events:
+    - insert
     affecteach: row
 
 #######################
