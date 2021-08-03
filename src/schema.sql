@@ -3339,7 +3339,7 @@ CREATE FUNCTION "trend_directory"."update_modified"("trend_store_part_id" intege
 AS $$
 INSERT INTO trend_directory.modified AS m (trend_store_part_id, timestamp, first, last)
 VALUES ($1, $2, $3, $3)
-ON CONFLICT ON CONSTRAINT modified_pkey DO UPDATE SET last = greatest(m.last, EXCLUDED.last);
+ON CONFLICT ON CONSTRAINT modified_pkey DO UPDATE SET last = EXCLUDED.last;
 $$ LANGUAGE sql VOLATILE;
 
 
