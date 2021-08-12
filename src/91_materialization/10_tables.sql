@@ -10,7 +10,7 @@ GRANT USAGE ON SCHEMA materialization TO minerva;
 
 CREATE TABLE materialization.type (
     id serial NOT NULL,
-    src_trendstore_id integer NOT NULL,
+    src_trendstore_id integer,
     dst_trendstore_id integer NOT NULL,
     processing_delay interval NOT NULL,
     stability_delay interval NOT NULL,
