@@ -281,9 +281,10 @@ GRANT INSERT,DELETE,UPDATE ON TABLE trend.attribute_to_trend TO minerva_writer;
 -- Table 'trend.attribute_to_trend_state'
 
 CREATE TABLE trend.attribute_to_trend_state (
-    attribute_to_trend_id integer REFERENCES trend.attribute_to_trend(id) PRIMARY KEY,
+    attribute_to_trend_id integer REFERENCES trend.attribute_to_trend(id),
     timestamp timestamp with time zone not null,
-    processed_modified timestamp with time zone not null
+    processed_modified timestamp with time zone not null,
+    PRIMARY KEY (attribute_to_trend_id, timestamp)
 );
 
 ALTER TABLE trend.attribute_to_trend_state OWNER TO minerva_admin;
