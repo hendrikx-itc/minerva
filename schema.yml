@@ -344,6 +344,29 @@ objects:
           END;
 
 - function:
+    name: safe_division
+    schema: public
+    return_type: anyelement
+    language: sql
+    volatility: immutable
+    strict: false
+    secdef: false
+    arguments:
+    - name: numerator
+      data_type: anyelement
+    - name: denominator
+      data_type: anyelement
+    - name: division_by_zero_indicator 
+      data_type: anyelement
+    source: |-
+      SELECT CASE
+          WHEN $2 = 0 THEN
+              $3
+          ELSE
+              $1 / $2
+          END;
+
+- function:
     name: add_array
     schema: public
     return_type: anyarray
