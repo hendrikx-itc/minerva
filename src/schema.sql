@@ -1,3 +1,5 @@
+CREATE EXTENSION citus;
+
 
 
 DO
@@ -1903,6 +1905,11 @@ SELECT ARRAY[
     ),
     format(
         'CREATE INDEX ON %I.%I USING btree (timestamp);',
+        trend_directory.base_table_schema(),
+        trend_directory.base_table_name($1)
+    ),
+    format(
+        'SELECT create_distributed_table(''%I.%I'', ''entity_id'')',
         trend_directory.base_table_schema(),
         trend_directory.base_table_name($1)
     ),

@@ -1,4 +1,4 @@
-FROM postgres:12
+FROM citusdata/citus:10.2
 MAINTAINER Hendrikx ITC
 
 COPY docker-resources/usr/bin/* /usr/bin/
