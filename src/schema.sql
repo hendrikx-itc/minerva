@@ -561,8 +561,8 @@ CREATE FUNCTION "directory"."create_data_source"(text)
     RETURNS directory.data_source
 AS $$
 INSERT INTO directory.data_source (name, description)
-VALUES ($1, 'default')
-RETURNING data_source;
+VALUES ($1, 'default');
+SELECT * FROM directory.data_source WHERE name = $1;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
@@ -704,8 +704,8 @@ CREATE FUNCTION "directory"."define_entity_type"(text)
 AS $$
 INSERT INTO directory.entity_type(name, description)
 VALUES ($1, '')
-ON CONFLICT DO NOTHING
-RETURNING entity_type;
+ON CONFLICT DO NOTHING;
+SELECT * FROM directory.entity_type WHERE name = $1;
 $$ LANGUAGE sql VOLATILE STRICT;
 
 
@@ -2168,25 +2168,28 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."define_table_trends"(trend_directory.trend_store_part, trend_directory.trend_descr[])
     RETURNS trend_directory.trend_store_part
 AS $$
-INSERT INTO trend_directory.table_trend(name, data_type, trend_store_part_id, description, time_aggregation, entity_aggregation, extra_data) (
+BEGIN
+  INSERT INTO trend_directory.table_trend(name, data_type, trend_store_part_id, description, time_aggregation, entity_aggregation, extra_data) (
     SELECT name, data_type, $1.id, description, time_aggregation, entity_aggregation, extra_data
     FROM unnest($2)
-);
-
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+  );
+  RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."define_generated_table_trends"(trend_directory.trend_store_part, trend_directory.generated_trend_descr[])
     RETURNS trend_directory.trend_store_part
 AS $$
-INSERT INTO trend_directory.generated_table_trend(trend_store_part_id, name, data_type, expression, extra_data, description) (
+BEGIN
+  INSERT INTO trend_directory.generated_table_trend(trend_store_part_id, name, data_type, expression, extra_data, description) (
     SELECT $1.id, name, data_type, expression, extra_data, description
     FROM unnest($2)
-);
+  );
 
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+  RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."rename_trend_store_part"(trend_directory.trend_store_part, name)
@@ -4200,6 +4203,53 @@ SELECT public.action(
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "attribute_directory"."create_set_hash_function_sql"(attribute_directory.attribute_store)
+    RETURNS text[]
+AS $function$
+SELECT ARRAY[
+    format('CREATE FUNCTION attribute_directory."set_hash_%s"(integer) '
+           'RETURNS void '
+           'AS $$'
+           'DECLARE '
+           '  attstore attribute_history.%I; '
+           'BEGIN '
+           '  SELECT * FROM attribute_history.%I WHERE id = $1 INTO attstore;'
+           '  UPDATE attribute_history.%I SET hash = attribute_history.values_hash(attstore)'
+           '    WHERE id = $1;'
+           'END;'
+           '$$ LANGUAGE plpgsql VOLATILE',
+           attribute_directory.to_table_name($1),
+           attribute_directory.to_table_name($1),
+           attribute_directory.to_table_name($1),
+           attribute_directory.to_table_name($1)
+    ),
+    format('SELECT create_distributed_function(''attribute_directory."set_hash_%s"(integer)'', ''$1'')',
+           attribute_directory.to_table_name($1)
+    )
+];
+$function$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "attribute_directory"."create_set_hash_function"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action($1, attribute_directory.create_set_hash_function_sql($1));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."drop_set_hash_function"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action(
+    $1,
+    format(
+        'DROP FUNCTION attribute_directory."set_hash_%s"(integer)',
+        attribute_directory.to_table_name($1)
+    )
+);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "attribute_directory"."changes_view_query"(attribute_directory.attribute_store)
     RETURNS text
 AS $$
@@ -4528,6 +4578,10 @@ SELECT ARRAY[
     format(
         'GRANT SELECT ON TABLE attribute_base.%I TO minerva',
         attribute_directory.to_table_name($1)
+    ),
+    format(
+        'SELECT create_distributed_table(''attribute_base.%I'', ''entity_id'')',
+        attribute_directory.to_table_name($1)
     )
 ]
 $$ LANGUAGE sql STABLE;
@@ -4586,9 +4640,10 @@ SELECT ARRAY[
         id serial,
         first_appearance timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
         modified timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        hash character varying,
-        PRIMARY KEY (id)
-        ) INHERITS (attribute_base.%I)', attribute_directory.to_table_name($1), attribute_directory.to_table_name($1)
+        hash character varying DEFAULT NULL,
+        %s,
+        PRIMARY KEY (id, entity_id)
+        )', attribute_directory.to_table_name($1), array_to_string(attribute_directory.column_specs($1), ',')
     ),
     format(
         'CREATE INDEX ON attribute_history.%I (id)',
@@ -4608,6 +4663,10 @@ SELECT ARRAY[
     ),
     format(
         'GRANT SELECT ON TABLE attribute_history.%I TO minerva',
+        attribute_directory.to_table_name($1)
+    ),
+    format(
+        'SELECT create_distributed_table(''attribute_history.%I'', ''entity_id'')',
         attribute_directory.to_table_name($1)
     )
 ];
@@ -4643,9 +4702,9 @@ CREATE FUNCTION "attribute_directory"."create_staging_table_sql"(attribute_direc
 AS $$
 SELECT ARRAY[
     format(
-        'CREATE UNLOGGED TABLE attribute_staging.%I () INHERITS (attribute_base.%I)',
+        'CREATE UNLOGGED TABLE attribute_staging.%I (%s)',
         attribute_directory.to_table_name($1),
-        attribute_directory.to_table_name($1)
+        array_to_string(attribute_directory.column_specs($1), ',')
     ),
     format(
         'CREATE INDEX ON attribute_staging.%I USING btree (entity_id, timestamp)',
@@ -4653,6 +4712,10 @@ SELECT ARRAY[
     ),
     format(
         'ALTER TABLE attribute_staging.%I OWNER TO minerva_writer',
+        attribute_directory.to_table_name($1)
+    ),
+    format(
+        'SELECT create_distributed_table(''attribute_staging.%I'', ''entity_id'')',
         attribute_directory.to_table_name($1)
     )
 ];
@@ -4912,108 +4975,6 @@ SELECT CASE
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."create_modified_trigger_function_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $function$
-SELECT ARRAY[
-    format('CREATE FUNCTION attribute_history.mark_modified_%s()
-RETURNS TRIGGER
-AS $$
-BEGIN
-    PERFORM attribute_directory.mark_modified(%s);
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql', $1.id, $1.id),
-    format('ALTER FUNCTION attribute_history.mark_modified_%s()
-        OWNER TO minerva_writer', $1.id)
-];
-$function$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_trigger_function"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.create_modified_trigger_function_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_modified_trigger_function_sql"(attribute_directory.attribute_store)
-    RETURNS text
-AS $$
-SELECT format('DROP FUNCTION attribute_history.mark_modified_%s()', $1.id);
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_modified_trigger_function"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.drop_modified_trigger_function_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_triggers_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    format('CREATE TRIGGER mark_modified_on_update
-        AFTER UPDATE ON attribute_history.%I
-        FOR EACH STATEMENT EXECUTE PROCEDURE attribute_history.mark_modified_%s()',
-        attribute_directory.to_table_name($1),
-        $1.id
-    ),
-    format('CREATE TRIGGER mark_modified_on_insert
-        AFTER INSERT ON attribute_history.%I
-        FOR EACH STATEMENT EXECUTE PROCEDURE attribute_history.mark_modified_%s()',
-        attribute_directory.to_table_name($1),
-        $1.id
-    )
-];
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_triggers"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.create_modified_triggers_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_modified_triggers_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    format('DROP TRIGGER mark_modified_on_update
-        ON attribute_history.%I',
-        attribute_directory.to_table_name($1)
-    ),
-    format('DROP TRIGGER mark_modified_on_insert
-        ON attribute_history.%I',
-        attribute_directory.to_table_name($1)
-    )
-];
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_modified_triggers"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.drop_modified_triggers_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "attribute_directory"."drop_hash_function"(attribute_directory.attribute_store)
     RETURNS attribute_directory.attribute_store
 AS $$
@@ -5029,7 +4990,8 @@ CREATE FUNCTION "attribute_directory"."define_attribute_store"("data_source_id" 
     RETURNS attribute_directory.attribute_store
 AS $$
 INSERT INTO attribute_directory.attribute_store(data_source_id, entity_type_id)
-VALUES ($1, $2) RETURNING attribute_store;
+  VALUES ($1, $2);
+SELECT * FROM attribute_directory.attribute_store WHERE data_source_id = $1 AND entity_type_id = $2;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -5037,21 +4999,23 @@ CREATE FUNCTION "attribute_directory"."define_attribute_store"("data_source_name
     RETURNS attribute_directory.attribute_store
 AS $$
 INSERT INTO attribute_directory.attribute_store(data_source_id, entity_type_id)
-VALUES ((directory.name_to_data_source($1)).id, (directory.name_to_entity_type($2)).id)
-RETURNING attribute_store;
+VALUES ((directory.name_to_data_source($1)).id, (directory.name_to_entity_type($2)).id);
+SELECT * FROM attribute_directory.attribute_store WHERE data_source_id = (directory.name_to_data_source($1)).id
+  AND entity_type_id = (directory.name_to_entity_type($2)).id;
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."add_attributes"(attribute_directory.attribute_store, "attributes" attribute_directory.attribute_descr[])
     RETURNS attribute_directory.attribute_store
 AS $$
-INSERT INTO attribute_directory.attribute(attribute_store_id, name, data_type, description) (
-    SELECT $1.id, name, data_type, description
-    FROM unnest($2) atts
-);
-
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+BEGIN
+  INSERT INTO attribute_directory.attribute(attribute_store_id, name, data_type, description) (
+      SELECT $1.id, name, data_type, description
+      FROM unnest($2) atts
+  );
+  RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."get_attribute"(attribute_directory.attribute_store, name)
@@ -5132,6 +5096,14 @@ BEGIN
 
     GET DIAGNOSTICS row_count = ROW_COUNT;
 
+    EXECUTE format(
+        'SELECT attribute_directory."set_hash_%s"(s.id) FROM attribute_history.%I s WHERE hash IS NULL',
+        table_name,
+        table_name
+    );
+
+    PERFORM attribute_directory.mark_modified($1.id);
+
     SELECT array_to_string(array_agg(format('%I = m.%I', name, name)), ', ') INTO set_columns_part
     FROM attribute_directory.attribute
     WHERE attribute_store_id = $1.id;
@@ -5165,13 +5137,13 @@ SELECT ARRAY[
     format(
         'CREATE UNLOGGED TABLE attribute_history.%I ('
         '    id integer,'
-        '    "end" timestamp with time zone,'
         '    first_appearance timestamp with time zone,'
         '    modified timestamp with time zone,'
-        '    hash text'
-        ') INHERITS (attribute_base.%I)',
+        '    hash text,'
+        '    %s'
+        ')',
         attribute_directory.compacted_tmp_table_name($1),
-        attribute_directory.to_table_name($1)
+        array_to_string(attribute_directory.column_specs($1), ',')
     ),
     format(
         'CREATE INDEX ON attribute_history.%I '
@@ -5181,6 +5153,10 @@ SELECT ARRAY[
     format(
         'ALTER TABLE attribute_history.%I '
         'OWNER TO minerva_writer',
+        attribute_directory.compacted_tmp_table_name($1)
+    ),
+    format(
+        'SELECT create_distributed_table(''attribute_history.%I'', ''entity_id'')',
         attribute_directory.compacted_tmp_table_name($1)
     )
 ];
@@ -5499,6 +5475,14 @@ BEGIN
         compacted_tmp_table_name
     );
 
+    EXECUTE format(
+        'PERFORM attribute_history."set_hash_%s"(s.id) FROM attribute_history.%I s WHERE hash IS NULL',
+        table_name,
+        table_name
+    );
+
+    PERFORM attribute_directory.mark_modified($1.id);
+
     PERFORM attribute_directory.mark_compacted($1.id, last_to_compact);
 
     RETURN $1;
@@ -5810,6 +5794,7 @@ CREATE FUNCTION "attribute_directory"."create_dependees"(attribute_directory.att
     RETURNS attribute_directory.attribute_store
 AS $$
 SELECT attribute_directory.create_hash_function($1);
+SELECT attribute_directory.create_set_hash_function($1);
 SELECT attribute_directory.create_staging_new_view($1);
 SELECT attribute_directory.create_staging_modified_view($1);
 SELECT attribute_directory.create_curr_ptr_view($1);
@@ -5830,6 +5815,7 @@ SELECT attribute_directory.drop_curr_view($1);
 SELECT attribute_directory.drop_curr_ptr_view($1);
 SELECT attribute_directory.drop_staging_modified_view($1);
 SELECT attribute_directory.drop_staging_new_view($1);
+SELECT attribute_directory.drop_set_hash_function($1);
 SELECT attribute_directory.drop_hash_function($1);
 SELECT attribute_directory.remove_from_compacted($1);
 SELECT $1;
@@ -5964,101 +5950,39 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."set_hash"()
-    RETURNS trigger
+CREATE PROCEDURE "attribute_directory"."init"(attribute_directory.attribute_store)
 AS $$
 BEGIN
-    NEW.hash = attribute_history.values_hash(NEW);
+  -- Base table
+  PERFORM attribute_directory.create_base_table($1);
 
-    RETURN NEW;
+  -- Dependent tables
+  PERFORM attribute_directory.create_history_table($1);
+  PERFORM attribute_directory.create_staging_table($1);
+  PERFORM attribute_directory.create_compacted_tmp_table($1);
+
+  -- Separate table
+  PERFORM attribute_directory.create_curr_ptr_table($1);
+
+  COMMIT;
+
+  -- Other
+  PERFORM attribute_directory.create_at_func_ptr($1);
+  PERFORM attribute_directory.create_at_func($1);
+
+  PERFORM attribute_directory.create_entity_at_func_ptr($1);
+  PERFORM attribute_directory.create_entity_at_func($1);
+
+  PERFORM attribute_directory.create_changes_view($1);
+
+  PERFORM attribute_directory.create_run_length_view($1);
+
+  COMMIT;
+
+  PERFORM attribute_directory.create_dependees($1);
+
 END;
-$$ LANGUAGE plpgsql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_hash_triggers_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    format('CREATE TRIGGER set_hash_on_update
-        BEFORE UPDATE ON attribute_history.%I
-        FOR EACH ROW EXECUTE PROCEDURE attribute_directory.set_hash()', attribute_directory.to_table_name($1)
-    ),
-    format('CREATE TRIGGER set_hash_on_insert
-        BEFORE INSERT ON attribute_history.%I
-        FOR EACH ROW EXECUTE PROCEDURE attribute_directory.set_hash()', attribute_directory.to_table_name($1)
-    )
-];
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "attribute_directory"."create_hash_triggers"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.create_hash_triggers_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_hash_triggers_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    format('DROP TRIGGER set_hash_on_update
-        ON attribute_history.%I', attribute_directory.to_table_name($1)
-    ),
-    format('DROP TRIGGER set_hash_on_insert
-        ON attribute_history.%I', attribute_directory.to_table_name($1)
-    )
-];
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_hash_triggers"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.drop_hash_triggers_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."init"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
--- Base/parent table
-SELECT attribute_directory.create_base_table($1);
-
--- Inherited table definitions
-SELECT attribute_directory.create_history_table($1);
-SELECT attribute_directory.create_staging_table($1);
-SELECT attribute_directory.create_compacted_tmp_table($1);
-
--- Separate table
-SELECT attribute_directory.create_curr_ptr_table($1);
-
--- Other
-SELECT attribute_directory.create_at_func_ptr($1);
-SELECT attribute_directory.create_at_func($1);
-
-SELECT attribute_directory.create_entity_at_func_ptr($1);
-SELECT attribute_directory.create_entity_at_func($1);
-
-SELECT attribute_directory.create_hash_triggers($1);
-
-SELECT attribute_directory.create_modified_trigger_function($1);
-SELECT attribute_directory.create_modified_triggers($1);
-
-SELECT attribute_directory.create_changes_view($1);
-
-SELECT attribute_directory.create_run_length_view($1);
-
-SELECT attribute_directory.create_dependees($1);
-
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE plpgsql;
 
 
 CREATE FUNCTION "attribute_directory"."deinit"(attribute_directory.attribute_store)
@@ -6071,11 +5995,6 @@ SELECT attribute_directory.drop_run_length_view($1);
 
 SELECT attribute_directory.drop_changes_view($1);
 
-SELECT attribute_directory.drop_modified_triggers($1);
-SELECT attribute_directory.drop_modified_trigger_function($1);
-
-SELECT attribute_directory.drop_hash_triggers($1);
-
 SELECT attribute_directory.drop_entity_at_func($1);
 SELECT attribute_directory.drop_entity_at_func_ptr($1);
 
@@ -6084,7 +6003,7 @@ SELECT attribute_directory.drop_at_func_ptr($1);
 
 SELECT attribute_directory.drop_curr_ptr_table($1);
 
--- Inherited table definitions
+-- Dependent tables
 SELECT attribute_directory.drop_compacted_tmp_table($1);
 SELECT attribute_directory.drop_staging_table($1);
 SELECT attribute_directory.drop_history_table($1);
@@ -6117,40 +6036,32 @@ SELECT attribute_directory.to_attribute($1, n.name, n.data_type, n.description)
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text)
-    RETURNS attribute_directory.attribute_store
+CREATE PROCEDURE "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text)
 AS $$
-DECLARE
-  store attribute_directory.attribute_store;
 BEGIN
-  SELECT * FROM attribute_directory.define_attribute_store($1, $2) INTO store;
-  PERFORM attribute_directory.init(store);
-  RETURN store;
+  CALL attribute_directory.init(attribute_directory.define_attribute_store($1, $2));
 END;
-$$ LANGUAGE plpgsql VOLATILE;
+$$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text, "attributes" attribute_directory.attribute_descr[])
-    RETURNS attribute_directory.attribute_store
+CREATE PROCEDURE "attribute_directory"."create_attribute_store"("data_source_name" text, "entity_type_name" text, "attributes" attribute_directory.attribute_descr[])
 AS $$
 DECLARE
   store attribute_directory.attribute_store;
 BEGIN
   SELECT * FROM attribute_directory.define_attribute_store($1, $2) INTO store;
   PERFORM attribute_directory.add_attributes(store, $3);
-  PERFORM attribute_directory.init(store);
-  RETURN store;
+  CALL attribute_directory.init(store);
 END;
-$$ LANGUAGE plpgsql VOLATILE;
+$$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION "attribute_directory"."create_attribute_store"("data_source_id" integer, "entity_type_id" integer, "attributes" attribute_directory.attribute_descr[])
-    RETURNS attribute_directory.attribute_store
+CREATE PROCEDURE "attribute_directory"."create_attribute_store"("data_source_id" integer, "entity_type_id" integer, "attributes" attribute_directory.attribute_descr[])
 AS $$
-SELECT attribute_directory.init(
+CALL attribute_directory.init(
     attribute_directory.add_attributes(attribute_directory.define_attribute_store($1, $2), $3)
 );
-$$ LANGUAGE sql VOLATILE;
+$$ LANGUAGE sql;
 
 
 CREATE FUNCTION "attribute_directory"."delete_attribute_store"("attribute_store" attribute_directory.attribute_store)
@@ -6165,16 +6076,6 @@ CREATE FUNCTION "attribute_directory"."delete_attribute_store"("name" text)
 AS $$
 SELECT attribute_directory.delete_attribute_store(attribute_store)
 FROM attribute_directory.attribute_store WHERE attribute_store::text = $1;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."to_attribute_store"("data_source_id" integer, "entity_type_id" integer, attribute_directory.attribute_descr[])
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT COALESCE(
-    attribute_directory.get_attribute_store($1, $2),
-    attribute_directory.create_attribute_store($1, $2, $3)
-);
 $$ LANGUAGE sql VOLATILE;
 
 
