@@ -1,6 +1,8 @@
 # Minerva ETL
 
-This repository contains the PostgreSQL based database schema for the Minerva ETL platform.
+The PostgreSQL based database schema for the Minerva ETL platform.
+
+[![License](https://img.shields.io/github/license/hendrikx-itc/minerva)](LICENSE)
 
 ## Development
 
