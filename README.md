@@ -64,3 +64,9 @@ Validate if your intance is working.
 ```Postgres
 psql -U postgres -h 127.0.0.1 -p 2345 minerva
 ```
+
+## Contact
+
+## License
+
+Minerva is distributed under [AGPL-3.0-only](LICENSE).
