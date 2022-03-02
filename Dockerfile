@@ -1,4 +1,4 @@
-FROM citusdata/citus:10.2
+FROM citusdata/citus:10.2-pg12
 MAINTAINER Hendrikx ITC
 
 COPY docker-resources/usr/bin/* /usr/bin/

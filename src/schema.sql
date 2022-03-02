@@ -936,7 +936,8 @@ DECLARE
   result text;
 BEGIN
   SELECT name FROM relation_directory.type WHERE name = $1 INTO result;
-  PERFORM public.action(format('DROP MATERIALIZED VIEW IF EXISTS relation.%I', $1));
+  PERFORM public.action(format('DROP TABLE IF EXISTS relation.%I', $1));
+  PERFORM public.action(format('DROP FUNCTION IF EXISTS relation_directory.%I', format('materialize_%s', $1)));
   DELETE FROM relation_directory.type WHERE name = $1;
   RETURN result;
 END;
