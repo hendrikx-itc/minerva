@@ -580,10 +580,14 @@ SELECT ARRAY[
     format(
       'CREATE TABLE IF NOT EXISTS entity.%I('
       'id serial,'
-      'name text UNIQUE,'
+      'name text,'
       'created timestamp with time zone default now()'
       ');',
       $1.name
+    ),
+    format(
+       'SELECT create_reference_table(''entity.%I'');',
+       $1.name
     ),
     format(
        'GRANT SELECT ON TABLE entity.%I TO minerva;',
@@ -632,9 +636,11 @@ SELECT ARRAY[
     format(
       'CREATE FUNCTION entity.%I(text) RETURNS entity.%I
       AS $$
-        INSERT INTO entity.%I(name) VALUES ($1) ON CONFLICT DO NOTHING RETURNING %I;
+        INSERT INTO entity.%I(name) VALUES ($1) ON CONFLICT DO NOTHING;
+        SELECT e FROM entity.%I e WHERE name = $1;
       $$ LANGUAGE sql',
       entity.create_entity_function_name($1),
+      $1.name,
       $1.name,
       $1.name,
       $1.name
