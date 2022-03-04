@@ -31,7 +31,7 @@ code. Please report unacceptable behavior to
 
 This section guides you through submitting a bug report for Minerva. Following
 these guidelines helps maintainers and the community understand your report
-:pencil:, reproduce the behavior :computer: :computer:, and find related
+:pencil:, reproduce the behavior :computer:, and find related
 reports :mag_right:.
 
 #### How Do I Submit A (Good) Bug Report?
