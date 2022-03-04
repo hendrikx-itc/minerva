@@ -4,6 +4,10 @@ The PostgreSQL based database schema for the Minerva ETL platform.
 
 [![License](https://img.shields.io/github/license/hendrikx-itc/minerva)](LICENSE)
 
+## Contributing
+
+Read the [contributing guide](CONTRIBUTING.md) if you want to help develop or improve Minerva.
+
 ## Development
 
 Developing on and with Minerva is easy using development Docker containers and
