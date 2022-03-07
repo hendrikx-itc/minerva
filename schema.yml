@@ -756,6 +756,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('directory.data_source')
+
 - table:
     name: entity_type
     schema: directory
@@ -785,6 +788,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('directory.entity_type')
 
 - table:
     name: tag_group
@@ -1699,6 +1705,9 @@ objects:
       unique: true
       definition: btree (entity_type_id, data_source_id, granularity)
 
+#- query:
+#    query: create_reference_table('trend_directory.trend_store')
+
 - table:
     name: trend_store_part
     schema: trend_directory
@@ -1734,6 +1743,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+#- query:
+#    query: create_reference_table('trend_directory.trend_store_part')
 
 - table:
     name: partition
@@ -3206,26 +3218,32 @@ objects:
       SELECT trend_directory.create_partition($1, trend_directory.timestamp_to_index(trend_directory.get_partition_size($1), $2));
 
 - function:
-    name: column_spec
+    name: table_trend_column_spec
     schema: trend_directory
     return_type: text
     language: sql
-    volatility: immutable
+    volatility: stable
     arguments:
-    - data_type: trend_directory.table_trend
+    - data_type: integer
+      name: table_trend_id
     source: |-
-      SELECT format('%I %s', $1.name, $1.data_type);
+      SELECT format('%I %s', tt.name, tt.data_type)
+        FROM trend_directory.table_trend tt
+        WHERE tt.id = $1;
 
 - function:
-    name: column_spec
+    name: generated_table_trend_column_spec
     schema: trend_directory
     return_type: text
     language: sql
-    volatility: immutable
+    volatility: stable
     arguments:
-    - data_type: trend_directory.generated_table_trend
+    - data_type: integer
+      name: generated_table_trend_id
     source: |-
-        SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', $1.name, $1.data_type, $1.expression);
+        SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', tt.name, tt.data_type, tt.expression)
+          FROM trend_directory.generated_table_trend tt
+          WHERE tt.id = $1;
 
 - function:
     name: column_specs
@@ -3237,11 +3255,11 @@ objects:
     - data_type: trend_directory.trend_store_part
     source: |-
       SELECT array_agg(c) FROM (
-        SELECT trend_directory.column_spec(t) AS c
+        SELECT trend_directory.table_trend_column_spec(t.id) AS c
         FROM trend_directory.table_trend t
         WHERE t.trend_store_part_id = $1.id
         UNION ALL
-        SELECT trend_directory.column_spec(t) AS c
+        SELECT trend_directory.generated_table_trend_column_spec(t.id) AS c
         FROM trend_directory.generated_table_trend t
         WHERE t.trend_store_part_id = $1.id
       ) combined_columns;
@@ -3443,19 +3461,24 @@ objects:
     name: initialize_trend_store_part
     schema: trend_directory
     return_type: trend_directory.trend_store_part
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
     arguments:
-    - data_type: trend_directory.trend_store_part
+    - data_type: integer
+      name: trend_store_part_id
     description: 'Create all database objects required for the trend store part to
       be fully functional and capable of storing data.'
     source: |-
-      SELECT trend_directory.create_base_table($1);
-      SELECT trend_directory.create_staging_table($1);
-      
-      SELECT $1;
+      DECLARE
+        tsp trend_directory.trend_store_part;
+      BEGIN
+        SELECT * FROM trend_directory.trend_store_part WHERE id = $1 INTO tsp;
+        PERFORM trend_directory.create_base_table(tsp);
+        PERFORM trend_directory.create_staging_table(tsp);
+        RETURN tsp;
+      END;
 
 - function:
     name: deinitialize_trend_store_part
@@ -3472,6 +3495,9 @@ objects:
     source: |-
       SELECT trend_directory.drop_base_table($1);
       SELECT trend_directory.drop_staging_table($1);
+
+#- query:
+#    query: create_distributed_function('trend_directory.deinitialize_trend_store_part(trend_directory.trend_store_part)')
 
 - function:
     name: get_default_partition_size
@@ -3979,7 +4005,7 @@ objects:
     arguments:
     - data_type: trend_directory.trend_store
     source: |-
-      SELECT trend_directory.initialize_trend_store_part(trend_store_part)
+      SELECT trend_directory.initialize_trend_store_part(trend_store_part.id)
       FROM trend_directory.trend_store_part WHERE trend_store_id = $1.id;
 
       SELECT $1;
@@ -4033,7 +4059,7 @@ objects:
     name: create_trend_store_part
     schema: trend_directory
     return_type: trend_directory.trend_store_part
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -4043,9 +4069,13 @@ objects:
     - name: name
       data_type: name
     source: |-
-      SELECT trend_directory.initialize_trend_store_part(
-          trend_directory.define_trend_store_part($1, $2)
-        );
+      DECLARE
+        tsp trend_directory.trend_store_part;
+      BEGIN
+        SELECT trend_directory.define_trend_store_part($1, $2) INTO tsp;
+        PERFORM trend_directory.initialize_trend_store_part(tsp);
+        RETURN tsp;
+      END;
 
 - function:
     name: get_trend_store_parts
@@ -6338,31 +6368,31 @@ objects:
     - update
     affecteach: row
 
-- trigger:
-    table:
-      schema: directory
-      name: data_source
-    name: delete_trend_stores_on_data_source_delete
-    function:
-      schema: trend_directory
-      name: cleanup_on_data_source_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
+#- trigger:
+#    table:
+#      schema: directory
+#      name: data_source
+#    name: delete_trend_stores_on_data_source_delete
+#    function:
+#      schema: trend_directory
+#      name: cleanup_on_data_source_delete
+#    when: before
+#    events:
+#    - delete
+#    affecteach: row
 
-- trigger:
-    table:
-      schema: trend_directory
-      name: trend_store_part
-    name: cleanup_trend_store_part_on_delete
-    function:
-      schema: trend_directory
-      name: cleanup_trend_store_part_on_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
+#- trigger:
+#    table:
+#      schema: trend_directory
+#      name: trend_store_part
+#    name: cleanup_trend_store_part_on_delete
+#    function:
+#      schema: trend_directory
+#      name: cleanup_trend_store_part_on_delete
+#    when: before
+#    events:
+#    - delete
+#    affecteach: row
 
 - trigger:
     table:
@@ -6445,8 +6475,8 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-#- query:
-#    query: create_reference_table('attribute_directory.attribute_store')
+- query:
+    query: create_reference_table('attribute_directory.attribute_store')
 
 - function:
     name: get_attribute_store
@@ -6662,6 +6692,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('attribute_directory.attribute_store_modified')
+
 - table:
     name: attribute_store_curr_materialized
     schema: attribute_directory
@@ -6723,6 +6756,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('attribute_directory.attribute_store_compacted')
 
 - composite_type:
     name: attribute_info
@@ -7901,6 +7937,9 @@ objects:
       SET materialized = greatest(materialized, $2)
       WHERE attribute_store_id = $1
       RETURNING attribute_store_curr_materialized;
+
+- query:
+    query: create_reference_table('attribute_directory.attribute_store_curr_materialized')
 
 - function:
     name: store_curr_materialized
@@ -9694,57 +9733,57 @@ objects:
       SELECT attribute_directory.delete_attribute_store(attribute_store)
       FROM attribute_directory.attribute_store WHERE attribute_store::text = $1;
 
-- trigger:
-    table:
-      schema: directory
-      name: data_source
-    name: delete_attribute_stores_on_data_source_delete
-    function:
-      schema: attribute_directory
-      name: cleanup_on_data_source_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
+#- trigger:
+#    table:
+#      schema: directory
+#      name: data_source
+#    name: delete_attribute_stores_on_data_source_delete
+#    function:
+#      schema: attribute_directory
+#      name: cleanup_on_data_source_delete
+#    when: before
+#    events:
+#    - delete
+#    affecteach: row
 
-- trigger:
-    table:
-      schema: directory
-      name: entity_type
-    name: delete_attribute_stores_on_entity_type_delete
-    function:
-      schema: attribute_directory
-      name: cleanup_on_entity_type_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
+#- trigger:
+#    table:
+#      schema: directory
+#      name: entity_type
+#    name: delete_attribute_stores_on_entity_type_delete
+#    function:
+#      schema: attribute_directory
+#      name: cleanup_on_entity_type_delete
+#    when: before
+#    events:
+#    - delete
+#    affecteach: row
 
-- trigger:
-    table:
-      schema: attribute_directory
-      name: attribute_store
-    name: cleanup_attribute_store_on_delete
-    function:
-      schema: attribute_directory
-      name: cleanup_attribute_store_on_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
+#- trigger:
+#    table:
+#      schema: attribute_directory
+#      name: attribute_store
+#    name: cleanup_attribute_store_on_delete
+#    function:
+#      schema: attribute_directory
+#      name: cleanup_attribute_store_on_delete
+#    when: before
+#    events:
+#    - delete
+#    affecteach: row
 
-- trigger:
-    table:
-      schema: attribute_directory
-      name: attribute
-    name: update_attribute_type
-    function:
-      schema: attribute_directory
-      name: update_data_type_on_change
-    when: after
-    events:
-    - update
-    affecteach: row
+#- trigger:
+#    table:
+#      schema: attribute_directory
+#      name: attribute
+#    name: update_attribute_type
+#    function:
+#      schema: attribute_directory
+#      name: update_data_type_on_change
+#    when: after
+#    events:
+#    - update
+#    affecteach: row
 
 - view:
     name: dependencies
@@ -10709,18 +10748,18 @@ objects:
     - delete
     affecteach: row
 
-- trigger:
-    table:
-      schema: directory
-      name: data_source
-    name: delete_notification_stores_on_data_source_delete
-    function:
-      schema: notification_directory
-      name: cleanup_on_data_source_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
+#- trigger:
+#    table:
+#      schema: directory
+#      name: data_source
+#    name: delete_notification_stores_on_data_source_delete
+#    function:
+#      schema: notification_directory
+#      name: cleanup_on_data_source_delete
+#    when: before
+#    events:
+#    - delete
+#    affecteach: row
 
 - function:
     name: update
