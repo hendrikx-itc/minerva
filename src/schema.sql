@@ -478,9 +478,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."data_source" TO minerva_writer;
 
 
 
-SELECT create_reference_table('directory.data_source');
-
-
 CREATE TABLE "directory"."entity_type"
 (
   "id" serial NOT NULL,
@@ -498,9 +495,6 @@ GRANT SELECT ON TABLE "directory"."entity_type" TO minerva;
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_type" TO minerva_writer;
 
-
-
-SELECT create_reference_table('directory.entity_type');
 
 
 CREATE TABLE "directory"."tag_group"
@@ -1862,33 +1856,29 @@ SELECT trend_directory.create_partition($1, trend_directory.timestamp_to_index(t
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."table_trend_column_spec"("table_trend_id" integer)
+CREATE FUNCTION "trend_directory"."column_spec"(trend_directory.table_trend)
     RETURNS text
 AS $$
-SELECT format('%I %s', tt.name, tt.data_type)
-  FROM trend_directory.table_trend tt
-  WHERE tt.id = $1;
-$$ LANGUAGE sql STABLE;
+SELECT format('%I %s', $1.name, $1.data_type);
+$$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trend_directory"."generated_table_trend_column_spec"("generated_table_trend_id" integer)
+CREATE FUNCTION "trend_directory"."column_spec"(trend_directory.generated_table_trend)
     RETURNS text
 AS $$
-SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', tt.name, tt.data_type, tt.expression)
-  FROM trend_directory.generated_table_trend tt
-  WHERE tt.id = $1;
-$$ LANGUAGE sql STABLE;
+SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', $1.name, $1.data_type, $1.expression);
+$$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trend_directory"."column_specs"(trend_directory.trend_store_part)
     RETURNS text[]
 AS $$
 SELECT array_agg(c) FROM (
-  SELECT trend_directory.table_trend_column_spec(t.id) AS c
+  SELECT trend_directory.column_spec(t) AS c
   FROM trend_directory.table_trend t
   WHERE t.trend_store_part_id = $1.id
   UNION ALL
-  SELECT trend_directory.generated_table_trend_column_spec(t.id) AS c
+  SELECT trend_directory.column_spec(t) AS c
   FROM trend_directory.generated_table_trend t
   WHERE t.trend_store_part_id = $1.id
 ) combined_columns;
@@ -2034,20 +2024,16 @@ SELECT public.action($1, trend_directory.drop_staging_table_sql($1));
 $$ LANGUAGE sql VOLATILE STRICT SECURITY DEFINER;
 
 
-CREATE FUNCTION "trend_directory"."initialize_trend_store_part"("trend_store_part_id" integer)
+CREATE FUNCTION "trend_directory"."initialize_trend_store_part"(trend_directory.trend_store_part)
     RETURNS trend_directory.trend_store_part
 AS $$
-DECLARE
-  tsp trend_directory.trend_store_part;
-BEGIN
-  SELECT * FROM trend_directory.trend_store_part WHERE id = $1 INTO tsp;
-  PERFORM trend_directory.create_base_table(tsp);
-  PERFORM trend_directory.create_staging_table(tsp);
-  RETURN tsp;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
+SELECT trend_directory.create_base_table($1);
+SELECT trend_directory.create_staging_table($1);
 
-COMMENT ON FUNCTION "trend_directory"."initialize_trend_store_part"("trend_store_part_id" integer) IS 'Create all database objects required for the trend store part to be fully functional and capable of storing data.';
+SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."initialize_trend_store_part"(trend_directory.trend_store_part) IS 'Create all database objects required for the trend store part to be fully functional and capable of storing data.';
 
 
 CREATE FUNCTION "trend_directory"."deinitialize_trend_store_part"(trend_directory.trend_store_part)
@@ -2384,7 +2370,7 @@ $$ LANGUAGE sql STABLE;
 CREATE FUNCTION "trend_directory"."initialize_trend_store"(trend_directory.trend_store)
     RETURNS trend_directory.trend_store
 AS $$
-SELECT trend_directory.initialize_trend_store_part(trend_store_part.id)
+SELECT trend_directory.initialize_trend_store_part(trend_store_part)
 FROM trend_directory.trend_store_part WHERE trend_store_id = $1.id;
 
 SELECT $1;
@@ -2417,14 +2403,10 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."create_trend_store_part"("trend_store_id" integer, "name" name)
     RETURNS trend_directory.trend_store_part
 AS $$
-DECLARE
-  tsp trend_directory.trend_store_part;
-BEGIN
-  SELECT trend_directory.define_trend_store_part($1, $2) INTO tsp;
-  PERFORM trend_directory.initialize_trend_store_part(tsp);
-  RETURN tsp;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
+SELECT trend_directory.initialize_trend_store_part(
+    trend_directory.define_trend_store_part($1, $2)
+  );
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."get_trend_store_parts"("trend_store_id" integer)
@@ -3937,6 +3919,18 @@ CREATE TRIGGER propagate_changes_on_trend_update
   EXECUTE PROCEDURE "trend_directory"."changes_on_trend_update"();
 
 
+CREATE TRIGGER delete_trend_stores_on_data_source_delete
+  BEFORE DELETE ON "directory"."data_source"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."cleanup_on_data_source_delete"();
+
+
+CREATE TRIGGER cleanup_trend_store_part_on_delete
+  BEFORE DELETE ON "trend_directory"."trend_store_part"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "trend_directory"."cleanup_trend_store_part_on_delete"();
+
+
 CREATE TRIGGER drop_view_on_delete
   BEFORE DELETE ON "trend_directory"."trend_view"
   FOR EACH ROW
@@ -3963,9 +3957,6 @@ GRANT SELECT ON TABLE "attribute_directory"."attribute_store" TO minerva;
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store" TO minerva_writer;
 
-
-
-SELECT create_reference_table('attribute_directory.attribute_store');
 
 
 CREATE FUNCTION "attribute_directory"."get_attribute_store"("data_source_id" integer, "entity_type_id" integer)
@@ -4062,9 +4053,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_modif
 
 
 
-SELECT create_reference_table('attribute_directory.attribute_store_modified');
-
-
 CREATE TABLE "attribute_directory"."attribute_store_curr_materialized"
 (
   "attribute_store_id" integer NOT NULL,
@@ -4089,9 +4077,6 @@ GRANT SELECT ON TABLE "attribute_directory"."attribute_store_compacted" TO miner
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva_writer;
 
-
-
-SELECT create_reference_table('attribute_directory.attribute_store_compacted');
 
 
 CREATE TYPE "attribute_directory"."attribute_info" AS (
@@ -4889,9 +4874,6 @@ SET materialized = greatest(materialized, $2)
 WHERE attribute_store_id = $1
 RETURNING attribute_store_curr_materialized;
 $$ LANGUAGE sql VOLATILE;
-
-
-SELECT create_reference_table('attribute_directory.attribute_store_curr_materialized');
 
 
 CREATE FUNCTION "attribute_directory"."store_curr_materialized"("attribute_store_id" integer, "materialized" timestamp with time zone)
@@ -6104,6 +6086,30 @@ FROM attribute_directory.attribute_store WHERE attribute_store::text = $1;
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE TRIGGER delete_attribute_stores_on_data_source_delete
+  BEFORE DELETE ON "directory"."data_source"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."cleanup_on_data_source_delete"();
+
+
+CREATE TRIGGER delete_attribute_stores_on_entity_type_delete
+  BEFORE DELETE ON "directory"."entity_type"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."cleanup_on_entity_type_delete"();
+
+
+CREATE TRIGGER cleanup_attribute_store_on_delete
+  BEFORE DELETE ON "attribute_directory"."attribute_store"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."cleanup_attribute_store_on_delete"();
+
+
+CREATE TRIGGER update_attribute_type
+  AFTER UPDATE ON "attribute_directory"."attribute"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."update_data_type_on_change"();
+
+
 CREATE VIEW "attribute_directory"."dependencies" AS
  SELECT dependent.relname AS src,
     pg_attribute.attname AS column_name,
@@ -6698,6 +6704,12 @@ CREATE TRIGGER drop_notification_set_store_table_on_delete
   BEFORE DELETE ON "notification_directory"."notification_set_store"
   FOR EACH ROW
   EXECUTE PROCEDURE "notification_directory"."drop_notification_set_store_table_on_delete"();
+
+
+CREATE TRIGGER delete_notification_stores_on_data_source_delete
+  BEFORE DELETE ON "directory"."data_source"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "notification_directory"."cleanup_on_data_source_delete"();
 
 
 CREATE FUNCTION "virtual_entity"."update"("name" name)
