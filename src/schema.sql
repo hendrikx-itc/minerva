@@ -4214,23 +4214,13 @@ CREATE FUNCTION "attribute_directory"."create_set_hash_function_sql"(attribute_d
     RETURNS text[]
 AS $function$
 SELECT ARRAY[
-    format('CREATE FUNCTION attribute_directory."set_hash_%s"(integer) '
+    format('CREATE FUNCTION attribute_directory."set_hash"(attstore attribute_history.%I) '
            'RETURNS void '
            'AS $$'
-           'DECLARE '
-           '  attstore attribute_history.%I; '
-           'BEGIN '
-           '  SELECT * FROM attribute_history.%I WHERE id = $1 INTO attstore;'
            '  UPDATE attribute_history.%I SET hash = attribute_history.values_hash(attstore)'
-           '    WHERE id = $1;'
-           'END;'
-           '$$ LANGUAGE plpgsql VOLATILE',
+           '    WHERE attstore.id = $1.id AND entity_id = attstore.entity_id;'
+           '$$ LANGUAGE sql VOLATILE',
            attribute_directory.to_table_name($1),
-           attribute_directory.to_table_name($1),
-           attribute_directory.to_table_name($1),
-           attribute_directory.to_table_name($1)
-    ),
-    format('SELECT create_distributed_function(''attribute_directory."set_hash_%s"(integer)'', ''$1'')',
            attribute_directory.to_table_name($1)
     )
 ];
@@ -4250,7 +4240,7 @@ AS $$
 SELECT public.action(
     $1,
     format(
-        'DROP FUNCTION attribute_directory."set_hash_%s"(integer)',
+        'DROP FUNCTION attribute_directory."set_hash"(attribute_history.%I)',
         attribute_directory.to_table_name($1)
     )
 );
@@ -5104,7 +5094,7 @@ BEGIN
     GET DIAGNOSTICS row_count = ROW_COUNT;
 
     EXECUTE format(
-        'SELECT attribute_directory."set_hash_%s"(s.id) FROM attribute_history.%I s WHERE hash IS NULL',
+        'SELECT attribute_directory."set_hash"(s) FROM attribute_history.%I s WHERE hash IS NULL',
         table_name,
         table_name
     );
@@ -5483,7 +5473,7 @@ BEGIN
     );
 
     EXECUTE format(
-        'PERFORM attribute_history."set_hash_%s"(s.id) FROM attribute_history.%I s WHERE hash IS NULL',
+        'PERFORM attribute_history."set_hash"(s) FROM attribute_history.%I s WHERE hash IS NULL',
         table_name,
         table_name
     );
