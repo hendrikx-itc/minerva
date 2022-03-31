@@ -2882,7 +2882,7 @@ objects:
           JOIN trend_directory.materialization m ON m.id = materialization_id
           GROUP BY m, dst_timestamp
       ) update_result;
-@@@
+
 - function:
     name: new_modified
     schema: trend_directory
