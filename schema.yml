@@ -583,6 +583,9 @@ objects:
     arguments:
     - data_type: anyelement
 
+- query:
+    query: create_distributed_function('last(anyelement)')
+
 - table:
     name: setting
     schema: system
@@ -2879,7 +2882,7 @@ objects:
           JOIN trend_directory.materialization m ON m.id = materialization_id
           GROUP BY m, dst_timestamp
       ) update_result;
-
+@@@
 - function:
     name: new_modified
     schema: trend_directory
@@ -6894,7 +6897,7 @@ objects:
       SELECT (attribute_directory.to_table_name($1) || '_curr_ptr')::name;
 
 - function:
-    name: render_hash_query
+    name: hash_query
     schema: attribute_directory
     return_type: text
     language: sql
@@ -6904,101 +6907,12 @@ objects:
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT COALESCE(
-          'SELECT md5(' ||
-          array_to_string(array_agg(format('COALESCE(($1.%I)::text, '''')', name)), ' || ') ||
-          ')',
-          'SELECT ''''::text')
+      SELECT 
+          'md5(''' ||
+          array_to_string(array_agg(format('CASE WHEN %I IS NULL THEN '''' ELSE %I END', name, name)), ' || ') ||
+          ''')'
       FROM attribute_directory.attribute
       WHERE attribute_store_id = $1.id;
-
-- function:
-    name: create_hash_function_sql
-    schema: attribute_directory
-    return_type: text[]
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT ARRAY[
-          format('CREATE FUNCTION attribute_history.values_hash(attribute_history.%I)
-      RETURNS text
-      AS $$
-          %s
-      $$ LANGUAGE sql STABLE', attribute_directory.to_table_name($1), attribute_directory.render_hash_query($1)),
-          format('ALTER FUNCTION attribute_history.values_hash(attribute_history.%I)
-              OWNER TO minerva_writer', attribute_directory.to_table_name($1))
-      ];
-
-- function:
-    name: create_hash_function
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-          $1,
-          attribute_directory.create_hash_function_sql($1)
-      );
-
-- function:
-    name: create_set_hash_function_sql
-    schema: attribute_directory
-    return_type: text[]
-    language: sql
-    volatility: stable
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT ARRAY[
-          format('CREATE FUNCTION attribute_directory."set_hash"(attstore attribute_history.%I) '
-                 'RETURNS void '
-                 'AS $$'
-                 '  UPDATE attribute_history.%I SET hash = attribute_history.values_hash(attstore)'
-                 '    WHERE attstore.id = $1.id AND entity_id = attstore.entity_id;'
-                 '$$ LANGUAGE sql VOLATILE',
-                 attribute_directory.to_table_name($1),
-                 attribute_directory.to_table_name($1)
-          )
-      ];
-
-- function:
-    name: create_set_hash_function
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action($1, attribute_directory.create_set_hash_function_sql($1));
-
-- function:
-    name: drop_set_hash_function
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-          $1,
-          format(
-              'DROP FUNCTION attribute_directory."set_hash"(attribute_history.%I)',
-              attribute_directory.to_table_name($1)
-          )
-      );
 
 - function:
     name: changes_view_query
@@ -7572,10 +7486,13 @@ objects:
               id serial,
               first_appearance timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
               modified timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              hash character varying DEFAULT NULL,
+              hash character varying GENERATED ALWAYS AS (%s) STORED,
               %s,
               PRIMARY KEY (id, entity_id)
-              )', attribute_directory.to_table_name($1), array_to_string(attribute_directory.column_specs($1), ',')
+              )',
+              attribute_directory.to_table_name($1),
+              attribute_directory.hash_query($1),
+              array_to_string(attribute_directory.column_specs($1), ',')
           ),
           format(
               'CREATE INDEX ON attribute_history.%I (id)',
@@ -8090,23 +8007,6 @@ objects:
         END;
 
 - function:
-    name: drop_hash_function
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      BEGIN
-          EXECUTE format('DROP FUNCTION attribute_history.values_hash(attribute_history.%I)', attribute_directory.to_table_name($1));
-
-          RETURN $1;
-      END;
-
-- function:
     name: define_attribute_store
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -8297,12 +8197,6 @@ objects:
           );
 
           GET DIAGNOSTICS row_count = ROW_COUNT;
-
-          EXECUTE format(
-              'SELECT attribute_directory."set_hash"(s) FROM attribute_history.%I s WHERE hash IS NULL',
-              table_name,
-              table_name
-          );
 
           PERFORM attribute_directory.mark_modified($1.id);
 
@@ -8808,12 +8702,6 @@ objects:
               compacted_tmp_table_name
           );
 
-          EXECUTE format(
-              'PERFORM attribute_history."set_hash"(s) FROM attribute_history.%I s WHERE hash IS NULL',
-              table_name,
-              table_name
-          );
-
           PERFORM attribute_directory.mark_modified($1.id);
 
           PERFORM attribute_directory.mark_compacted($1.id, last_to_compact);
@@ -9270,8 +9158,6 @@ objects:
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT attribute_directory.create_hash_function($1);
-      SELECT attribute_directory.create_set_hash_function($1);
       SELECT attribute_directory.create_staging_new_view($1);
       SELECT attribute_directory.create_staging_modified_view($1);
       SELECT attribute_directory.create_curr_ptr_view($1);
@@ -9298,8 +9184,6 @@ objects:
       SELECT attribute_directory.drop_curr_ptr_view($1);
       SELECT attribute_directory.drop_staging_modified_view($1);
       SELECT attribute_directory.drop_staging_new_view($1);
-      SELECT attribute_directory.drop_set_hash_function($1);
-      SELECT attribute_directory.drop_hash_function($1);
       SELECT attribute_directory.remove_from_compacted($1);
       SELECT $1;
 
