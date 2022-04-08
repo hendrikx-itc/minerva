@@ -575,6 +575,9 @@ objects:
     arguments:
     - data_type: anyelement
 
+- query:
+    query: create_distributed_function('first(anyelement)')
+
 - aggregate:
     name: last
     schema: public

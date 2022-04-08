@@ -379,6 +379,9 @@ CREATE AGGREGATE first (anyelement) (
 
 
 
+SELECT create_distributed_function('first(anyelement)');
+
+
 CREATE AGGREGATE last (anyelement) (
     sfunc = snd,
     stype = anyelement
