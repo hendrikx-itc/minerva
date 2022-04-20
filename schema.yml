@@ -452,6 +452,9 @@ objects:
           EXECUTE sql;
       END;
 
+- query:
+    query: create_distributed_function('action(text)')
+
 - function:
     name: action_count
     schema: public
@@ -472,6 +475,9 @@ objects:
           RETURN row_count;
       END;
 
+- query:
+    query: create_distributed_function('action_count(text)')
+
 - function:
     name: action
     schema: public
@@ -490,6 +496,9 @@ objects:
 
           RETURN $1;
       END;
+
+- query:
+    query: create_distributed_function('action(anyelement,text)')
 
 - function:
     name: action
@@ -513,6 +522,9 @@ objects:
 
           RETURN $1;
       END;
+
+- query:
+    query: create_distributed_function('action(anyelement,text[])')
 
 - function:
     name: table_exists
@@ -762,6 +774,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('directory.data_source')
+
 - table:
     name: entity_type
     schema: directory
@@ -792,6 +807,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('directory.entity_type')
+
 - table:
     name: tag_group
     schema: directory
@@ -820,6 +838,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('directory.tag_group')
 
 - table:
     name: tag
@@ -867,6 +888,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('directory.tag')
+
 - function:
     name: get_entity_type_name
     schema: directory
@@ -893,6 +917,9 @@ objects:
     source: |-
       SELECT entity_type FROM directory.entity_type WHERE lower(name) = lower($1);
 
+- query:
+    query: create_distributed_function('directory.get_entity_type(text)')
+
 - function:
     name: get_data_source
     schema: directory
@@ -905,6 +932,9 @@ objects:
     - data_type: text
     source: |-
       SELECT * FROM directory.data_source WHERE name = $1;
+
+- query:
+   query: create_distributed_function('directory.get_data_source(text)')
 
 - function:
     name: create_data_source
@@ -920,19 +950,6 @@ objects:
       INSERT INTO directory.data_source (name, description)
       VALUES ($1, 'default');
       SELECT * FROM directory.data_source WHERE name = $1;
-
-- function:
-    name: delete_data_source
-    schema: directory
-    return_type: directory.data_source
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
 
 - function:
     name: create_entity_table_sql
@@ -1705,6 +1722,9 @@ objects:
       unique: true
       definition: btree (entity_type_id, data_source_id, granularity)
 
+- query:
+    query: create_reference_table('trend_directory.trend_store')
+
 - table:
     name: trend_store_part
     schema: trend_directory
@@ -1740,6 +1760,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('trend_directory.trend_store_part')
 
 - table:
     name: partition
@@ -1785,6 +1808,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('trend_directory.partition')
 
 - table:
     name: trend_view
@@ -1833,6 +1859,9 @@ objects:
       unique: true
       definition: btree (entity_type_id, data_source_id, granularity)
 
+- query:
+    query: create_reference_table('trend_directory.trend_view')
+
 - table:
     name: trend_view_part
     schema: trend_directory
@@ -1861,6 +1890,9 @@ objects:
         columns:
         - id
       on_delete: cascade
+
+- query:
+    query: create_reference_table('trend_directory.trend_view_part')
 
 - table:
     name: table_trend
@@ -1912,6 +1944,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('trend_directory.table_trend')
+
 - table:
     name: generated_table_trend
     schema: trend_directory
@@ -1958,6 +1993,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('trend_directory.generated_table_trend')
 
 - table:
     name: table_trend_tag_link
@@ -2298,6 +2336,39 @@ objects:
     affecteach: row
 
 - function:
+    name: to_char
+    schema: trend_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: trend_directory.materialization
+    source: |-
+      SELECT trend_store_part.name::text
+      FROM trend_directory.trend_store_part
+      WHERE trend_store_part.id = $1.dst_trend_store_part_id
+
+- function:
+    name: materialization_to_char
+    schema: trend_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: integer
+      name: materialization_id
+    source: |-
+      SELECT trend_store_part.name::text
+        FROM trend_directory.trend_store_part
+        JOIN trend_directory.materialization
+          ON trend_store_part.id = materialization.dst_trend_store_part_id
+        WHERE materialization.id = $1;
+
+- function:
     name: source_fingerprint_sql
     schema: trend_directory
     return_type: text
@@ -2305,9 +2376,10 @@ objects:
     language: sql
     volatility: stable
     arguments:
-    - data_type: trend_directory.materialization
+    - data_type: integer
+      name: materialization_id
     source: |-
-      SELECT format('SELECT * FROM trend.%I($1)', $1::text || '_fingerprint');
+        SELECT format('SELECT * FROM trend.%I($1)', trend_directory.materialization_to_char($1) || '_fingerprint');
 
 - function:
     name: source_fingerprint
@@ -2319,7 +2391,8 @@ objects:
     language: plpgsql
     volatility: stable
     arguments:
-    - data_type: trend_directory.materialization
+    - data_type: integer
+      name: materialization_id
     - data_type: timestamp with time zone
     source: |-
       DECLARE
@@ -2662,29 +2735,38 @@ objects:
     schema: trend_directory
     return_type: timestamp with time zone
     arguments:
-    - data_type: trend_directory.materialization
+    - data_type: integer
+      name: dst_trend_store_part_id
     - data_type: timestamp with time zone
     language: sql
     volatility: stable
     source: |-
-      SELECT max(last) FROM trend_directory.modified
-        WHERE trend_store_part_id = $1.dst_trend_store_part_id
-        AND timestamp < $2;
+        SELECT max(last) FROM trend_directory.modified
+          WHERE trend_store_part_id = $1
+          AND timestamp < $2;
 
 - function:
     name: update_source_fingerprint
     schema: trend_directory
     return_type: void
     description: Update the fingerprint of the sources in the materialization_state table.
-    language: sql
+    language: plpgsql
     volatility: volatile
     arguments:
-    - data_type: trend_directory.materialization
+    - data_type: integer
+      name: materialization_id
     - data_type: timestamp with time zone
     source: |-
-      INSERT INTO trend_directory.materialization_state(materialization_id, timestamp, source_fingerprint, max_modified, processed_fingerprint, job_id)
-      VALUES ($1.id, $2, (trend_directory.source_fingerprint($1, $2)).body, trend_directory.max_modified($1, $2), null, null)
-      ON CONFLICT ON CONSTRAINT materialization_state_pkey DO UPDATE SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body, max_modified = trend_directory.max_modified($1, $2);
+      DECLARE
+        materialization trend_directory.materialization;
+      BEGIN
+        SELECT * FROM trend_directory.materialization WHERE id = $1 INTO materialization;
+        IF action_count(format('SELECT * FROM trend_directory.materialization_state WHERE materialization_id = %s AND timestamp = ''%s''', $1, $2)) = 0
+          THEN INSERT INTO trend_directory.materialization_state(materialization_id, timestamp, source_fingerprint, max_modified, processed_fingerprint, job_id)
+            VALUES ($1, $2, (trend_directory.source_fingerprint($1, $2)).body, trend_directory.max_modified(materialization.dst_trend_store_part_id, $2), null, null);
+          ELSE UPDATE trend_directory.materialization_state ms SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body, max_modified = trend_directory.max_modified(materialization.dst_trend_store_part_id, $2) WHERE ms.materialization_id = $1 AND ms.timestamp = $2;
+        END IF;
+      END;
 
 - table:
     name: materialization_tag_link
@@ -2851,15 +2933,19 @@ objects:
     language: plpgsql
     volatility: volatile
     arguments:
-    - data_type: trend_directory.materialization_trend_store_link
+    - data_type: integer
+      name: materialization_id
+    - data_type: integer
+      name: trend_store_part_id
     - data_type: timestamp with time zone
     source: |-
       DECLARE
-          result timestamp with time zone;
+        mts_link trend_directory.materialization_trend_store_link;
+        result timestamp with time zone;
       BEGIN
-          EXECUTE format('SELECT %s($1)', $1.timestamp_mapping_func::regproc::name) INTO result USING $2;
-
-          RETURN result;
+        SELECT * FROM trend_directory.materialization_trend_store_link tsl WHERE tsl.materialization_id = $1 AND tsl.trend_store_part_id = $2 INTO mts_link;
+        EXECUTE format('SELECT %s($1)', mts_link.timestamp_mapping_func::regproc::name) INTO result USING $3;
+        RETURN result;
       END;
 
 - function:
@@ -2876,14 +2962,14 @@ objects:
           WITH mapped_modified AS (
             SELECT
               materialization_id,
-              trend_directory.map_timestamp(materialization_trend_store_link, $2) AS dst_timestamp
+              trend_directory.map_timestamp(materialization_trend_store_link.materialization_id, materialization_trend_store_link.trend_store_part_id, $2) AS dst_timestamp
             FROM trend_directory.materialization_trend_store_link
             WHERE trend_store_part_id = $1
           )
-          SELECT trend_directory.update_source_fingerprint(m, dst_timestamp)
+          SELECT trend_directory.update_source_fingerprint(m.id, dst_timestamp)
           FROM mapped_modified
           JOIN trend_directory.materialization m ON m.id = materialization_id
-          GROUP BY m, dst_timestamp
+          GROUP BY m.id, dst_timestamp
       ) update_result;
 
 - function:
@@ -3186,18 +3272,23 @@ objects:
     name: create_partition
     schema: trend_directory
     return_type: trend_directory.partition
-    language: sql
+    language: plpgsql
     volatility: volatile
     arguments:
     - data_type: trend_directory.trend_store_part
     - data_type: integer
     source: |-
-      SELECT public.action($1, trend_directory.create_partition_sql($1, $2));
+      DECLARE
+        result trend_directory.partition;
+      BEGIN
+        PERFORM public.action($1, trend_directory.create_partition_sql($1, $2));
 
-      INSERT INTO trend_directory.partition(trend_store_part_id, index, name, "from", "to")
-      SELECT $1.id, $2, trend_directory.partition_name($1, $2), trend_directory.index_to_timestamp(trend_store.partition_size, $2), trend_directory.index_to_timestamp(trend_store.partition_size, $2 + 1)
-      FROM trend_directory.trend_store WHERE id = $1.trend_store_id
-      RETURNING *;
+        INSERT INTO trend_directory.partition(trend_store_part_id, index, name, "from", "to")
+          SELECT $1.id, $2, trend_directory.partition_name($1, $2), trend_directory.index_to_timestamp(trend_store.partition_size, $2), trend_directory.index_to_timestamp(trend_store.partition_size, $2 + 1)
+          FROM trend_directory.trend_store WHERE id = $1.trend_store_id
+          RETURNING * INTO result;
+        RETURN result;
+      END;
 
 - function:
     name: create_partition
@@ -3212,6 +3303,24 @@ objects:
       SELECT trend_directory.create_partition($1, trend_directory.timestamp_to_index(trend_directory.get_partition_size($1), $2));
 
 - function:
+    name: create_partition
+    schema: trend_directory
+    return_type: trend_directory.partition
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - data_type: integer
+      name: trend_store_part_id
+    - data_type: integer
+    source: |-
+      DECLARE
+        tsp trend_directory.trend_store_part;
+      BEGIN
+        SELECT * FROM trend_directory.trend_store_part WHERE id = $1 INTO tsp;
+        RETURN trend_directory.create_partition(tsp, $2);
+      END;
+
+- function:
     name: column_spec
     schema: trend_directory
     return_type: text
@@ -3221,6 +3330,23 @@ objects:
     - data_type: trend_directory.table_trend
     source: |-
       SELECT format('%I %s', $1.name, $1.data_type);
+
+- function:
+    name: trend_column_spec
+    schema: trend_directory
+    return_type: text
+    language: plpgsql
+    volatility: immutable
+    arguments:
+    - name: table_trend_id
+      data_type: integer
+    source: |-
+      DECLARE
+        tt trend_directory.table_trend;
+      BEGIN
+        SELECT * FROM trend_directory.table_trend WHERE id = $1 INTO tt;
+        RETURN trend_directory.column_spec(tt);
+      END;
 
 - function:
     name: column_spec
@@ -3234,6 +3360,23 @@ objects:
         SELECT format('%I %s GENERATED ALWAYS AS (%s) STORED', $1.name, $1.data_type, $1.expression);
 
 - function:
+    name: generated_trend_column_spec
+    schema: trend_directory
+    return_type: text
+    language: plpgsql
+    volatility: immutable
+    arguments:
+    - name: generated_table_trend_id
+      data_type: integer
+    source: |-
+      DECLARE
+        tt trend_directory.generated_table_trend;
+      BEGIN
+        SELECT * FROM trend_directory.generated_table_trend WHERE id = $1 INTO tt;
+        RETURN trend_directory.column_spec(tt);
+      END;
+
+- function:
     name: column_specs
     schema: trend_directory
     return_type: text[]
@@ -3243,11 +3386,11 @@ objects:
     - data_type: trend_directory.trend_store_part
     source: |-
       SELECT array_agg(c) FROM (
-        SELECT trend_directory.column_spec(t) AS c
+        SELECT trend_directory.trend_column_spec(t.id) AS c
         FROM trend_directory.table_trend t
         WHERE t.trend_store_part_id = $1.id
         UNION ALL
-        SELECT trend_directory.column_spec(t) AS c
+        SELECT trend_directory.generated_trend_column_spec(t.id) AS c
         FROM trend_directory.generated_table_trend t
         WHERE t.trend_store_part_id = $1.id
       ) combined_columns;
@@ -3464,6 +3607,25 @@ objects:
       SELECT $1;
 
 - function:
+    name: initialize_trend_store_part
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: integer
+    source: |-
+      DECLARE
+        tsp trend_directory.trend_store_part;
+      BEGIN
+        SELECT * from trend_directory.trend_store_part WHERE id = $1 into tsp;
+        PERFORM trend_directory.initialize_trend_store_part(tsp);
+        RETURN tsp;
+      END;
+
+- function:
     name: deinitialize_trend_store_part
     schema: trend_directory
     return_type: trend_directory.trend_store_part
@@ -3550,10 +3712,8 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: data_source_name
-      data_type: text
-    - name: entity_type_name
-      data_type: text
+    - data_type: directory.data_source
+    - data_type: directory.entity_type
     - name: granularity
       data_type: interval
     source: |-
@@ -3563,8 +3723,8 @@ objects:
           granularity
       )
       VALUES (
-          (directory.name_to_data_source($1)).id,
-          (directory.name_to_entity_type($2)).id,
+          $1.id,
+          $2.id,
           $3
       ) RETURNING *;
 
@@ -3667,7 +3827,7 @@ objects:
     name: create_trend_view
     schema: trend_directory
     return_type: trend_directory.trend_view
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -3680,9 +3840,16 @@ objects:
       data_type: interval
     - data_type: trend_directory.trend_view_part_descr[]
     source: |-
-      SELECT trend_directory.initialize_trend_view(
-          trend_directory.define_trend_view($1, $2, $3), $4
-      );
+      DECLARE
+        dsource directory.data_source;
+        etype directory.entity_type;
+      BEGIN
+        SELECT directory.name_to_data_source($1) into dsource;
+        SELECT directory.name_to_entity_type($2) into etype;
+        RETURN trend_directory.initialize_trend_view(
+          trend_directory.define_trend_view($1, dsource, etype), $4
+        );
+      END;
 
 - function:
     name: define_table_trends
@@ -3917,10 +4084,8 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: data_source_name
-      data_type: text
-    - name: entity_type_name
-      data_type: text
+    - data_type: directory.data_source
+    - data_type: directory.entity_type
     - name: granularity
       data_type: interval
     - name: partition_size
@@ -3933,8 +4098,8 @@ objects:
           partition_size
       )
       VALUES (
-          (directory.name_to_data_source($1)).id,
-          (directory.name_to_entity_type($2)).id,
+          $1.id,
+          $2.id,
           $3,
           $4
       ) RETURNING *;
@@ -3975,6 +4140,29 @@ objects:
       SELECT trend_directory.delete_trend_store((trend_directory.get_trend_store($1, $2, $3)).id);
 
 - function:
+    name: delete_trend_store_part
+    schema: trend_directory
+    return_type: void
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_store_part
+    source: |-
+      DECLARE
+          table_name text;
+      BEGIN
+
+          EXECUTE format(
+              'DROP TABLE IF EXISTS trend.%I CASCADE',
+              trend_directory.base_table_name($1)
+          );
+
+          DELETE FROM trend_directory.trend_store_part tp WHERE tp.id = $1.id;
+      END;
+
+- function:
     name: initialize_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store
@@ -3985,7 +4173,7 @@ objects:
     arguments:
     - data_type: trend_directory.trend_store
     source: |-
-      SELECT trend_directory.initialize_trend_store_part(trend_store_part)
+      SELECT trend_directory.initialize_trend_store_part(trend_store_part.id)
       FROM trend_directory.trend_store_part WHERE trend_store_id = $1.id;
 
       SELECT $1;
@@ -4157,10 +4345,8 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: data_source_name
-      data_type: text
-    - name: entity_type_name
-      data_type: text
+    - data_type: directory.data_source
+    - data_type: directory.entity_type
     - name: granularity
       data_type: interval
     - name: partition_size
@@ -4177,7 +4363,7 @@ objects:
     name: create_trend_store
     schema: trend_directory
     return_type: trend_directory.trend_store
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -4193,9 +4379,16 @@ objects:
     - name: parts
       data_type: trend_directory.trend_store_part_descr[]
     source: |-
-      SELECT trend_directory.initialize_trend_store(
-          trend_directory.define_trend_store($1, $2, $3, $4, $5)
-      );
+      DECLARE
+        dsource directory.data_source;
+        etype directory.entity_type;
+      BEGIN
+        SELECT * FROM directory.name_to_data_source($1) into dsource;
+        SELECT * FROM directory.name_to_entity_type($2) into etype;
+        RETURN trend_directory.initialize_trend_store(
+          trend_directory.define_trend_store(dsource, etype, $3, $4, $5)
+        );
+      END;
 
 - function:
     name: staged_timestamps
@@ -4274,10 +4467,41 @@ objects:
       );
 
 - function:
+    name: changes_on_trend_update
+    schema: trend_directory
+    return_type: void
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - name: trend_directory.table_trend_id
+      data_type: integer
+    - name: oldname
+      data_type: text
+    - name: newname
+      data_type: text
+    source: |-
+      DECLARE
+          base_table_name text;
+      BEGIN
+          IF $3 <> $2 THEN
+              FOR base_table_name IN
+                  SELECT trend_directory.base_table_name(trend_store_part)
+                  FROM trend_directory.table_trend
+                  JOIN trend_directory.trend_store_part ON table_trend.trend_store_part_id = trend_store_part.id
+                  WHERE table_trend.id = $1
+              LOOP
+                  EXECUTE format('ALTER TABLE trend.%I RENAME COLUMN %I TO %I', base_table_name, $2, $3);
+              END LOOP;
+          END IF;
+      END;
+
+- function:
     name: alter_trend_name
     schema: trend_directory
     return_type: trend_directory.trend_store_part
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -4288,10 +4512,17 @@ objects:
     - name: new_name
       data_type: name
     source: |-
-      UPDATE trend_directory.table_trend
-        SET name = $3
-        WHERE trend_store_part_id = $1.id AND name = $2
-        RETURNING $1;
+      DECLARE
+        table_trend_id integer;
+      BEGIN
+        FOR table_trend_id IN
+          SELECT id FROM directory.table_trend WHERE trend_store_part_id = $1.id AND name = $2
+        LOOP
+          UPDATE trend_directory.table_trend SET name = $3 WHERE id = table_trend_id;
+          PERFORM trend_directory.changes_on_trend_update(table_trend_id, $2, $3);
+        END LOOP;
+        RETURN $1;
+      END;
 
 - composite_type:
     name: column_info
@@ -4389,6 +4620,22 @@ objects:
       SELECT public.action($1, trend_directory.drop_view_sql($1));
 
       SELECT $1;
+
+- function:
+    name: delete_trend_view
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.trend_view
+    source: |-
+      SELECT trend_directory.drop_view(tvp)
+        FROM trend_directory.trend_view_part tvp
+        WHERE tvp.trend_store_id = $1.id;
+      DELETE FROM trend_directory.trend_view WHERE id = $1.id;
 
 - function:
     name: add_column_sql_part
@@ -5754,7 +6001,7 @@ objects:
       END;
 
 - function:
-    name: transfer
+    name: view_materialization_transfer
     schema: trend_directory
     return_type: integer
     description: Transfer all records of the specified timestamp from the view to the target trend store of the materialization.
@@ -5763,20 +6010,22 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: materialization
-      data_type: trend_directory.view_materialization
+    - name: materialization_id
+      data_type: integer
     - name: timestamp
       data_type: timestamp with time zone
     source: |-
       DECLARE
+          mat trend_directory.view_materialization;
           columns_part text;
           row_count integer;
           job_id bigint;
       BEGIN
+          SELECT * FROM trend_directory.view_materialization WHERE view_materialization.materialization_id = $1 INTO mat;
           SELECT logging.start_job(format('{"view_materialization": "%s", "timestamp": "%s"}', m::text, $2::text)::jsonb) INTO job_id
-          FROM trend_directory.materialization m WHERE id = $1.materialization_id;
+          FROM trend_directory.materialization m WHERE id = $1;
 
-          SELECT trend_directory.columns_part($1) INTO columns_part;
+          SELECT trend_directory.view_materialization_columns_part($1) INTO columns_part;
 
           EXECUTE format(
               'INSERT INTO trend.%I (entity_id, timestamp, created, job_id, %s) SELECT entity_id, timestamp, now(), %s, %s FROM %s WHERE timestamp = $1',
@@ -5784,7 +6033,7 @@ objects:
               columns_part,
               job_id,
               columns_part,
-              $1.src_view::name
+              mat.src_view::name
           ) USING timestamp;
 
           GET DIAGNOSTICS row_count = ROW_COUNT;
@@ -5795,7 +6044,7 @@ objects:
       END;
 
 - function:
-    name: transfer
+    name: function_materialization_transfer
     schema: trend_directory
     return_type: integer
     language: plpgsql
@@ -5803,20 +6052,25 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: materialization
-      data_type: trend_directory.function_materialization
+    - name: materialization_id
+      data_type: integer
     - name: timestamp
       data_type: timestamp with time zone
     source: |-
       DECLARE
+          mat trend_directory.function_materialization;
           columns_part text;
           row_count integer;
           job_id bigint;
       BEGIN
+          SELECT * FROM trend_directory.function_materialization fm WHERE fm.materialization_id = $1 into mat;
+          IF mat IS NULL
+            THEN RETURN NULL;
+          END IF;
           SELECT logging.start_job(format('{"function_materialization": "%s", "timestamp": "%s"}', m::text, $2::text)::jsonb) INTO job_id
-          FROM trend_directory.materialization m WHERE id = $1.materialization_id;
+          FROM trend_directory.materialization m WHERE id = $1;
 
-          SELECT trend_directory.columns_part($1) INTO columns_part;
+          SELECT trend_directory.function_materialization_columns_part($1) INTO columns_part;
 
           EXECUTE format(
               'INSERT INTO trend.%I (entity_id, timestamp, created, job_id, %s) SELECT entity_id, timestamp, now(), %s, %s FROM %s($1)',
@@ -5824,7 +6078,7 @@ objects:
               columns_part,
               job_id,
               columns_part,
-              $1.src_function::regproc
+              mat.src_function::regproc
           ) USING timestamp;
 
           GET DIAGNOSTICS row_count = ROW_COUNT;
@@ -5843,22 +6097,18 @@ objects:
     strict: false
     secdef: false
     arguments:
-    - name: materialization
-      data_type: trend_directory.materialization
+    - name: materialization_id
+      data_type: integer
     - name: timestamp
       data_type: timestamp with time zone
     source: |-
       DECLARE
         row_count integer;
       BEGIN
-        SELECT trend_directory.transfer(fm, $2) INTO row_count
-        FROM trend_directory.function_materialization fm
-        WHERE materialization_id = $1.id;
+        SELECT trend_directory.function_materialization_transfer($1, $2) INTO row_count;
 
         IF row_count IS NULL THEN
-          SELECT trend_directory.transfer(vm, $2) INTO row_count
-          FROM trend_directory.view_materialization vm
-          WHERE materialization_id = $1.id;
+          SELECT trend_directory.view_materialization_transfer($1, $2) INTO row_count;
         END IF;
 
         RETURN row_count;
@@ -5869,31 +6119,34 @@ objects:
     schema: trend_directory
     return_type: trend_directory.transfer_result
     language: plpgsql
-    volatility: volatile
     description: >
       Materialize the data produced by the referenced view of the
       materialization by clearing the timestamp in the target
       trend_store_part and inserting the data resulting from the view
       into it.
+    volatility: volatile
     strict: false
     secdef: false
     arguments:
-    - name: materialization
-      data_type: trend_directory.materialization
+    - name: materialization_id
+      data_type: integer
     - name: timestamp
       data_type: timestamp with time zone
     source: |-
       DECLARE
+          mat trend_directory.materialization;
           start timestamp with time zone;
           duration interval;
           columns_part text;
           result trend_directory.transfer_result;
       BEGIN
+          SELECT * FROM trend_directory.materialization WHERE id = $1 INTO mat;
+
           start = clock_timestamp();
 
           -- Remove all records in the target table for the timestamp to materialize
           PERFORM trend_directory.clear_trend_store_part(
-              $1.dst_trend_store_part_id, $2
+              mat.dst_trend_store_part_id, $2
           );
 
           result.row_count = trend_directory.transfer($1, $2);
@@ -5901,16 +6154,16 @@ objects:
           -- Update the state of this materialization
           UPDATE trend_directory.materialization_state vms
           SET processed_fingerprint = vms.source_fingerprint
-          WHERE vms.materialization_id = $1.id AND vms.timestamp = $2;
+          WHERE vms.materialization_id = $1 AND vms.timestamp = $2;
 
           -- Log the change in the target trend store part
-          PERFORM trend_directory.mark_modified($1.dst_trend_store_part_id, $2, now());
+          PERFORM trend_directory.mark_modified(mat.dst_trend_store_part_id, $2, now());
 
           duration = clock_timestamp() - start;
 
           UPDATE trend_directory.materialization_metrics
           SET execution_count = execution_count + 1, total_duration = total_duration + duration
-          WHERE materialization_id = $1.id;
+          WHERE materialization_metrics.materialization_id = $1;
 
           RETURN result;
       END;
@@ -5957,21 +6210,6 @@ objects:
 
           RETURN row_count;
       END;
-
-- function:
-    name: to_char
-    schema: trend_directory
-    return_type: text
-    language: sql
-    volatility: stable
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: trend_directory.materialization
-    source: |-
-      SELECT trend_store_part.name::text
-      FROM trend_directory.trend_store_part
-      WHERE trend_store_part.id = $1.dst_trend_store_part_id
 
 - function:
     name: add_new_state
@@ -6080,6 +6318,22 @@ objects:
     strict: false
     secdef: false
     arguments:
+    - data_type: integer
+      name: materialization_id
+    source: |-
+      SELECT tsp.* FROM trend_directory.trend_store_part tsp
+        JOIN trend_directory.materialization m ON tsp.id = m.dst_trend_store_part_id
+        WHERE m.id = $1;
+
+- function:
+    name: dst_trend_store_part
+    schema: trend_directory
+    return_type: trend_directory.trend_store_part
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
     - data_type: trend_directory.view_materialization
     source: |-
       SELECT p.*
@@ -6114,20 +6368,21 @@ objects:
     description: |-
       Return the comma separated, quoted list of column names to be used in queries
     arguments:
-    - data_type: trend_directory.materialization
+    - data_type: integer
+      name: trend_store_part_id
     source: |-
       WITH columns AS (
         SELECT t.name
         FROM trend_directory.trend_store_part ttsp
         JOIN trend_directory.table_trend t ON t.trend_store_part_id = ttsp.id
-        WHERE ttsp.id = $1.dst_trend_store_part_id
+        WHERE ttsp.id = $1
       )
       SELECT
         array_to_string(array_agg(quote_ident(name)), ', ')
-      FROM columns
+      FROM columns;
 
 - function:
-    name: columns_part
+    name: view_materialization_columns_part
     schema: trend_directory
     return_type: text
     language: sql
@@ -6137,14 +6392,15 @@ objects:
     description: |-
       Return the comma separated, quoted list of column names to be used in queries
     arguments:
-    - data_type: trend_directory.view_materialization
+    - data_type: integer
+      name: materialization_id
     source: |-
-      SELECT trend_directory.columns_part(m)
-      FROM trend_directory.materialization m
-      WHERE id = $1.materialization_id;
+      SELECT trend_directory.columns_part(m.dst_trend_store_part_id)
+        FROM trend_directory.materialization m
+        WHERE id = $1;
 
 - function:
-    name: columns_part
+    name: function_materialization_columns_part
     schema: trend_directory
     return_type: text
     language: sql
@@ -6154,11 +6410,12 @@ objects:
     description: |-
       Return the comma separated, quoted list of column names to be used in queries
     arguments:
-    - data_type: trend_directory.function_materialization
+    - data_type: integer
+      name: materialization_id
     source: |-
-      SELECT trend_directory.columns_part(m)
+      SELECT trend_directory.columns_part(m.dst_trend_store_part_id)
       FROM trend_directory.materialization m
-      WHERE id = $1.materialization_id;
+      WHERE id = $1;
 
 - cast:
     source:
@@ -6221,49 +6478,6 @@ objects:
     implicit: false
 
 - function:
-    name: cleanup_on_data_source_delete
-    schema: trend_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          DELETE FROM trend_directory.trend_store WHERE data_source_id = OLD.id;
-
-          RETURN OLD;
-      END;
-
-- function:
-    name: changes_on_trend_update
-    schema: trend_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      DECLARE
-          base_table_name text;
-      BEGIN
-          IF NEW.name <> OLD.name THEN
-              FOR base_table_name IN
-                  SELECT trend_directory.base_table_name(trend_store_part)
-                  FROM trend_directory.table_trend
-                  JOIN trend_directory.trend_store_part ON table_trend.trend_store_part_id = trend_store_part.id
-                  WHERE table_trend.id = NEW.id
-              LOOP
-                  EXECUTE format('ALTER TABLE trend.%I RENAME COLUMN %I TO %I', base_table_name, OLD.name, NEW.name);
-              END LOOP;
-          END IF;
-
-          RETURN NEW;
-      END;
-
-- function:
     name: update_modified_column
     schema: trend_directory
     return_type: trigger
@@ -6280,44 +6494,6 @@ objects:
       END;
 
 - function:
-    name: cleanup_trend_store_part_on_delete
-    schema: trend_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      DECLARE
-          table_name text;
-      BEGIN
-
-          EXECUTE format(
-              'DROP TABLE IF EXISTS trend.%I CASCADE',
-              trend_directory.base_table_name(OLD)
-          );
-
-          RETURN OLD;
-      END;
-
-- function:
-    name: drop_view_on_delete
-    schema: trend_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          PERFORM trend_directory.drop_view(OLD);
-
-          RETURN OLD;
-      END;
-
-- function:
     name: create_stats_on_creation
     schema: trend_directory
     return_type: trigger
@@ -6330,58 +6506,6 @@ objects:
           VALUES (NEW.trend_store_part_id, NEW.timestamp, '2000-01-01 00:00:00+02', 1);
         RETURN NEW;
       END;
-
-- trigger:
-    table:
-      schema: trend_directory
-      name: table_trend
-    name: propagate_changes_on_trend_update
-    function:
-      schema: trend_directory
-      name: changes_on_trend_update
-    when: after
-    events:
-    - update
-    affecteach: row
-
-- trigger:
-    table:
-      schema: directory
-      name: data_source
-    name: delete_trend_stores_on_data_source_delete
-    function:
-      schema: trend_directory
-      name: cleanup_on_data_source_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
-
-- trigger:
-    table:
-      schema: trend_directory
-      name: trend_store_part
-    name: cleanup_trend_store_part_on_delete
-    function:
-      schema: trend_directory
-      name: cleanup_trend_store_part_on_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
-
-- trigger:
-    table:
-      schema: trend_directory
-      name: trend_view
-    name: drop_view_on_delete
-    function:
-      schema: trend_directory
-      name: drop_view_on_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
 
 - trigger:
     table:
@@ -6451,8 +6575,8 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-#- query:
-#    query: create_reference_table('attribute_directory.attribute_store')
+- query:
+    query: create_reference_table('attribute_directory.attribute_store')
 
 - function:
     name: get_attribute_store
@@ -6595,6 +6719,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('attribute_directory.attribute')
+
 - table:
     name: attribute_tag_link
     schema: attribute_directory
@@ -6637,6 +6764,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('attribute_directory.attribute_tag_link')
+
 - table:
     name: attribute_store_modified
     schema: attribute_directory
@@ -6667,6 +6797,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('attribute_directory.attribute_store_modified')
 
 - table:
     name: attribute_store_curr_materialized
@@ -6699,6 +6832,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('attribute_directory.attribute_store_curr_materialized')
+
 - table:
     name: attribute_store_compacted
     schema: attribute_directory
@@ -6730,6 +6866,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('attribute_directory.attribute_store_compacted')
+
 - composite_type:
     name: attribute_info
     schema: attribute_directory
@@ -6753,8 +6892,27 @@ objects:
     - data_type: attribute_directory.attribute_store
     source: |-
       SELECT data_source.name || '_' || entity_type.name
-      FROM directory.data_source, directory.entity_type
-      WHERE data_source.id = $1.data_source_id AND entity_type.id = $1.entity_type_id;
+        FROM directory.data_source, directory.entity_type
+        WHERE data_source.id = $1.data_source_id AND entity_type.id = $1.entity_type_id;
+
+- function:
+    name: attribute_name
+    schema: attribute_directory
+    return_type: text
+    language: plpgsql
+    volatility: stable
+    strict: true
+    secdef: false
+    arguments:
+    - name: attribute_store_id
+      data_type: integer
+    source: |-
+      DECLARE
+        attribute attribute_directory.attribute_store;
+      BEGIN
+        SELECT * FROM attribute_directory.attribute_store WHERE id = $1 INTO attribute;
+        RETURN attribute_directory.to_char(attribute);
+      END;
 
 - function:
     name: to_table_name
@@ -7992,7 +8150,7 @@ objects:
     name: mark_modified
     schema: attribute_directory
     return_type: attribute_directory.attribute_store_modified
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
@@ -8000,14 +8158,15 @@ objects:
     - name: attribute_store_id
       data_type: integer
     source: |-
-      SELECT CASE
-        WHEN current_setting('minerva.trigger_mark_modified') = 'off' THEN
-            (SELECT asm FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1)
-
-        ELSE
-            attribute_directory.mark_modified($1, now())
-
-        END;
+      DECLARE
+        result attribute_directory.attribute_store_modified;
+      BEGIN
+        IF current_setting('minerva.trigger_mark_modified') = 'off'
+        THEN SELECT * FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1 INTO result;
+        ELSE SELECT attribute_directory.mark_modified($1, now()) INTO result;
+        END IF;
+        RETURN result;
+      END;
 
 - function:
     name: define_attribute_store
@@ -8105,26 +8264,6 @@ objects:
       RETURNING attribute;
 
 - function:
-    name: check_attribute_types
-    schema: attribute_directory
-    return_type: attribute_directory.attribute
-    returns_set: true
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    - data_type: attribute_directory.attribute_descr[]
-    source: |-
-      UPDATE attribute_directory.attribute SET data_type = n.data_type
-      FROM unnest($2) n
-      WHERE attribute.name = n.name
-      AND attribute.attribute_store_id = $1.id
-      AND attribute.data_type <> trend_directory.greatest_data_type(n.data_type, attribute.data_type)
-      RETURNING attribute.*;
-
-- function:
     name: modify_column_type
     schema: attribute_directory
     return_type: void
@@ -8218,6 +8357,25 @@ objects:
           EXECUTE format('TRUNCATE attribute_staging.%I', table_name);
 
           RETURN row_count;
+      END;
+
+- function:
+    name: transfer_staged
+    schema: attribute_directory
+    return_type: integer
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: integer
+      name: attribute_store_id
+    source: |-
+      DECLARE
+        attribute attribute_directory.attribute_store;
+      BEGIN
+        SELECT * FROM attribute_directory.attribute_store WHERE id = $1 INTO attribute;
+        RETURN attribute_directory.transfer_staged(attribute);
       END;
 
 - function:
@@ -8605,6 +8763,9 @@ objects:
       data_type: integer
     source: |-
       SELECT COALESCE(compacted, 0) FROM attribute_directory.attribute_store_compacted WHERE attribute_store_id = $1;
+
+- query:
+    query: create_distributed_function('attribute_directory.last_compacted(integer)')
 
 - function:
     name: compact
@@ -9191,6 +9352,54 @@ objects:
       SELECT $1;
 
 - function:
+    name: update_data_type
+    schema: attribute_directory
+    return_type: attribute_directory.attribute
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute
+    - data_type: text
+      name: new_data_type
+    source: |-
+      UPDATE attribute_directory.attribute SET data_type = $2
+        WHERE id = $1.id;
+      SELECT
+          attribute_directory.create_dependees(
+              attribute_directory.modify_column_type(
+                  attribute_directory.drop_dependees(attribute_store),
+                  $1.name,
+                  $2
+              )
+          )
+      FROM attribute_directory.attribute_store
+      WHERE id = $1.attribute_store_id;
+
+      SELECT $1;
+
+- function:
+    name: check_attribute_types
+    schema: attribute_directory
+    return_type: attribute_directory.attribute
+    returns_set: true
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute_store
+    - data_type: attribute_directory.attribute_descr[]
+    source: |-
+      SELECT attribute_directory.update_data_type(attribute, n.data_type)
+        FROM unnest($2) n
+        JOIN attribute_directory.attribute
+          ON attribute.name = n.name
+        WHERE attribute.attribute_store_id = $1.id
+          AND attribute.data_type <> trend_directory.greatest_data_type(n.data_type, attribute.data_type);
+
+- function:
     name: add_attribute_column
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
@@ -9283,30 +9492,6 @@ objects:
           format('SELECT attribute_directory.add_attribute_column(attribute_store, %L, %L) FROM attribute_directory.attribute_store WHERE id = %s', $1.name, $1.data_type, $1.attribute_store_id)
       )
 
-- function:
-    name: modify_data_type
-    schema: attribute_directory
-    return_type: attribute_directory.attribute
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute
-    source: |-
-      SELECT
-          attribute_directory.create_dependees(
-              attribute_directory.modify_column_type(
-                  attribute_directory.drop_dependees(attribute_store),
-                  $1.name,
-                  $1.data_type
-              )
-          )
-      FROM attribute_directory.attribute_store
-      WHERE id = $1.attribute_store_id;
-
-      SELECT $1;
-
 - cast:
     source:
       schema: attribute_directory
@@ -9318,72 +9503,6 @@ objects:
       schema: attribute_directory
       name: to_char
     implicit: false
-
-- function:
-    name: cleanup_on_data_source_delete
-    schema: attribute_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          DELETE FROM attribute_directory.attribute_store WHERE data_source_id = OLD.id;
-
-          RETURN OLD;
-      END;
-
-- function:
-    name: cleanup_on_entity_type_delete
-    schema: attribute_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          DELETE FROM attribute_directory.attribute_store WHERE entity_type_id = OLD.id;
-
-          RETURN OLD;
-      END;
-
-- function:
-    name: cleanup_attribute_store_on_delete
-    schema: attribute_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          PERFORM attribute_directory.deinit(OLD);
-
-          RETURN OLD;
-      END;
-
-- function:
-    name: update_data_type_on_change
-    schema: attribute_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          IF OLD.data_type <> NEW.data_type THEN
-              PERFORM attribute_directory.modify_data_type(NEW);
-          END IF;
-
-          RETURN NEW;
-      END;
 
 - procedure:
     name: init
@@ -9426,7 +9545,7 @@ objects:
 - function:
     name: deinit
     schema: attribute_directory
-    return_type: attribute_directory.attribute_store
+    return_type: void
     language: sql
     volatility: volatile
     arguments:
@@ -9454,8 +9573,6 @@ objects:
 
       -- Base/parent table
       SELECT attribute_directory.drop_base_table($1);
-
-      SELECT $1;
 
 - function:
     name: to_attribute
@@ -9557,6 +9674,7 @@ objects:
       - name: attribute_store
         data_type: attribute_directory.attribute_store
     source: |-
+      SELECT attribute_directory.deinit($1);
       DELETE FROM attribute_directory.attribute_store WHERE id = $1.id;
 
 - function:
@@ -9571,57 +9689,46 @@ objects:
       SELECT attribute_directory.delete_attribute_store(attribute_store)
       FROM attribute_directory.attribute_store WHERE attribute_store::text = $1;
 
-- trigger:
-    table:
-      schema: directory
-      name: data_source
-    name: delete_attribute_stores_on_data_source_delete
-    function:
-      schema: attribute_directory
-      name: cleanup_on_data_source_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
+- function:
+    name: delete_entity_type
+    schema: directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+      - data_type: directory.entity_type
+    source: |-
+      SELECT attribute_directory.delete_attribute_store(s) FROM attribute_directory.attribute_store s WHERE s.entity_type_id = $1.id;
+      DELETE FROM directory.entity_type WHERE id = $1.id;
 
-- trigger:
-    table:
-      schema: directory
-      name: entity_type
-    name: delete_attribute_stores_on_entity_type_delete
-    function:
-      schema: attribute_directory
-      name: cleanup_on_entity_type_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
+- function:
+    name: cleanup_on_data_source_delete
+    schema: directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+      - data_type: directory.data_source
+    source: |-
+      SELECT attribute_directory.delete_attribute_store(s) FROM attribute_directory.attribute_store s WHERE s.data_source_id = $1.id;
 
-- trigger:
-    table:
-      schema: attribute_directory
-      name: attribute_store
-    name: cleanup_attribute_store_on_delete
-    function:
-      schema: attribute_directory
-      name: cleanup_attribute_store_on_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
-
-- trigger:
-    table:
-      schema: attribute_directory
-      name: attribute
-    name: update_attribute_type
-    function:
-      schema: attribute_directory
-      name: update_data_type_on_change
-    when: after
-    events:
-    - update
-    affecteach: row
+- function:
+    name: delete_data_source
+    schema: directory
+    return_type: directory.data_source
+    language: sql
+    volatility: volatile
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: text
+    source: |-
+      SELECT directory.cleanup_on_data_source_delete(s) FROM directory.data_source s WHERE s.name = $1;
+      DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
 
 - view:
     name: dependencies
@@ -9673,6 +9780,9 @@ objects:
       )
       FROM attribute_directory.attribute_store
       WHERE id = $1.attribute_store_id
+
+- query:
+    query: create_reference_table('attribute_directory.sampled_view_materialization')
 
 - function:
     name: materialize
@@ -9759,6 +9869,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('notification_directory.notification_store')
+
 - table:
     name: attribute
     schema: notification_directory
@@ -9804,6 +9917,9 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
+- query:
+    query: create_reference_table('notification_directory.attribute')
+
 - table:
     name: notification_set_store
     schema: notification_directory
@@ -9839,6 +9955,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('notification_directory.notification_set_store')
 
 - table:
     name: set_attribute
@@ -9884,6 +10003,9 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- query:
+    query: create_reference_table('notification_directory.set_attribute')
 
 - function:
     name: notification_store_schema
@@ -10281,6 +10403,34 @@ objects:
       );
 
 - function:
+    name: delete_notification_store
+    schema: notification_directory
+    return_type: void
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: notification_directory.notification_store
+    source: |-
+      BEGIN
+          EXECUTE format(
+              'DROP TABLE IF EXISTS %I.%I CASCADE',
+              notification_directory.notification_store_schema(),
+              notification_directory.staging_table_name($1)
+          );
+
+          EXECUTE format(
+              'DROP TABLE IF EXISTS %I.%I CASCADE',
+              notification_directory.notification_store_schema(),
+              notification_directory.table_name($1)
+          );
+
+          DELETE FROM notification_directory.notification_store WHERE id = $1.id;
+      END;
+
+
+- function:
     name: init_notification_set_store
     schema: notification_directory
     return_type: notification_directory.notification_set_store
@@ -10348,6 +10498,33 @@ objects:
     - data_type: notification_directory.notification_store
     source: |-
       SELECT notification_directory.create_notification_set_store($1, $2.id);
+
+- function:
+    name: delete_notification_set_store
+    schema: notification_directory
+    return_type: void
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: notification_directory.notification_set_store
+    source: |-
+      BEGIN
+          EXECUTE format(
+              'DROP TABLE IF EXISTS %I.%I',
+              notification_directory.notification_store_schema(),
+              $1.name || '_link'
+          );
+
+          EXECUTE format(
+              'DROP TABLE IF EXISTS %I.%I',
+              notification_directory.notification_store_schema(),
+              $1.name
+          );
+
+          DELETE FROM notification_directory.notification_set_store WHERE id = $1.id;
+      END;
 
 - function:
     name: get_column_type_name
@@ -10493,58 +10670,6 @@ objects:
     implicit: false
 
 - function:
-    name: drop_table_on_delete
-    schema: notification_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          EXECUTE format(
-              'DROP TABLE IF EXISTS %I.%I CASCADE',
-              notification_directory.notification_store_schema(),
-              notification_directory.staging_table_name(OLD)
-          );
-
-          EXECUTE format(
-              'DROP TABLE IF EXISTS %I.%I CASCADE',
-              notification_directory.notification_store_schema(),
-              notification_directory.table_name(OLD)
-          );
-
-          RETURN OLD;
-      END;
-
-- function:
-    name: drop_notification_set_store_table_on_delete
-    schema: notification_directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments: []
-    source: |-
-      BEGIN
-          EXECUTE format(
-              'DROP TABLE IF EXISTS %I.%I',
-              notification_directory.notification_store_schema(),
-              OLD.name || '_link'
-          );
-
-          EXECUTE format(
-              'DROP TABLE IF EXISTS %I.%I',
-              notification_directory.notification_store_schema(),
-              OLD.name
-          );
-
-          RETURN OLD;
-      END;
-
-- function:
     name: cleanup_on_data_source_delete
     schema: notification_directory
     return_type: trigger
@@ -10559,45 +10684,6 @@ objects:
 
           RETURN OLD;
       END;
-
-- trigger:
-    table:
-      schema: notification_directory
-      name: notification_store
-    name: drop_table_on_delete
-    function:
-      schema: notification_directory
-      name: drop_table_on_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
-
-- trigger:
-    table:
-      schema: notification_directory
-      name: notification_set_store
-    name: drop_notification_set_store_table_on_delete
-    function:
-      schema: notification_directory
-      name: drop_notification_set_store_table_on_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
-
-- trigger:
-    table:
-      schema: directory
-      name: data_source
-    name: delete_notification_stores_on_data_source_delete
-    function:
-      schema: notification_directory
-      name: cleanup_on_data_source_delete
-    when: before
-    events:
-    - delete
-    affecteach: row
 
 - function:
     name: update
@@ -13346,4 +13432,3 @@ objects:
       - data_type: timestamp with time zone
     source: |-
       SELECT date_trunc('month', $1 - interval '1d') + interval '1month';
-
