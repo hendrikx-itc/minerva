@@ -1,8 +1,19 @@
-FROM postgres:10
+FROM postgres:13
 ENV LC_ALL C
 MAINTAINER HENDRIKX-ITC
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y make patch libpq-dev postgresql-server-dev-10 postgresql-contrib-10 postgis postgresql-10-postgis-2.3 python3-pip git net-tools
+RUN apt-get update && apt-cache search postgis
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+	make \
+	patch \
+	libpq-dev \
+	postgresql-server-dev-13 \
+	postgresql-contrib-13 \
+	postgis \
+	postgresql-13-postgis-3 \
+	python3-pip \
+	git \
+	net-tools
 RUN pip3 install git+https://github.com/hendrikx-itc/pg-db-tools.git
 
 ADD https://github.com/theory/pgtap/archive/master.tar.gz /pgtap.tar.gz
@@ -12,8 +23,6 @@ RUN cd /pgtap && make && make install
 
 COPY bin/ /usr/bin/
 
-RUN mkdir /mimir -p
-
 COPY src /src
 COPY tests /tests
 
@@ -22,6 +31,7 @@ VOLUME /test_results
 
 RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
 
-COPY run-tests /docker-entrypoint-initdb.d/
-RUN chmod +x /docker-entrypoint-initdb.d/run-tests
-CMD ["/docker-entrypoint-initdb.d/run-tests"]
+COPY docker-resources/init-minerva-db-develop.sh /docker-entrypoint-initdb.d/
+COPY docker-resources/usr/bin/create-minerva-database /usr/bin/
+COPY run-tests.sh /docker-entrypoint-initdb.d/
+RUN chmod +x /docker-entrypoint-initdb.d/run-tests.sh

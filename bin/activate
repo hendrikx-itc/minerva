@@ -26,10 +26,10 @@ SCRIPT_DIR=$(absolute_dir $RELATIVE_SCRIPT_DIR)
 
 echo $SCRIPT_DIR
 
-export MINERVA_ROOT=${SCRIPT_DIR%/*}
+export WORKSPACE=${SCRIPT_DIR%/*}
+export PATH=$WORKSPACE/bin:$PATH
 
-export PATH=$MINERVA_ROOT/bin:$PATH
-
+export MINERVA_ROOT="$WORKSPACE"
 
 
 if [ $SHELL_NAME = "bash" ]; then
