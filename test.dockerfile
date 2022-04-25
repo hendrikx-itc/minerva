@@ -2,7 +2,6 @@ FROM postgres:13
 ENV LC_ALL C
 MAINTAINER HENDRIKX-ITC
 
-RUN apt-get update && apt-cache search postgis
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 	make \
 	patch \
