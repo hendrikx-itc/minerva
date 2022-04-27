@@ -1305,24 +1305,25 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."materialization" TO miner
 
 
 
-CREATE FUNCTION "trend_directory"."cleanup_for_materialization"()
-    RETURNS trigger
+CREATE FUNCTION "trend_directory"."cleanup_for_materialization"(trend_directory.materialization)
+    RETURNS void
 AS $$
 BEGIN
   EXECUTE format(
     'DROP FUNCTION trend.%I(timestamp with time zone)',
-    trend_directory.fingerprint_function_name(OLD)
+    trend_directory.fingerprint_function_name($1)
   );
-
-  RETURN OLD;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE TRIGGER cleanup_on_materialization_delete
-  BEFORE DELETE ON "trend_directory"."materialization"
-  FOR EACH ROW
-  EXECUTE PROCEDURE "trend_directory"."cleanup_for_materialization"();
+CREATE FUNCTION "trend_directory"."cleanup_for_materialization"("materialization_name" text)
+    RETURNS void
+AS $$
+SELECT trend_directory.cleanup_for_materialization(m)
+  FROM trend_directory.materialization m
+  WHERE m::text = $1;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE TABLE "trend_directory"."materialization_metrics"
@@ -1456,8 +1457,9 @@ COMMENT ON FUNCTION "trend_directory"."define_materialization"("dst_trend_store_
 CREATE FUNCTION "trend_directory"."undefine_materialization"("name" name)
     RETURNS void
 AS $$
+SELECT trend_directory."cleanup_for_materialization"($1);
 DELETE FROM trend_directory.materialization
-WHERE materialization::text = $1;
+  WHERE materialization::text = $1;
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."undefine_materialization"("name" name) IS 'Undefine and remove a materialization';
@@ -1824,7 +1826,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."fingerprint_function_name"(trend_directory.materialization)
     RETURNS name
 AS $$
-SELECT format('%s_fingerprint', $1::text)::name;
+SELECT format('%s_fingerprint', trend_directory.materialization_to_char($1.id))::name;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2178,6 +2180,20 @@ $$ LANGUAGE sql VOLATILE;
 COMMENT ON FUNCTION "trend_directory"."deinitialize_trend_store_part"(trend_directory.trend_store_part) IS 'Remove all database objects related to the table trend store part';
 
 
+CREATE FUNCTION "trend_directory"."deinitialize_trend_store_part"("trend_store_part_id" integer)
+    RETURNS void
+AS $$
+DECLARE
+  tsp trend_directory.trend_store_part;
+BEGIN
+  SELECT * FROM trend_directory.trend_store_part
+    WHERE trend_store_part.id = $1 INTO tsp;
+  EXECUTE trend_directory.drop_base_table_sql(tsp);
+  EXECUTE trend_directory.drop_staging_table_sql(tsp);
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."get_default_partition_size"("granularity" interval)
     RETURNS interval
 AS $$
@@ -2208,8 +2224,8 @@ CREATE FUNCTION "trend_directory"."define_table_trend"("trend_store_part_id" int
     RETURNS trend_directory.table_trend
 AS $$
 INSERT INTO trend_directory.table_trend (trend_store_part_id, name, data_type, description, time_aggregation, entity_aggregation)
-VALUES ($1, $2.name, $2.data_type, $2.description, $2.time_aggregation, $2.entity_aggregation)
-RETURNING table_trend;
+VALUES ($1, $2.name, $2.data_type, $2.description, $2.time_aggregation, $2.entity_aggregation);
+SELECT * FROM trend_directory.table_trend WHERE trend_store_part_id = $1 AND name = $2.name;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2217,8 +2233,8 @@ CREATE FUNCTION "trend_directory"."define_generated_table_trend"("trend_store_pa
     RETURNS trend_directory.generated_table_trend
 AS $$
 INSERT INTO trend_directory.generated_table_trend (trend_store_part_id, name, data_type, expression, extra_data, description)
-VALUES ($1, $2.name, $2.data_type, $2.expression, $2.extra_data, $2.description)
-RETURNING generated_table_trend;
+VALUES ($1, $2.name, $2.data_type, $2.expression, $2.extra_data, $2.description);
+SELECT * FROM trend_directory.generated_table_trend WHERE trend_store_part_id = $1 AND name = $2.name;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -2341,22 +2357,16 @@ $$ LANGUAGE plpgsql VOLATILE;
 CREATE FUNCTION "trend_directory"."rename_trend_store_part"(trend_directory.trend_store_part, name)
     RETURNS trend_directory.trend_store_part
 AS $$
-SELECT public.action(
-    $1,
-    format(
-        'ALTER TABLE %I.%I RENAME TO %I',
-        trend_directory.base_table_schema(),
-        $1.name,
-        $2
-    )
-);
-
-UPDATE trend_directory.trend_store_part
-SET name = $2
-WHERE id = $1.id;
-
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+BEGIN
+  EXECUTE format(
+    'ALTER TABLE %I.%I RENAME TO %I',
+    trend_directory.base_table_schema(),
+    $1.name,
+    $2
+  );
+  RETURN $1;
+END; 
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."rename_partitions"(trend_directory.trend_store_part, "new_name" name)
@@ -2390,6 +2400,7 @@ DECLARE
   old_name text;
   new_name text;
 BEGIN
+  SET LOCAL citus.multi_shard_modify_mode TO 'sequential';
   SELECT trend_directory.to_char($1) INTO old_name;
   SELECT $2::text INTO new_name;
   PERFORM trend_directory.rename_trend_store_part($1, $2);
@@ -2491,7 +2502,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."delete_trend_store"(integer)
     RETURNS void
 AS $$
-SELECT trend_directory.deinitialize_trend_store_part(part)
+SELECT trend_directory.deinitialize_trend_store_part(part.id)
 FROM trend_directory.trend_store_part AS part
 WHERE trend_store_id = $1;
 
@@ -2503,7 +2514,7 @@ CREATE FUNCTION "trend_directory"."delete_trend_store"("data_source_name" text, 
     RETURNS void
 AS $$
 SELECT trend_directory.delete_trend_store((trend_directory.get_trend_store($1, $2, $3)).id);
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."delete_trend_store_part"(trend_directory.trend_store_part)
@@ -2701,7 +2712,7 @@ DECLARE
 BEGIN
     IF $3 <> $2 THEN
         FOR base_table_name IN
-            SELECT trend_directory.base_table_name(trend_store_part)
+            SELECT trend_directory.base_table_name_by_trend_store_part_id(trend_store_part.id)
             FROM trend_directory.table_trend
             JOIN trend_directory.trend_store_part ON table_trend.trend_store_part_id = trend_store_part.id
             WHERE table_trend.id = $1
@@ -2720,7 +2731,7 @@ DECLARE
   table_trend_id integer;
 BEGIN
   FOR table_trend_id IN
-    SELECT id FROM directory.table_trend WHERE trend_store_part_id = $1.id AND name = $2
+    SELECT id FROM trend_directory.table_trend WHERE trend_store_part_id = $1.id AND name = $2
   LOOP
     UPDATE trend_directory.table_trend SET name = $3 WHERE id = table_trend_id;
     PERFORM trend_directory.changes_on_trend_update(table_trend_id, $2, $3);
@@ -2910,27 +2921,30 @@ FROM trend_directory.trend_store_part WHERE name = $1
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."assure_table_trends_exist"(trend_directory.trend_store_part, trend_directory.trend_descr[], trend_directory.generated_trend_descr[])
+CREATE FUNCTION "trend_directory"."assure_table_trends_exist"("trend_store_id" integer, "trend_store_part_name" text, trend_directory.trend_descr[], trend_directory.generated_trend_descr[])
     RETURNS text[]
 AS $$
 DECLARE
+  tsp trend_directory.trend_store_part;
   result text[];
 BEGIN
+  SELECT * FROM trend_directory.get_or_create_trend_store_part($1, $2) INTO tsp;
+
   CREATE TEMP TABLE missing_trends(trend trend_directory.trend_descr);
   CREATE TEMP TABLE missing_generated_trends(trend trend_directory.generated_trend_descr);
 
   -- Normal trends
-  INSERT INTO missing_trends SELECT trend_directory.missing_table_trends($1, $2);
+  INSERT INTO missing_trends SELECT trend_directory.missing_table_trends(tsp, $3);
 
   IF EXISTS (SELECT * FROM missing_trends LIMIT 1) THEN
-    PERFORM trend_directory.create_table_trends($1, ARRAY(SELECT trend FROM missing_trends));
+    PERFORM trend_directory.create_table_trends(tsp, ARRAY(SELECT trend FROM missing_trends));
   END IF;
 
   -- Generated trends
-  INSERT INTO missing_generated_trends SELECT trend_directory.missing_generated_table_trends($1, $3);
+  INSERT INTO missing_generated_trends SELECT trend_directory.missing_generated_table_trends(tsp, $4);
 
   IF EXISTS (SELECT * FROM missing_generated_trends LIMIT 1) THEN
-    PERFORM trend_directory.create_generated_table_trends($1, missing_generated_trends);
+    PERFORM trend_directory.create_generated_table_trends(tsp, missing_generated_trends);
   END IF;
 
   SELECT ARRAY(SELECT (mt).trend.name FROM missing_trends mt UNION SELECT (mt).trend.name FROM missing_generated_trends mt) INTO result;
@@ -2951,7 +2965,8 @@ DECLARE
 BEGIN
   FOR partresult IN
     SELECT trend_directory.assure_table_trends_exist(
-      trend_directory.get_or_create_trend_store_part($1.id, name),
+      $1.id,
+      name,
       trends,
       generated_trends
     )
@@ -2968,7 +2983,8 @@ CREATE FUNCTION "trend_directory"."add_trends"("part" trend_directory.trend_stor
     RETURNS text[]
 AS $$
 SELECT trend_directory.assure_table_trends_exist(
-  trend_store_part,
+  trend_store_part.trend_store_id,
+  $1.name,
   $1.trends,
   $1.generated_trends
 )
@@ -2997,6 +3013,15 @@ AS $$
 SELECT trend_store_part.name FROM trend_directory.table_trend LEFT JOIN trend_directory.trend_store_part
   ON table_trend.trend_store_part_id = trend_store_part.id
   WHERE table_trend.id = trend.id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."trend_store_part_name_for_trend"("trend_id" integer)
+    RETURNS name
+AS $$
+SELECT trend_store_part.name FROM trend_directory.table_trend LEFT JOIN trend_directory.trend_store_part
+  ON table_trend.trend_store_part_id = trend_store_part.id
+  WHERE table_trend.id = $1;
 $$ LANGUAGE sql STABLE;
 
 
@@ -3050,18 +3075,22 @@ COMMENT ON FUNCTION "trend_directory"."remove_trend_if_extraneous"("trend" trend
 CREATE FUNCTION "trend_directory"."get_trends_for_trend_store_part"("trend_store_part_id" integer)
     RETURNS SETOF trend_directory.table_trend
 AS $$
-SELECT * FROM trend_directory.table_trend WHERE table_trend.trend_store_part_id = $1;
-$$ LANGUAGE sql STABLE;
+BEGIN
+  RETURN QUERY EXECUTE FORMAT('SELECT * FROM trend_directory.table_trend WHERE table_trend.trend_store_part_id = %s;', $1);
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 
 CREATE FUNCTION "trend_directory"."get_trends_for_trend_store_part"(trend_directory.trend_store_part)
     RETURNS SETOF trend_directory.table_trend
 AS $$
-SELECT trend_directory.get_trends_for_trend_store_part($1.id);
-$$ LANGUAGE sql STABLE;
+BEGIN
+  RETURN QUERY EXECUTE FORMAT('SELECT trend_directory.get_trends_for_trend_store_part(%s);', $1.id);
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 
-CREATE FUNCTION "trend_directory"."remove_extra_trends"(trend_directory.trend_store_part, trend_directory.trend_descr[])
+CREATE FUNCTION "trend_directory"."remove_extra_trends"("trend_store_part_id" integer, trend_directory.trend_descr[])
     RETURNS text[]
 AS $$
 DECLARE
@@ -3104,7 +3133,7 @@ CREATE FUNCTION "trend_directory"."remove_extra_trends"("part" trend_directory.t
     RETURNS text[]
 AS $$
 SELECT trend_directory.remove_extra_trends(
-  trend_store_part,
+  id,
   $1.trends
 )
 FROM trend_directory.trend_store_part
@@ -3112,29 +3141,31 @@ WHERE name = $1.name;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."change_table_trend_data_unsafe"(trend_directory.table_trend, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
+CREATE FUNCTION "trend_directory"."change_table_trend_data_unsafe"("trend_id" integer, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
     RETURNS text
 AS $$
 DECLARE
   result text;
+  trend trend_directory.table_trend;
 BEGIN
-  IF $1.data_type <> $2 OR $1.entity_aggregation <> $3 OR $1.time_aggregation <> $4
+  SELECT * FROM trend_directory.table_trend WHERE id = $1 INTO trend;
+  IF trend.data_type <> $2 OR trend.entity_aggregation <> $3 OR trend.time_aggregation <> $4
   THEN
     UPDATE trend_directory.table_trend SET
       data_type = $2,
       entity_aggregation = $3,
       time_aggregation = $4
-    WHERE id = $1.id;
-    SELECT $1.name INTO result;
+    WHERE id = $1;
+    SELECT trend.name INTO result;
   END IF;
 
-  IF $1.data_type <> $2
+  IF trend.data_type <> $2
   THEN
     EXECUTE format('ALTER TABLE trend.%I ALTER %I TYPE %s USING CAST(%I AS %s)',
       trend_directory.trend_store_part_name_for_trend($1),
-      $1.name,
+      trend.name,
       $2,
-      $1.name,
+      trend.name,
       $2);
   END IF;
 
@@ -3193,21 +3224,26 @@ SELECT
 $$ LANGUAGE sql IMMUTABLE;
 
 
-CREATE FUNCTION "trend_directory"."change_table_trend_data_safe"(trend_directory.table_trend, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
+CREATE FUNCTION "trend_directory"."change_table_trend_data_safe"("trend_id" integer, "data_type" text, "entity_aggregation" text, "time_aggregation" text)
     RETURNS text
 AS $$
-SELECT trend_directory.change_table_trend_data_unsafe(
-  $1,
-  trend_directory.greatest_data_type($2, $1.data_type),
-  $3,
-  $4);
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  trend trend_directory.table_trend;
+BEGIN
+  SELECT * FROM trend_directory.table_trend WHERE id = $1 INTO trend;
+  RETURN trend_directory.change_table_trend_data_unsafe(
+    $1,
+    trend_directory.greatest_data_type($2, trend.data_type),
+    $3,
+    $4);
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_trend_data_unsafe"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text)
     RETURNS text
 AS $$
-SELECT trend_directory.change_table_trend_data_unsafe($1, t.data_type, t.entity_aggregation, t.time_aggregation)
+SELECT trend_directory.change_table_trend_data_unsafe($1.id, t.data_type, t.entity_aggregation, t.time_aggregation)
   FROM unnest($2) t
   WHERE t.name = $1.name AND trend_directory.trend_store_part_name_for_trend($1) = $3;
 $$ LANGUAGE sql VOLATILE;
@@ -3216,7 +3252,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "trend_directory"."change_trend_data_safe"("trend" trend_directory.table_trend, "trends" trend_directory.trend_descr[], "partname" text)
     RETURNS text
 AS $$
-SELECT trend_directory.change_table_trend_data_safe($1, t.data_type, t.entity_aggregation, t.time_aggregation)
+SELECT trend_directory.change_table_trend_data_safe($1.id, t.data_type, t.entity_aggregation, t.time_aggregation)
   FROM unnest($2) t
   WHERE t.name = $1.name AND trend_directory.trend_store_part_name_for_trend($1) = $3;
 $$ LANGUAGE sql VOLATILE;
@@ -3264,31 +3300,73 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
-CREATE FUNCTION "trend_directory"."trend_has_update"("trend" trend_directory.table_trend, "trend_update" trend_directory.trend_descr)
+CREATE FUNCTION "trend_directory"."change_trend_data"(trend_directory.trend_store, "parts" trend_directory.trend_store_part_descr[])
+    RETURNS text[]
+AS $$
+DECLARE
+  result text[];
+  partresult text;
+BEGIN
+  FOR partresult IN
+    SELECT trend_directory.change_trend_data_unsafe(
+      trend_directory.get_trends_for_trend_store($1), trends, name)
+    FROM unnest($2)
+  LOOP
+    IF partresult IS NOT null THEN
+      SELECT result || partresult INTO result;
+    END IF;
+  END LOOP;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."trend_has_update"("trend_id" integer, "trend_update" trend_directory.trend_descr)
     RETURNS boolean
 AS $$
-SELECT
-  $1.data_type != $2.data_type
-  OR
-  $1.time_aggregation != $2.time_aggregation
-  OR
-  $1.entity_aggregation != $2.entity_aggregation;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  trend trend_directory.table_trend;
+BEGIN
+  SELECT * FROM trend_directory.table_trend WHERE id = $1 INTO trend;
+  RETURN
+    trend.data_type != $2.data_type
+      OR
+    trend.time_aggregation != $2.time_aggregation
+      OR
+    trend.entity_aggregation != $2.entity_aggregation;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."change_trend_data_upward"("part" trend_directory.trend_store_part_descr)
     RETURNS text[]
 AS $$
 SELECT array_agg(trend_directory.change_table_trend_data_safe(
-  table_trend,
+  table_trend.id,
   t.data_type,
   t.entity_aggregation,
   t.time_aggregation
 ))
 FROM trend_directory.trend_store_part
-JOIN trend_directory.table_trend ON table_trend.trend_store_part_id = trend_store_part.id
-JOIN UNNEST($1.trends) AS t ON t.name = table_trend.name
-WHERE trend_store_part.name = $1.name AND trend_directory.trend_has_update(table_trend, t);
+  JOIN trend_directory.table_trend ON table_trend.trend_store_part_id = trend_store_part.id
+  JOIN UNNEST($1.trends) AS t ON t.name = table_trend.name
+  WHERE trend_store_part.name = $1.name AND trend_directory.trend_has_update(table_trend.id, t);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_trend_data"("part" trend_directory.trend_store_part_descr)
+    RETURNS text[]
+AS $$
+SELECT array_agg(trend_directory.change_table_trend_data_unsafe(
+  table_trend.id,
+  t.data_type,
+  t.entity_aggregation,
+  t.time_aggregation
+))
+FROM trend_directory.trend_store_part
+  JOIN trend_directory.table_trend ON table_trend.trend_store_part_id = trend_store_part.id
+  JOIN UNNEST($1.trends) AS t ON t.name = table_trend.name
+  WHERE trend_store_part.name = $1.name AND trend_directory.trend_has_update(table_trend.id, t);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -3381,6 +3459,23 @@ BEGIN
   SELECT trend_directory.remove_extra_trends($1) INTO result.removed_trends;
 
   SELECT trend_directory.change_trend_data_upward($1) INTO result.changed_trends;
+
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."change_trend_store_part_strong"("part" trend_directory.trend_store_part_descr)
+    RETURNS trend_directory.change_trend_store_part_result
+AS $$
+DECLARE
+  result trend_directory.change_trend_store_part_result;
+BEGIN
+  SELECT trend_directory.add_trends($1) INTO result.added_trends;
+
+  SELECT trend_directory.remove_extra_trends($1) INTO result.removed_trends;
+
+  SELECT trend_directory.change_trend_data($1) INTO result.changed_trends;
 
   RETURN result;
 END;
