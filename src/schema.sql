@@ -4608,7 +4608,7 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."drop_curr_view_sql"(attribute_directory.attribute_store)
     RETURNS varchar
 AS $$
-SELECT format('DROP VIEW attribute.%I', attribute_directory.to_table_name($1));
+SELECT format('DROP VIEW attribute.%I CASCADE', attribute_directory.to_table_name($1));
 $$ LANGUAGE sql STABLE;
 
 
@@ -6221,25 +6221,37 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE FUNCTION "attribute_directory"."delete_attribute_store"("attribute_store_id" integer)
+    RETURNS void
+AS $$
+DECLARE
+  store attribute_directory.attribute_store;
+BEGIN
+  SELECT * FROM attribute_directory.attribute_store WHERE id = $1 INTO store;
+  PERFORM attribute_directory.delete_attribute_store(store);
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
 CREATE FUNCTION "directory"."delete_entity_type"(directory.entity_type)
     RETURNS void
 AS $$
-SELECT attribute_directory.delete_attribute_store(s) FROM attribute_directory.attribute_store s WHERE s.entity_type_id = $1.id;
+SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.entity_type_id = $1.id;
 DELETE FROM directory.entity_type WHERE id = $1.id;
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "directory"."cleanup_on_data_source_delete"(directory.data_source)
+CREATE FUNCTION "directory"."cleanup_on_data_source_delete"("data_source_id" integer)
     RETURNS void
 AS $$
-SELECT attribute_directory.delete_attribute_store(s) FROM attribute_directory.attribute_store s WHERE s.data_source_id = $1.id;
+SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = id;
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "directory"."delete_data_source"(text)
     RETURNS directory.data_source
 AS $$
-SELECT directory.cleanup_on_data_source_delete(s) FROM directory.data_source s WHERE s.name = $1;
+SELECT directory.cleanup_on_data_source_delete(s.id) FROM directory.data_source s WHERE s.name = $1;
 DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
 $$ LANGUAGE sql VOLATILE STRICT;
 

@@ -7477,7 +7477,7 @@ objects:
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT format('DROP VIEW attribute.%I', attribute_directory.to_table_name($1));
+      SELECT format('DROP VIEW attribute.%I CASCADE', attribute_directory.to_table_name($1));
 
 - function:
     name: drop_curr_view
@@ -9848,6 +9848,22 @@ objects:
       END;
 
 - function:
+    name: delete_attribute_store
+    schema: attribute_directory
+    return_type: void
+    language: plpgsql
+    arguments:
+      - name: attribute_store_id
+        data_type: integer
+    source: |-
+      DECLARE
+        store attribute_directory.attribute_store;
+      BEGIN
+        SELECT * FROM attribute_directory.attribute_store WHERE id = $1 INTO store;
+        PERFORM attribute_directory.delete_attribute_store(store);
+      END;
+
+- function:
     name: delete_entity_type
     schema: directory
     return_type: void
@@ -9858,7 +9874,7 @@ objects:
     arguments:
       - data_type: directory.entity_type
     source: |-
-      SELECT attribute_directory.delete_attribute_store(s) FROM attribute_directory.attribute_store s WHERE s.entity_type_id = $1.id;
+      SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.entity_type_id = $1.id;
       DELETE FROM directory.entity_type WHERE id = $1.id;
 
 - function:
@@ -9870,9 +9886,10 @@ objects:
     strict: false
     secdef: false
     arguments:
-      - data_type: directory.data_source
+      - data_type: integer
+        name: data_source_id
     source: |-
-      SELECT attribute_directory.delete_attribute_store(s) FROM attribute_directory.attribute_store s WHERE s.data_source_id = $1.id;
+      SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = id;
 
 - function:
     name: delete_data_source
@@ -9885,7 +9902,7 @@ objects:
     arguments:
     - data_type: text
     source: |-
-      SELECT directory.cleanup_on_data_source_delete(s) FROM directory.data_source s WHERE s.name = $1;
+      SELECT directory.cleanup_on_data_source_delete(s.id) FROM directory.data_source s WHERE s.name = $1;
       DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
 
 - view:
