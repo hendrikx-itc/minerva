@@ -7032,6 +7032,24 @@ objects:
         WHERE data_source.id = $1.data_source_id AND entity_type.id = $1.entity_type_id;
 
 - function:
+    name: attribute_store_to_char
+    schema: attribute_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: integer
+      name: attribute_store_id
+    source: |-
+      SELECT data_source.name || '_' || entity_type.name
+        FROM attribute_directory.attribute_store
+          JOIN directory.data_source ON data_source.id = attribute_store.data_source_id
+          JOIN directory.entity_type ON entity_type.id = attribute_store.entity_type_id
+        WHERE attribute_store.id = $1;
+
+- function:
     name: attribute_name
     schema: attribute_directory
     return_type: text
@@ -9817,13 +9835,17 @@ objects:
     name: delete_attribute_store
     schema: attribute_directory
     return_type: void
-    language: sql
+    language: plpgsql
     arguments:
       - name: name
         data_type: text
     source: |-
-      SELECT attribute_directory.delete_attribute_store(attribute_store)
-      FROM attribute_directory.attribute_store WHERE attribute_store::text = $1;
+      DECLARE
+        store attribute_directory.attribute_store;
+      BEGIN
+        SELECT * FROM attribute_directory.attribute_store WHERE attribute_directory.attribute_store_to_char(attribute_store.id) = $1 INTO store;
+        PERFORM attribute_directory.delete_attribute_store(store);
+      END;
 
 - function:
     name: delete_entity_type
@@ -10169,6 +10191,23 @@ objects:
       SELECT data_source.name
       FROM directory.data_source
       WHERE data_source.id = $1.data_source_id;
+
+- function:
+    name: notification_store_to_char
+    schema: notification_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: integer
+      name: notification_store_id
+    source: |-
+      SELECT data_source.name
+        FROM notification_directory.notification_store
+          JOIN directory.data_source ON data_source.id = notification_store.data_source_id
+        WHERE notification_store.id = $1;
 
 - function:
     name: table_name

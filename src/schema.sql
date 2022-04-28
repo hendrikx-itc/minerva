@@ -4329,6 +4329,17 @@ SELECT data_source.name || '_' || entity_type.name
 $$ LANGUAGE sql STABLE STRICT;
 
 
+CREATE FUNCTION "attribute_directory"."attribute_store_to_char"("attribute_store_id" integer)
+    RETURNS text
+AS $$
+SELECT data_source.name || '_' || entity_type.name
+  FROM attribute_directory.attribute_store
+    JOIN directory.data_source ON data_source.id = attribute_store.data_source_id
+    JOIN directory.entity_type ON entity_type.id = attribute_store.entity_type_id
+  WHERE attribute_store.id = $1;
+$$ LANGUAGE sql STABLE STRICT;
+
+
 CREATE FUNCTION "attribute_directory"."attribute_name"("attribute_store_id" integer)
     RETURNS text
 AS $$
@@ -6201,9 +6212,13 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."delete_attribute_store"("name" text)
     RETURNS void
 AS $$
-SELECT attribute_directory.delete_attribute_store(attribute_store)
-FROM attribute_directory.attribute_store WHERE attribute_store::text = $1;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  store attribute_directory.attribute_store;
+BEGIN
+  SELECT * FROM attribute_directory.attribute_store WHERE attribute_directory.attribute_store_to_char(attribute_store.id) = $1 INTO store;
+  PERFORM attribute_directory.delete_attribute_store(store);
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "directory"."delete_entity_type"(directory.entity_type)
@@ -6405,6 +6420,16 @@ AS $$
 SELECT data_source.name
 FROM directory.data_source
 WHERE data_source.id = $1.data_source_id;
+$$ LANGUAGE sql STABLE STRICT;
+
+
+CREATE FUNCTION "notification_directory"."notification_store_to_char"("notification_store_id" integer)
+    RETURNS text
+AS $$
+SELECT data_source.name
+  FROM notification_directory.notification_store
+    JOIN directory.data_source ON data_source.id = notification_store.data_source_id
+  WHERE notification_store.id = $1;
 $$ LANGUAGE sql STABLE STRICT;
 
 
