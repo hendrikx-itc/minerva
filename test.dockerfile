@@ -20,6 +20,8 @@ RUN mkdir /pgtap
 RUN tar -xzvf /pgtap.tar.gz -C /pgtap --strip-components=1
 RUN cd /pgtap && make && make install
 
+RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
+
 COPY bin/ /usr/bin/
 
 COPY src /src
@@ -27,8 +29,6 @@ COPY tests /tests
 
 RUN mkdir /test_results -p
 VOLUME /test_results
-
-RUN PERL_MM_USE_DEFAULT=1 cpan TAP::Parser::SourceHandler::pgTAP
 
 COPY docker-resources/init-minerva-db-develop.sh /docker-entrypoint-initdb.d/
 COPY docker-resources/usr/bin/create-minerva-database /usr/bin/

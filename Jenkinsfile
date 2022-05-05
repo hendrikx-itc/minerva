@@ -7,10 +7,7 @@ node('docker'){
     sh "mkdir -p test_results && chmod 777 test_results"
     sh "rm -f test_results/*"
 
-    def img = docker.build("database_unittest", "-f test.dockerfile .")
-    img.withRun("-v ${WORKSPACE}/test_results:/test_results -v ${WORKSPACE}/tests:/tests") {
-        /* do nothing */
-    }
+    sh "bin/run-tests"
 
     archiveArtifacts("test_results/*.tap")
     step([$class: 'TapPublisher', testResults: 'test_results/*.tap'])
