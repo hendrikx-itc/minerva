@@ -2,6 +2,7 @@
 
 docker build -t database_unittest -f test.dockerfile .
 
+mkdir -p ${WORKSPACE}/test_results
 mkdir -p ${WORKSPACE}/tmp/lib/data
 mkdir -p ${WORKSPACE}/tmp/run
 

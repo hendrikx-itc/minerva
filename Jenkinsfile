@@ -4,8 +4,7 @@ node('docker'){
   }
 
   stage('Unittests database') {
-    sh "mkdir -p test_results && chmod 777 test_results"
-    sh "rm -f test_results/*"
+    sh "rm -rf test_results"
 
     sh "bin/run-tests"
 
