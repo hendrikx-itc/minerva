@@ -496,9 +496,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."data_source" TO minerva_writer;
 
 
 
-SELECT create_reference_table('directory.data_source');
-
-
 CREATE TABLE "directory"."entity_type"
 (
   "id" serial NOT NULL,
@@ -518,9 +515,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."entity_type" TO minerva_writer;
 
 
 
-SELECT create_reference_table('directory.entity_type');
-
-
 CREATE TABLE "directory"."tag_group"
 (
   "id" serial NOT NULL,
@@ -537,9 +531,6 @@ GRANT SELECT ON TABLE "directory"."tag_group" TO minerva;
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag_group" TO minerva_writer;
 
-
-
-SELECT create_reference_table('directory.tag_group');
 
 
 CREATE TABLE "directory"."tag"
@@ -563,9 +554,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "directory"."tag" TO minerva_writer;
 
 
 
-SELECT create_reference_table('directory.tag');
-
-
 CREATE FUNCTION "directory"."get_entity_type_name"(integer)
     RETURNS text
 AS $$
@@ -580,17 +568,11 @@ SELECT entity_type FROM directory.entity_type WHERE lower(name) = lower($1);
 $$ LANGUAGE sql STABLE STRICT;
 
 
-SELECT create_distributed_function('directory.get_entity_type(text)');
-
-
 CREATE FUNCTION "directory"."get_data_source"(text)
     RETURNS directory.data_source
 AS $$
 SELECT * FROM directory.data_source WHERE name = $1;
 $$ LANGUAGE sql STABLE STRICT;
-
-
-SELECT create_distributed_function('directory.get_data_source(text)');
 
 
 CREATE FUNCTION "directory"."create_data_source"(text)
@@ -1074,9 +1056,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."trend_store" TO minerva_w
 
 
 
-SELECT create_reference_table('trend_directory.trend_store');
-
-
 CREATE TABLE "trend_directory"."trend_store_part"
 (
   "id" serial NOT NULL,
@@ -1091,9 +1070,6 @@ GRANT SELECT ON TABLE "trend_directory"."trend_store_part" TO minerva;
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."trend_store_part" TO minerva_writer;
 
-
-
-SELECT create_reference_table('trend_directory.trend_store_part');
 
 
 CREATE TABLE "trend_directory"."partition"
@@ -1115,9 +1091,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."partition" TO minerva_wri
 
 
 
-SELECT create_reference_table('trend_directory.partition');
-
-
 CREATE TABLE "trend_directory"."trend_view"
 (
   "id" serial NOT NULL,
@@ -1133,9 +1106,6 @@ CREATE UNIQUE INDEX "trend_view_unique_constraint" ON "trend_directory"."trend_v
 
 
 
-SELECT create_reference_table('trend_directory.trend_view');
-
-
 CREATE TABLE "trend_directory"."trend_view_part"
 (
   "id" serial NOT NULL,
@@ -1144,9 +1114,6 @@ CREATE TABLE "trend_directory"."trend_view_part"
   PRIMARY KEY (id)
 );
 
-
-
-SELECT create_reference_table('trend_directory.trend_view_part');
 
 
 CREATE TABLE "trend_directory"."table_trend"
@@ -1168,9 +1135,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."table_trend" TO minerva_w
 
 
 
-SELECT create_reference_table('trend_directory.table_trend');
-
-
 CREATE TABLE "trend_directory"."generated_table_trend"
 (
   "id" serial NOT NULL,
@@ -1187,9 +1151,6 @@ GRANT SELECT ON TABLE "trend_directory"."generated_table_trend" TO minerva;
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "trend_directory"."generated_table_trend" TO minerva_writer;
 
-
-
-SELECT create_reference_table('trend_directory.generated_table_trend');
 
 
 CREATE TABLE "trend_directory"."table_trend_tag_link"
@@ -4175,9 +4136,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store" TO m
 
 
 
-SELECT create_reference_table('attribute_directory.attribute_store');
-
-
 CREATE FUNCTION "attribute_directory"."get_attribute_store"("data_source_id" integer, "entity_type_id" integer)
     RETURNS attribute_directory.attribute_store
 AS $$
@@ -4246,9 +4204,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute" TO minerva
 
 
 
-SELECT create_reference_table('attribute_directory.attribute');
-
-
 CREATE TABLE "attribute_directory"."attribute_tag_link"
 (
   "attribute_id" integer NOT NULL,
@@ -4260,9 +4215,6 @@ GRANT SELECT ON TABLE "attribute_directory"."attribute_tag_link" TO minerva;
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_tag_link" TO minerva_writer;
 
-
-
-SELECT create_reference_table('attribute_directory.attribute_tag_link');
 
 
 CREATE TABLE "attribute_directory"."attribute_store_modified"
@@ -4278,9 +4230,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_modif
 
 
 
-SELECT create_reference_table('attribute_directory.attribute_store_modified');
-
-
 CREATE TABLE "attribute_directory"."attribute_store_curr_materialized"
 (
   "attribute_store_id" integer NOT NULL,
@@ -4294,9 +4243,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_curr_
 
 
 
-SELECT create_reference_table('attribute_directory.attribute_store_curr_materialized');
-
-
 CREATE TABLE "attribute_directory"."attribute_store_compacted"
 (
   "attribute_store_id" integer NOT NULL,
@@ -4308,9 +4254,6 @@ GRANT SELECT ON TABLE "attribute_directory"."attribute_store_compacted" TO miner
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "attribute_directory"."attribute_store_compacted" TO minerva_writer;
 
-
-
-SELECT create_reference_table('attribute_directory.attribute_store_compacted');
 
 
 CREATE TYPE "attribute_directory"."attribute_info" AS (
@@ -5158,16 +5101,13 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer)
     RETURNS attribute_directory.attribute_store_modified
 AS $$
-DECLARE
-  result attribute_directory.attribute_store_modified;
-BEGIN
-  IF current_setting('minerva.trigger_mark_modified') = 'off'
-  THEN SELECT * FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1 INTO result;
-  ELSE SELECT attribute_directory.mark_modified($1, now()) INTO result;
-  END IF;
-  RETURN result;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
+SELECT
+  CASE WHEN current_setting('minerva.trigger_mark_modified') = 'off'
+    THEN asm.*
+    ELSE attribute_directory.mark_modified($1, now())
+  END
+  FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."define_attribute_store"("data_source_id" integer, "entity_type_id" integer)
@@ -5566,9 +5506,6 @@ SELECT COALESCE(compacted, 0) FROM attribute_directory.attribute_store_compacted
 $$ LANGUAGE sql STABLE;
 
 
-SELECT create_distributed_function('attribute_directory.last_compacted(integer)');
-
-
 CREATE FUNCTION "attribute_directory"."compact"(attribute_directory.attribute_store, "max_compacting" integer)
     RETURNS attribute_directory.attribute_store
 AS $$
@@ -5577,10 +5514,9 @@ DECLARE
     table_name name := attribute_directory.to_table_name($1);
     compacted_tmp_table_name name := table_name || '_compacted_tmp';
     compacted_view_name name := attribute_directory.compacted_view_name($1);
-    to_compact_name name := attribute_directory.to_compact_view_name($1);
-    default_columns text[] := ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'];
+    default_columns text[] := ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified'];
     extended_default_columns text[] := ARRAY[
-        format('%I.id', compacted_view_name), format('%I.entity_id', compacted_view_name), 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'
+        format('%I.id', compacted_view_name), format('%I.entity_id', compacted_view_name), 'timestamp', '"end"', 'first_appearance', 'modified'
     ];
     attribute_columns text[];
     columns_part text;
@@ -5604,17 +5540,23 @@ BEGIN
     );
 
     EXECUTE format(
+        'WITH to_compact AS '
+           '(SELECT entity_id, MIN(id) AS first_id FROM attribute_history.%I '
+           'WHERE id > attribute_directory.last_compacted(%s) GROUP BY entity_id) '
         'INSERT INTO attribute_history.%I(%s) '
              'SELECT %s FROM attribute_history.%I '
-             'JOIN attribute_history.%I '
-             'ON %I.entity_id = %I.entity_id '
+             'JOIN to_compact '
+             'ON %I.entity_id = to_compact.entity_id '
              'WHERE first_id <= %s;',
+        table_name,
+        $1.id,
         compacted_tmp_table_name, columns_part,
         extended_columns_part,
-        compacted_view_name, to_compact_name,
-        compacted_view_name, to_compact_name,
+        compacted_view_name,
+        compacted_view_name,
         last_to_compact
     );
+
 
     EXECUTE format(
         'UPDATE attribute_history.%I SET modified = now()',
@@ -5643,7 +5585,7 @@ BEGIN
     );
 
     columns_part = array_to_string(
-        ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'] || attribute_columns,
+        ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified'] || attribute_columns,
         ','
     );
 
@@ -6296,9 +6238,6 @@ WHERE id = $1.attribute_store_id
 $$ LANGUAGE sql VOLATILE;
 
 
-SELECT create_reference_table('attribute_directory.sampled_view_materialization');
-
-
 CREATE FUNCTION "attribute_directory"."materialize"(attribute_directory.sampled_view_materialization)
     RETURNS integer
 AS $$
@@ -6349,9 +6288,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."notification_store
 
 
 
-SELECT create_reference_table('notification_directory.notification_store');
-
-
 CREATE TABLE "notification_directory"."attribute"
 (
   "id" serial NOT NULL,
@@ -6373,9 +6309,6 @@ GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."attribute" TO mine
 
 
 
-SELECT create_reference_table('notification_directory.attribute');
-
-
 CREATE TABLE "notification_directory"."notification_set_store"
 (
   "id" serial NOT NULL,
@@ -6390,9 +6323,6 @@ GRANT SELECT ON TABLE "notification_directory"."notification_set_store" TO miner
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."notification_set_store" TO minerva_writer;
 
-
-
-SELECT create_reference_table('notification_directory.notification_set_store');
 
 
 CREATE TABLE "notification_directory"."set_attribute"
@@ -6414,9 +6344,6 @@ GRANT SELECT ON TABLE "notification_directory"."set_attribute" TO minerva;
 
 GRANT INSERT,UPDATE,DELETE ON TABLE "notification_directory"."set_attribute" TO minerva_writer;
 
-
-
-SELECT create_reference_table('notification_directory.set_attribute');
 
 
 CREATE FUNCTION "notification_directory"."notification_store_schema"()

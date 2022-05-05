@@ -774,9 +774,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('directory.data_source')
-
 - table:
     name: entity_type
     schema: directory
@@ -807,9 +804,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('directory.entity_type')
-
 - table:
     name: tag_group
     schema: directory
@@ -838,9 +832,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- query:
-    query: create_reference_table('directory.tag_group')
 
 - table:
     name: tag
@@ -888,9 +879,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('directory.tag')
-
 - function:
     name: get_entity_type_name
     schema: directory
@@ -917,9 +905,6 @@ objects:
     source: |-
       SELECT entity_type FROM directory.entity_type WHERE lower(name) = lower($1);
 
-- query:
-    query: create_distributed_function('directory.get_entity_type(text)')
-
 - function:
     name: get_data_source
     schema: directory
@@ -932,9 +917,6 @@ objects:
     - data_type: text
     source: |-
       SELECT * FROM directory.data_source WHERE name = $1;
-
-- query:
-   query: create_distributed_function('directory.get_data_source(text)')
 
 - function:
     name: create_data_source
@@ -1722,9 +1704,6 @@ objects:
       unique: true
       definition: btree (entity_type_id, data_source_id, granularity)
 
-- query:
-    query: create_reference_table('trend_directory.trend_store')
-
 - table:
     name: trend_store_part
     schema: trend_directory
@@ -1760,9 +1739,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- query:
-    query: create_reference_table('trend_directory.trend_store_part')
 
 - table:
     name: partition
@@ -1808,9 +1784,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- query:
-    query: create_reference_table('trend_directory.partition')
 
 - table:
     name: trend_view
@@ -1859,9 +1832,6 @@ objects:
       unique: true
       definition: btree (entity_type_id, data_source_id, granularity)
 
-- query:
-    query: create_reference_table('trend_directory.trend_view')
-
 - table:
     name: trend_view_part
     schema: trend_directory
@@ -1890,9 +1860,6 @@ objects:
         columns:
         - id
       on_delete: cascade
-
-- query:
-    query: create_reference_table('trend_directory.trend_view_part')
 
 - table:
     name: table_trend
@@ -1944,9 +1911,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('trend_directory.table_trend')
-
 - table:
     name: generated_table_trend
     schema: trend_directory
@@ -1993,9 +1957,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- query:
-    query: create_reference_table('trend_directory.generated_table_trend')
 
 - table:
     name: table_trend_tag_link
@@ -6711,9 +6672,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('attribute_directory.attribute_store')
-
 - function:
     name: get_attribute_store
     schema: attribute_directory
@@ -6855,9 +6813,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('attribute_directory.attribute')
-
 - table:
     name: attribute_tag_link
     schema: attribute_directory
@@ -6900,9 +6855,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('attribute_directory.attribute_tag_link')
-
 - table:
     name: attribute_store_modified
     schema: attribute_directory
@@ -6933,9 +6885,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- query:
-    query: create_reference_table('attribute_directory.attribute_store_modified')
 
 - table:
     name: attribute_store_curr_materialized
@@ -6968,9 +6917,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('attribute_directory.attribute_store_curr_materialized')
-
 - table:
     name: attribute_store_compacted
     schema: attribute_directory
@@ -7001,9 +6947,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- query:
-    query: create_reference_table('attribute_directory.attribute_store_compacted')
 
 - composite_type:
     name: attribute_info
@@ -7158,19 +7101,6 @@ objects:
     - data_type: attribute_directory.attribute_store
     source: |-
       SELECT (attribute_directory.to_table_name($1) || '_compacted')::name;
-
-- function:
-    name: to_compact_view_name
-    schema: attribute_directory
-    return_type: name
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT (attribute_directory.to_table_name($1) || '_to_compact')::name;
 
 - function:
     name: curr_ptr_view_name
@@ -8304,7 +8234,7 @@ objects:
     name: mark_modified
     schema: attribute_directory
     return_type: attribute_directory.attribute_store_modified
-    language: plpgsql
+    language: sql
     volatility: volatile
     strict: false
     secdef: false
@@ -8312,15 +8242,12 @@ objects:
     - name: attribute_store_id
       data_type: integer
     source: |-
-      DECLARE
-        result attribute_directory.attribute_store_modified;
-      BEGIN
-        IF current_setting('minerva.trigger_mark_modified') = 'off'
-        THEN SELECT * FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1 INTO result;
-        ELSE SELECT attribute_directory.mark_modified($1, now()) INTO result;
-        END IF;
-        RETURN result;
-      END;
+      SELECT
+        CASE WHEN current_setting('minerva.trigger_mark_modified') = 'off'
+          THEN asm.*
+          ELSE attribute_directory.mark_modified($1, now())
+        END
+        FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1;
 
 - function:
     name: define_attribute_store
@@ -8727,92 +8654,6 @@ objects:
       );
 
 - function:
-    name: to_compact_view_query
-    schema: attribute_directory
-    return_type: text
-    language: sql
-    volatility: stable
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT FORMAT(
-        'SELECT entity_id, MIN(id) AS first_id '
-        'FROM attribute_history.%I '
-        'WHERE id > attribute_directory.last_compacted(%s) '
-        'GROUP BY entity_id',
-        attribute_directory.to_table_name($1),
-        $1.id
-      );
-
-- function:
-    name: create_to_compact_view_sql
-    schema: attribute_directory
-    return_type: text[]
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT ARRAY[
-          format(
-              'CREATE VIEW attribute_history.%I AS %s',
-              attribute_directory.to_compact_view_name($1),
-              attribute_directory.to_compact_view_query($1)
-          ),
-          format(
-              'ALTER TABLE attribute_history.%I OWNER TO minerva_writer',
-              attribute_directory.to_compact_view_name($1)
-          )
-      ];
-
-- function:
-    name: create_to_compact_view
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-          $1,
-          attribute_directory.create_to_compact_view_sql($1)
-      );
-    
-- function:
-    name: drop_to_compact_view_sql
-    schema: attribute_directory
-    return_type: text
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT format('DROP VIEW attribute_history.%I', attribute_directory.to_compact_view_name($1));
-
-- function:
-    name: drop_to_compact_view
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-          $1,
-          attribute_directory.drop_to_compact_view_sql($1)
-      );
-
-- function:
     name: insert_into_compacted_sql
     schema: attribute_directory
     return_type: text
@@ -8918,9 +8759,6 @@ objects:
     source: |-
       SELECT COALESCE(compacted, 0) FROM attribute_directory.attribute_store_compacted WHERE attribute_store_id = $1;
 
-- query:
-    query: create_distributed_function('attribute_directory.last_compacted(integer)')
-
 - function:
     name: compact
     schema: attribute_directory
@@ -8941,10 +8779,9 @@ objects:
           table_name name := attribute_directory.to_table_name($1);
           compacted_tmp_table_name name := table_name || '_compacted_tmp';
           compacted_view_name name := attribute_directory.compacted_view_name($1);
-          to_compact_name name := attribute_directory.to_compact_view_name($1);
-          default_columns text[] := ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'];
+          default_columns text[] := ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified'];
           extended_default_columns text[] := ARRAY[
-              format('%I.id', compacted_view_name), format('%I.entity_id', compacted_view_name), 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'
+              format('%I.id', compacted_view_name), format('%I.entity_id', compacted_view_name), 'timestamp', '"end"', 'first_appearance', 'modified'
           ];
           attribute_columns text[];
           columns_part text;
@@ -8968,17 +8805,23 @@ objects:
           );
 
           EXECUTE format(
+              'WITH to_compact AS '
+                 '(SELECT entity_id, MIN(id) AS first_id FROM attribute_history.%I '
+                 'WHERE id > attribute_directory.last_compacted(%s) GROUP BY entity_id) '
               'INSERT INTO attribute_history.%I(%s) '
                    'SELECT %s FROM attribute_history.%I '
-                   'JOIN attribute_history.%I '
-                   'ON %I.entity_id = %I.entity_id '
+                   'JOIN to_compact '
+                   'ON %I.entity_id = to_compact.entity_id '
                    'WHERE first_id <= %s;',
+              table_name,
+              $1.id,
               compacted_tmp_table_name, columns_part,
               extended_columns_part,
-              compacted_view_name, to_compact_name,
-              compacted_view_name, to_compact_name,
+              compacted_view_name,
+              compacted_view_name,
               last_to_compact
           );
+
 
           EXECUTE format(
               'UPDATE attribute_history.%I SET modified = now()',
@@ -9007,7 +8850,7 @@ objects:
           );
 
           columns_part = array_to_string(
-              ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified', 'hash'] || attribute_columns,
+              ARRAY['id', 'entity_id', 'timestamp', '"end"', 'first_appearance', 'modified'] || attribute_columns,
               ','
           );
 
@@ -9481,7 +9324,6 @@ objects:
       SELECT attribute_directory.create_curr_ptr_view($1);
       SELECT attribute_directory.create_curr_view($1);
       SELECT attribute_directory.create_compacted_view($1);
-      SELECT attribute_directory.create_to_compact_view($1);
       SELECT attribute_directory.insert_into_compacted($1);
       SELECT $1;
 
@@ -9496,7 +9338,6 @@ objects:
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT attribute_directory.drop_to_compact_view($1);
       SELECT attribute_directory.drop_compacted_view($1);
       SELECT attribute_directory.drop_curr_view($1);
       SELECT attribute_directory.drop_curr_ptr_view($1);
@@ -9956,9 +9797,6 @@ objects:
       FROM attribute_directory.attribute_store
       WHERE id = $1.attribute_store_id
 
-- query:
-    query: create_reference_table('attribute_directory.sampled_view_materialization')
-
 - function:
     name: materialize
     schema: attribute_directory
@@ -10044,9 +9882,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('notification_directory.notification_store')
-
 - table:
     name: attribute
     schema: notification_directory
@@ -10092,9 +9927,6 @@ objects:
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
 
-- query:
-    query: create_reference_table('notification_directory.attribute')
-
 - table:
     name: notification_set_store
     schema: notification_directory
@@ -10130,9 +9962,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- query:
-    query: create_reference_table('notification_directory.notification_set_store')
 
 - table:
     name: set_attribute
@@ -10178,9 +10007,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- query:
-    query: create_reference_table('notification_directory.set_attribute')
 
 - function:
     name: notification_store_schema
