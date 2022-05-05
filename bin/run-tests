@@ -1,0 +1,20 @@
+#!/bin/bash
+
+docker build -t database_unittest -f test.dockerfile .
+
+mkdir -p ${WORKSPACE}/test_results
+mkdir -p ${WORKSPACE}/tmp/lib/data
+mkdir -p ${WORKSPACE}/tmp/run
+
+docker run \
+  --rm \
+  --user "$(id -u):$(id -g)" \
+  -v /etc/passwd:/etc/passwd:ro \
+  -v ${WORKSPACE}/test_results:/test_results \
+  -v ${WORKSPACE}/tests:/tests \
+  -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -v ${WORKSPACE}/tmp/lib/data:/var/lib/postgresql/data \
+  -v ${WORKSPACE}/tmp/run:/var/run/postgresql \
+  database_unittest
+
+rm -rf tmp
