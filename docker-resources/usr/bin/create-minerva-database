@@ -12,7 +12,7 @@ fi
 
 echo '#####################################'
 echo 'Creating Minerva database...'
-find /minerva -name '*.sql' | sort | while read filepath
+find /src -name '*.sql' | sort | while read filepath
 do
     echo '#####################################'
     echo $filepath
@@ -20,12 +20,3 @@ do
     psql -v ON_ERROR_STOP=1 -f $filepath
 done
 
-echo '#####################################'
-echo 'Loading custom scripts...'
-find /custom -name '*.sql' | sort | while read filepath
-do
-    echo '#####################################'
-    echo $filepath
-    echo '#####################################'
-    psql -v ON_ERROR_STOP=1 -f $filepath
-done
