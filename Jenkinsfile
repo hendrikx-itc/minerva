@@ -8,23 +8,7 @@ node('docker'){
 
     sh "bin/run-tests"
 
-    archiveArtifacts("test_results/*.tap")
-    step([$class: 'TapPublisher', testResults: 'test_results/*.tap'])
-  }
-
-  stage('Build documentation') {
-    sh 'chmod 777 doc/*'
-
-    def img = docker.build('readthedocs', '-f readthedocs.dockerfile .')
-    img.inside(){
-      sh "cd doc/ && make html"
-    }
-
-    sh "tar -czvf readthedocs.tar.gz doc/_build/*"
-    archiveArtifacts("readthedocs.tar.gz")
-  }
-
-  stage('Publish documentation') {
-    sh "cp -R ${WORKSPACE}/doc/_build/html/* /documentation/minerva-prototype-doc/"
+    archiveArtifacts("test_results/**/*.tap")
+    step([$class: 'TapPublisher', testResults: 'test_results/**/*.tap'])
   }
 }
