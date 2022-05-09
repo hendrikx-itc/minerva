@@ -1,4 +1,4 @@
-FROM postgres:13
+FROM citusdata/citus:10.2-pg13
 ENV LC_ALL C
 MAINTAINER HENDRIKX-ITC
 
