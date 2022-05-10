@@ -1,4 +1,0 @@
-#!/bin/bash
-set -e
-
-psql -d postgres -c "CREATE DATABASE $MINERVA_DB_NAME;"

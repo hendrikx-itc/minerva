@@ -1,5 +1,0 @@
-master: localhost
-file_client: local
-file_roots:
-  base:
-    - /vagrant/provision/salt/roots/salt
