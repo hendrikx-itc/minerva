@@ -44,6 +44,10 @@ objects:
     privileges:
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: entity
@@ -52,6 +56,16 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,INSERT,UPDATE
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: alias
@@ -68,6 +82,10 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: relation
@@ -78,9 +96,20 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,INSERT,UPDATE
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
 
 - schema:
     name: relation_directory
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: trend
@@ -90,7 +119,14 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
-
+    default-privileges:
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,INSERT,UPDATE
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
+ 
 - schema:
     name: trend_partition
     comment: Holds partitions of the trend store tables in the trend schema.
@@ -99,6 +135,13 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,INSERT,UPDATE
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
 
 - schema:
     name: trend_directory
@@ -107,6 +150,10 @@ objects:
       privilege: USAGE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: attribute
@@ -123,6 +170,13 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,INSERT,UPDATE
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
 
 - schema:
     name: attribute_directory
@@ -131,6 +185,10 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: attribute_history
@@ -139,6 +197,16 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,INSERT,UPDATE
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: attribute_staging
@@ -147,6 +215,13 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,INSERT,UPDATE
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
 
 - schema:
     name: notification
@@ -158,6 +233,10 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: notification_directory
@@ -167,6 +246,10 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: metric
@@ -195,6 +278,10 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: trigger_rule
@@ -203,12 +290,20 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - schema:
     name: logging
     privileges:
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
 
 - function:
     name: integer_to_array
@@ -447,13 +542,12 @@ objects:
     arguments:
     - name: sql
       data_type: text
+    postqueries:
+    - query: create_distributed_function('action(text)')
     source: |-
       BEGIN
           EXECUTE sql;
       END;
-
-- query:
-    query: create_distributed_function('action(text)')
 
 - function:
     name: action_count
@@ -464,6 +558,8 @@ objects:
     arguments:
     - name: sql
       data_type: text
+    postqueries:
+    - query: create_distributed_function('action_count(text)')
     source: |-
       DECLARE
           row_count integer;
@@ -474,9 +570,6 @@ objects:
 
           RETURN row_count;
       END;
-
-- query:
-    query: create_distributed_function('action_count(text)')
 
 - function:
     name: action
@@ -490,15 +583,14 @@ objects:
     - data_type: anyelement
     - name: sql
       data_type: text
+    postqueries:
+    - query: create_distributed_function('action(anyelement,text)')
     source: |-
       BEGIN
           EXECUTE sql;
 
           RETURN $1;
       END;
-
-- query:
-    query: create_distributed_function('action(anyelement,text)')
 
 - function:
     name: action
@@ -512,6 +604,8 @@ objects:
     - data_type: anyelement
     - name: sql
       data_type: text[]
+    postqueries:
+    - query: create_distributed_function('action(anyelement,text[])')
     source: |-
       DECLARE
           statement text;
@@ -522,9 +616,6 @@ objects:
 
           RETURN $1;
       END;
-
-- query:
-    query: create_distributed_function('action(anyelement,text[])')
 
 - function:
     name: table_exists
@@ -584,22 +675,20 @@ objects:
     schema: public
     sfunc: fst
     stype: anyelement
+    postqueries:
+    - query: create_distributed_function('first(anyelement)')
     arguments:
     - data_type: anyelement
-
-- query:
-    query: create_distributed_function('first(anyelement)')
 
 - aggregate:
     name: last
     schema: public
     sfunc: snd
     stype: anyelement
+    postqueries:
+    - query: create_distributed_function('last(anyelement)')
     arguments:
     - data_type: anyelement
-
-- query:
-    query: create_distributed_function('last(anyelement)')
 
 - table:
     name: setting

@@ -50,11 +50,19 @@ CREATE SCHEMA IF NOT EXISTS "system";
 CREATE SCHEMA IF NOT EXISTS "directory";
 COMMENT ON SCHEMA "directory" IS 'Stores contextual information for the data. This includes the entities, entity_types, data_sources, etc. It is the entrypoint when looking for data.';
 GRANT USAGE ON SCHEMA "directory" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "entity";
 GRANT USAGE,CREATE ON SCHEMA "entity" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "entity" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT,INSERT,UPDATE ON tables TO "minerva_writer";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT ON tables TO "minerva";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "alias";
@@ -65,6 +73,8 @@ GRANT USAGE ON SCHEMA "alias" TO "minerva";
 CREATE SCHEMA IF NOT EXISTS "alias_directory";
 GRANT USAGE,CREATE ON SCHEMA "alias_directory" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "alias_directory" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "alias_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "relation";
@@ -72,26 +82,42 @@ COMMENT ON SCHEMA "relation" IS 'Stores the actual relations between entities in
 ';
 GRANT USAGE,CREATE ON SCHEMA "relation" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "relation" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT,INSERT,UPDATE ON tables TO "minerva_writer";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT ON tables TO "minerva";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "relation_directory";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "relation_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "trend";
 COMMENT ON SCHEMA "trend" IS 'Stores information with fixed interval and format, like periodic measurements.';
 GRANT USAGE,CREATE ON SCHEMA "trend" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "trend" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT,INSERT,UPDATE ON tables TO "minerva_writer";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT ON tables TO "minerva";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "trend_partition";
 COMMENT ON SCHEMA "trend_partition" IS 'Holds partitions of the trend store tables in the trend schema.';
 GRANT USAGE,CREATE ON SCHEMA "trend_partition" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "trend_partition" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT,INSERT,UPDATE ON tables TO "minerva_writer";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT ON tables TO "minerva";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "trend_directory";
 GRANT USAGE ON SCHEMA "trend_directory" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "trend_directory" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute";
@@ -102,21 +128,37 @@ GRANT USAGE ON SCHEMA "attribute" TO "minerva";
 CREATE SCHEMA IF NOT EXISTS "attribute_base";
 GRANT USAGE,CREATE ON SCHEMA "attribute_base" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "attribute_base" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT,INSERT,UPDATE ON tables TO "minerva_writer";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute_directory";
 GRANT USAGE,CREATE ON SCHEMA "attribute_directory" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "attribute_directory" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute_history";
 GRANT USAGE,CREATE ON SCHEMA "attribute_history" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "attribute_history" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT SELECT,INSERT,UPDATE ON tables TO "minerva_writer";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT SELECT ON tables TO "minerva";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute_staging";
 GRANT USAGE,CREATE ON SCHEMA "attribute_staging" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "attribute_staging" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT,INSERT,UPDATE ON tables TO "minerva_writer";
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT ON tables TO "minerva";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "notification";
@@ -124,12 +166,16 @@ COMMENT ON SCHEMA "notification" IS 'Stores information of events that can occur
 but still have a fixed, known format. This schema is dynamically populated.';
 GRANT USAGE,CREATE ON SCHEMA "notification" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "notification" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "notification_directory";
 COMMENT ON SCHEMA "notification_directory" IS 'Stores meta-data about notification data in the notification schema.';
 GRANT USAGE,CREATE ON SCHEMA "notification_directory" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "notification_directory" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "notification_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "metric";
@@ -148,15 +194,21 @@ GRANT USAGE ON SCHEMA "olap" TO "minerva";
 CREATE SCHEMA IF NOT EXISTS "trigger";
 GRANT USAGE,CREATE ON SCHEMA "trigger" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "trigger" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "trigger_rule";
 GRANT USAGE,CREATE ON SCHEMA "trigger_rule" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "trigger_rule" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE SCHEMA IF NOT EXISTS "logging";
 GRANT USAGE ON SCHEMA "logging" TO "minerva";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "logging" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
+
 
 
 CREATE FUNCTION "public"."integer_to_array"("value" integer)
@@ -299,8 +351,6 @@ BEGIN
     EXECUTE sql;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-
-
 SELECT create_distributed_function('action(text)');
 
 
@@ -317,8 +367,6 @@ BEGIN
     RETURN row_count;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-
-
 SELECT create_distributed_function('action_count(text)');
 
 
@@ -331,8 +379,6 @@ BEGIN
     RETURN $1;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-
-
 SELECT create_distributed_function('action(anyelement,text)');
 
 
@@ -349,8 +395,6 @@ BEGIN
     RETURN $1;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
-
-
 SELECT create_distributed_function('action(anyelement,text[])');
 
 
@@ -389,8 +433,6 @@ CREATE AGGREGATE first (anyelement) (
     stype = anyelement
 );
 
-
-
 SELECT create_distributed_function('first(anyelement)');
 
 
@@ -398,8 +440,6 @@ CREATE AGGREGATE last (anyelement) (
     sfunc = snd,
     stype = anyelement
 );
-
-
 
 SELECT create_distributed_function('last(anyelement)');
 
@@ -4344,13 +4384,6 @@ SELECT (attribute_directory.to_table_name($1) || '_compacted')::name;
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "attribute_directory"."to_compact_view_name"(attribute_directory.attribute_store)
-    RETURNS name
-AS $$
-SELECT (attribute_directory.to_table_name($1) || '_to_compact')::name;
-$$ LANGUAGE sql STABLE;
-
-
 CREATE FUNCTION "attribute_directory"."curr_ptr_view_name"(attribute_directory.attribute_store)
     RETURNS name
 AS $$
@@ -5375,64 +5408,6 @@ SELECT public.action(
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."to_compact_view_query"(attribute_directory.attribute_store)
-    RETURNS text
-AS $$
-SELECT FORMAT(
-  'SELECT entity_id, MIN(id) AS first_id '
-  'FROM attribute_history.%I '
-  'WHERE id > attribute_directory.last_compacted(%s) '
-  'GROUP BY entity_id',
-  attribute_directory.to_table_name($1),
-  $1.id
-);
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "attribute_directory"."create_to_compact_view_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    format(
-        'CREATE VIEW attribute_history.%I AS %s',
-        attribute_directory.to_compact_view_name($1),
-        attribute_directory.to_compact_view_query($1)
-    ),
-    format(
-        'ALTER TABLE attribute_history.%I OWNER TO minerva_writer',
-        attribute_directory.to_compact_view_name($1)
-    )
-];
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "attribute_directory"."create_to_compact_view"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.create_to_compact_view_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_to_compact_view_sql"(attribute_directory.attribute_store)
-    RETURNS text
-AS $$
-SELECT format('DROP VIEW attribute_history.%I', attribute_directory.to_compact_view_name($1));
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_to_compact_view"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.drop_to_compact_view_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "attribute_directory"."insert_into_compacted_sql"(attribute_directory.attribute_store)
     RETURNS text
 AS $$
@@ -5915,7 +5890,6 @@ SELECT attribute_directory.create_staging_modified_view($1);
 SELECT attribute_directory.create_curr_ptr_view($1);
 SELECT attribute_directory.create_curr_view($1);
 SELECT attribute_directory.create_compacted_view($1);
-SELECT attribute_directory.create_to_compact_view($1);
 SELECT attribute_directory.insert_into_compacted($1);
 SELECT $1;
 $$ LANGUAGE sql VOLATILE;
@@ -5924,7 +5898,6 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."drop_dependees"(attribute_directory.attribute_store)
     RETURNS attribute_directory.attribute_store
 AS $$
-SELECT attribute_directory.drop_to_compact_view($1);
 SELECT attribute_directory.drop_compacted_view($1);
 SELECT attribute_directory.drop_curr_view($1);
 SELECT attribute_directory.drop_curr_ptr_view($1);
