@@ -8,6 +8,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 	libpq-dev \
 	postgresql-server-dev-13 \
 	postgresql-contrib-13 \
+	postgis \
+	postgresql-13-postgis-3 \
 	python3-pip \
 	git \
 	net-tools

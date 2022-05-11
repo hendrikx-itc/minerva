@@ -12,7 +12,7 @@ fi
 
 echo '#####################################'
 echo 'Creating Minerva database...'
-find /src -name '*.sql' | sort | while read filepath
+find $WORKSPACE/src -name '*.sql' | sort | while read filepath
 do
     echo '#####################################'
     echo $filepath
@@ -20,3 +20,14 @@ do
     psql -v ON_ERROR_STOP=1 -f $filepath
 done
 
+if [ -d "$WORKSPACE/custom" ]; then
+    echo '#####################################'
+    echo 'Loading custom scripts...'
+    find $WORKSPACE/custom -name '*.sql' | sort | while read filepath
+    do
+        echo '#####################################'
+        echo $filepath
+        echo '#####################################'
+        psql -v ON_ERROR_STOP=1 -f $filepath
+    done
+fi

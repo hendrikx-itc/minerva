@@ -1,6 +1,0 @@
-PGDATABASE=minerva doc-postgresql directory > /vagrant/doc/source/database-schema/directory.rst
-PGDATABASE=minerva doc-postgresql system > /vagrant/doc/source/database-schema/system.rst
-PGDATABASE=minerva doc-postgresql trend > /vagrant/doc/source/database-schema/trend.rst
-PGDATABASE=minerva doc-postgresql attribute > /vagrant/doc/source/database-schema/attribute.rst
-PGDATABASE=minerva doc-postgresql attribute_directory > /vagrant/doc/source/database-schema/attribute_directory.rst
-PGDATABASE=minerva doc-postgresql notification > /vagrant/doc/source/database-schema/notification.rst

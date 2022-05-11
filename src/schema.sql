@@ -469,7 +469,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,2,3)::system.version_tuple;
+SELECT (5,3,0)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -6799,7 +6799,8 @@ CREATE TYPE "trigger"."notification" AS (
   "entity_id" integer,
   "timestamp" timestamp with time zone,
   "weight" integer,
-  "details" text
+  "details" text,
+  "data" json
 );
 
 
@@ -7603,8 +7604,8 @@ DECLARE
 BEGIN
     EXECUTE format(
 $query$
-INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
-SELECT staging.entity_id, staging.timestamp, staging.created, staging.rule_id, staging.weight, staging.details
+INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details, data)
+SELECT staging.entity_id, staging.timestamp, staging.created, staging.rule_id, staging.weight, staging.details, staging.data
 FROM notification.%I staging
 LEFT JOIN notification.%I target ON target.entity_id = staging.entity_id AND target.timestamp = staging.timestamp AND target.rule_id = staging.rule_id
 WHERE target.entity_id IS NULL;
@@ -7628,8 +7629,8 @@ DECLARE
 BEGIN
     EXECUTE format(
 $query$
-INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details)
-(SELECT entity_id, timestamp, now(), $1, weight, details FROM trigger_rule.%I($2))
+INSERT INTO notification.%I(entity_id, timestamp, created, rule_id, weight, details, data)
+(SELECT entity_id, timestamp, now(), $1, weight, details, data FROM trigger_rule.%I($2))
 $query$,
         notification_directory.staging_table_name($2), trigger.notification_fn_name($1)
     )
@@ -7777,6 +7778,13 @@ CREATE FUNCTION "trigger"."notification_message_fn_name"(trigger.rule)
     RETURNS name
 AS $$
 SELECT ($1.name || '_notification_message')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trigger"."notification_data_fn_name"(trigger.rule)
+    RETURNS name
+AS $$
+SELECT ($1.name || '_notification_data')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -8062,6 +8070,69 @@ SELECT trigger.create_notification_message_fn(trigger.get_rule($1), $2);
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "trigger"."create_notification_data_fn_sql"(trigger.rule, "expression" text)
+    RETURNS text
+AS $$
+SELECT format(
+'CREATE OR REPLACE FUNCTION trigger_rule.%I(trigger_rule.%I)
+    RETURNS json
+AS $function$
+SELECT (%s)
+$function$ LANGUAGE SQL IMMUTABLE',
+    trigger.notification_data_fn_name($1),
+    trigger.details_type_name($1),
+    $2
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."drop_notification_data_fn_sql"(trigger.rule)
+    RETURNS text
+AS $$
+SELECT format(
+    'DROP FUNCTION trigger_rule.%I',
+    trigger.notification_data_fn_name($1),
+    trigger.details_type_name($1)
+);
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trigger"."create_notification_data_fn"(trigger.rule, "expression" text)
+    RETURNS trigger.rule
+AS $$
+SELECT public.action(
+    $1,
+    ARRAY[
+        trigger.create_notification_data_fn_sql($1, $2),
+        format(
+            'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
+            trigger.notification_data_fn_name($1),
+            trigger.details_type_name($1)
+        ),
+        format(
+            'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
+            trigger.notification_data_fn_name($1),
+            trigger.details_type_name($1)
+        )
+    ]
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_dummy_notification_data_fn"(trigger.rule)
+    RETURNS trigger.rule
+AS $$
+SELECT trigger.create_notification_data_fn($1, format('''"{}"''::json', $1.name));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."define_notification_data"(name, "expression" text)
+    RETURNS trigger.rule
+AS $$
+SELECT trigger.create_notification_data_fn(trigger.get_rule($1), $2);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trigger"."rule_fn_sql"(trigger.rule, "where_clause" text)
     RETURNS text
 AS $$
@@ -8129,7 +8200,8 @@ SELECT
     n.entity_id,
     n.timestamp,
     COALESCE(exc.weight, trigger_rule.%I(n)) AS weight,
-    trigger_rule.%I(n) AS details
+    trigger_rule.%I(n) AS details,
+    trigger_rule.%I(n) AS data
 FROM trigger_rule.%I($1) AS n
 LEFT JOIN trigger_rule.%I AS exc ON
     exc.entity_id = n.entity_id AND
@@ -8138,6 +8210,7 @@ LEFT JOIN trigger_rule.%I AS exc ON
     trigger.notification_fn_name($1),
     trigger.weight_fn_name($1),
     trigger.notification_message_fn_name($1),
+    trigger.notification_data_fn_name($1),
     $1.name,
     trigger.exception_weight_table_name($1)
 );
@@ -8274,6 +8347,7 @@ SELECT trigger.define_thresholds($1, $2);
 SELECT trigger.create_exception_weight_table($1);
 SELECT trigger.create_dummy_default_weight($1);
 SELECT trigger.create_dummy_notification_message_fn($1);
+SELECT trigger.create_dummy_notification_data_fn($1);
 SELECT trigger.set_condition($1, 'true');
 SELECT trigger.create_notification_fn($1);
 SELECT trigger.create_fingerprint_fn($1);

@@ -1,3 +1,0 @@
-#!/bin/bash
-set -e
-find /vagrant/schema/tests -name '*.sql' | PGDATABASE=minerva xargs pg_prove --verbose
