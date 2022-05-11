@@ -1,8 +1,8 @@
-FROM postgres:12
+FROM citusdata/citus:10.2-pg13
 MAINTAINER Hendrikx ITC
 
 COPY docker-resources/usr/bin/* /usr/bin/
-COPY docker-resources/init-minerva-db-develop.sh /docker-entrypoint-initdb.d/
-COPY src /minerva
+COPY docker-resources/init-minerva-db-production.sh /docker-entrypoint-initdb.d/
+COPY src /src
 
 VOLUME /custom

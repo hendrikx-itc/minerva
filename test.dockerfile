@@ -1,4 +1,4 @@
-FROM postgres:13
+FROM citusdata/citus:10.2-pg13
 ENV LC_ALL C
 MAINTAINER HENDRIKX-ITC
 
@@ -8,8 +8,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 	libpq-dev \
 	postgresql-server-dev-13 \
 	postgresql-contrib-13 \
-	postgis \
-	postgresql-13-postgis-3 \
 	python3-pip \
 	git \
 	net-tools
