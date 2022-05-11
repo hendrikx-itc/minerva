@@ -4,7 +4,7 @@ SELECT plan(9);
 
 SET minerva.trigger_mark_modified TO on;
 
-SELECT attribute_directory.create_attribute_store('ds2', 'type2', ARRAY[('x','integer','some column')]::attribute_directory.attribute_descr[]);
+CALL attribute_directory.create_attribute_store('ds2', 'type2', ARRAY[('x','integer','some column')]::attribute_directory.attribute_descr[]);
 
 SELECT results_eq(
     $$SELECT attribute_directory.requires_compacting(id) FROM attribute_directory.attribute_store$$,

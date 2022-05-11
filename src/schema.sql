@@ -469,7 +469,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,3,0)::system.version_tuple;
+SELECT (6,0,0)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -2322,7 +2322,7 @@ BEGIN
   SELECT directory.name_to_data_source($1) into dsource;
   SELECT directory.name_to_entity_type($2) into etype;
   RETURN trend_directory.initialize_trend_view(
-    trend_directory.define_trend_view($1, dsource, etype), $4
+    trend_directory.define_trend_view(dsource, etype, $3), $4
   );
 END;
 $$ LANGUAGE plpgsql VOLATILE;

@@ -43,7 +43,7 @@ SELECT throws_like(
     'creating a second notification store for the same data source is not possible'
 );
 
-SELECT attribute_directory.create_attribute_store(
+CALL attribute_directory.create_attribute_store(
     'another_data_source_name',
     'some_entity_type_name',
     ARRAY[]::attribute_directory.attribute_descr[]

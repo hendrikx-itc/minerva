@@ -4,7 +4,7 @@ SET minerva.trigger_mark_modified TO on;
 
 SELECT plan(7);
 
-SELECT attribute_directory.create_attribute_store(
+CALL attribute_directory.create_attribute_store(
     'some_data_source_name',
     'some_entity_type_name',
     ARRAY[

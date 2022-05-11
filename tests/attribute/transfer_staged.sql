@@ -2,7 +2,7 @@ BEGIN;
 
 SELECT plan(2);
 
-SELECT attribute_directory.create_attribute_store(
+CALL attribute_directory.create_attribute_store(
     'source',
     'network',
     ARRAY[

@@ -2,7 +2,7 @@ BEGIN;
 
 SELECT plan(21);
 
-SELECT attribute_directory.create_attribute_store(
+CALL attribute_directory.create_attribute_store(
     'ds',
     'type',
     ARRAY[

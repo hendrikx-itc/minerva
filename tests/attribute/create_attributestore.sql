@@ -2,7 +2,7 @@ BEGIN;
 
 SELECT plan(27);
 
-SELECT attribute_directory.create_attribute_store(
+CALL attribute_directory.create_attribute_store(
     'some_data_source_name',
     'some_entity_type_name',
     ARRAY[
@@ -242,7 +242,7 @@ SELECT columns_are(
          ]
 );
 
-PREPARE second_try AS SELECT attribute_directory.create_attribute_store(
+PREPARE second_try AS CALL attribute_directory.create_attribute_store(
     'some_other_data_source_name',
     'some_other_entity_type_name',
     ARRAY[
