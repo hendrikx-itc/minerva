@@ -174,7 +174,7 @@ PREPARE second_try AS SELECT attribute_directory.create_attribute(
     'a new text column'
 );
 
-SELECT throws_like('second_try', '%unique constraint%', 'Trying to create an attribute store twice should create an error');
+SELECT throws_like('second_try', '%duplicate key value%', 'Trying to create an attribute store twice should create an error');
 
 SELECT attribute_directory.drop_attribute(
     attribute_directory.get_attribute_store('some_data_source_name', 'some_entity_type_name'),

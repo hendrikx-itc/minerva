@@ -7234,19 +7234,23 @@ objects:
     name: hash_query
     schema: attribute_directory
     return_type: text
-    language: sql
+    language: plpgsql
     volatility: stable
     strict: false
     secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT 
-          'md5(''' ||
-          array_to_string(array_agg(format('CASE WHEN %I IS NULL THEN '''' ELSE %I END', name, name)), ' || ') ||
-          ''')'
-      FROM attribute_directory.attribute
-      WHERE attribute_store_id = $1.id;
+      BEGIN
+        IF action_count(format('SELECT 1 FROM attribute_directory.attribute WHERE attribute_store_id = %s', $1.id)) = 0
+          THEN RETURN '''Q''';
+        ELSE 
+          RETURN 'md5(''' ||
+            array_to_string(array_agg(format('CASE WHEN %I IS NULL THEN '''' ELSE %I END', name, name)), ' || ') ||
+            ''')' FROM attribute_directory.attribute WHERE attribute_store_id = $1.id;
+        END IF;
+      END;
+ 
 
 - function:
     name: changes_view_query

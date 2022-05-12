@@ -4408,13 +4408,16 @@ $$ LANGUAGE sql STABLE;
 CREATE FUNCTION "attribute_directory"."hash_query"(attribute_directory.attribute_store)
     RETURNS text
 AS $$
-SELECT 
-    'md5(''' ||
-    array_to_string(array_agg(format('CASE WHEN %I IS NULL THEN '''' ELSE %I END', name, name)), ' || ') ||
-    ''')'
-FROM attribute_directory.attribute
-WHERE attribute_store_id = $1.id;
-$$ LANGUAGE sql STABLE;
+BEGIN
+  IF action_count(format('SELECT 1 FROM attribute_directory.attribute WHERE attribute_store_id = %s', $1.id)) = 0
+    THEN RETURN '''Q''';
+  ELSE 
+    RETURN 'md5(''' ||
+      array_to_string(array_agg(format('CASE WHEN %I IS NULL THEN '''' ELSE %I END', name, name)), ' || ') ||
+      ''')' FROM attribute_directory.attribute WHERE attribute_store_id = $1.id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 
 CREATE FUNCTION "attribute_directory"."changes_view_query"(attribute_directory.attribute_store)
