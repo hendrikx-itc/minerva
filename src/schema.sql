@@ -5948,6 +5948,8 @@ SELECT public.action(
     ARRAY[
         format('SELECT attribute_directory.drop_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id),
         format('ALTER TABLE attribute_base.%I ADD COLUMN %I %s', attribute_directory.to_char($1), $2, $3),
+        format('ALTER TABLE attribute_history.%I ADD COLUMN %I %s', attribute_directory.to_char($1), $2, $3),
+        format('ALTER TABLE attribute_staging.%I ADD COLUMN %I %s', attribute_directory.to_char($1), $2, $3),
         format('SELECT attribute_directory.create_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id)
     ]
 );
@@ -5974,6 +5976,8 @@ SELECT public.action(
     ARRAY[
         format('SELECT attribute_directory.drop_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id),
         format('ALTER TABLE attribute_base.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+        format('ALTER TABLE attribute_history.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+        format('ALTER TABLE attribute_staging.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
         format('SELECT attribute_directory.create_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id)
     ]
 );
