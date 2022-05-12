@@ -4,7 +4,7 @@ SELECT plan(5);
 
 SELECT trend_directory.create_trend_store(
     'test1',
-    'some_entity_type_name',
+    'create_trendstore_entity_type',
     '15m'::interval,
     '1 day'::interval,
     ARRAY[
@@ -22,7 +22,7 @@ SELECT has_table(
 
 SELECT trend_directory.create_trend_store(
     'test2',
-    'some_entity_type_name', 
+    'create_trendstore_entity_type', 
     '15m'::interval,
     '1 day'::interval,
     ARRAY[
@@ -58,7 +58,7 @@ SELECT col_type_is( 'trend', 'test-trend-store-2_part1', 'x', 'integer', 'x shou
 
 PREPARE repeat AS SELECT trend_directory.create_trend_store(
     'test1',
-    'some_entity_type_name',
+    'create_trendstore_entity_type',
     '15m'::interval,
     '1 day'::interval,
     ARRAY[

@@ -4,7 +4,7 @@ SELECT plan(12);
 
 SELECT isa_ok(
     notification_directory.create_notification_store(
-        'some_data_source_name',
+        'notificationstore_attrs_data_source',
         ARRAY[('NV_ALARM_ID', 'integer', '')]::notification_directory.attr_def[]
     ),
     'notification_directory.notification_store',
@@ -13,30 +13,30 @@ SELECT isa_ok(
 
 SELECT has_table(
     'notification',
-    'some_data_source_name',
+    'notificationstore_attrs_data_source',
     'table should be created'
 );
 
 SELECT has_column(
-    'notification'::name, 'some_data_source_name'::name, 'NV_ALARM_ID'::name,
+    'notification'::name, 'notificationstore_attrs_data_source'::name, 'NV_ALARM_ID'::name,
     'notification store table has a custom attribute column NV_ALARM_ID'
 );
 
 SELECT col_type_is(
-    'notification'::name, 'some_data_source_name'::name, 'NV_ALARM_ID'::name,
+    'notification'::name, 'notificationstore_attrs_data_source'::name, 'NV_ALARM_ID'::name,
     'integer',
     'NV_ALARM_ID is of type integer'
 );
 
 SELECT bag_eq(
     $$ SELECT name FROM directory.data_source; $$,
-    ARRAY[ 'some_data_source_name' ],
+    ARRAY[ 'notificationstore_attrs_data_source' ],
     'creating notification store should create data source'
 );
 
 SELECT throws_like(
     $$ SELECT notification_directory.create_notification_store(
-        'some_data_source_name',
+        'notificationstore_attrs_data_source',
         ARRAY[('some_other_id', 'integer', '')]::notification_directory.attr_def[]
     ); $$,
     '%unique constraint%',
@@ -45,13 +45,13 @@ SELECT throws_like(
 
 CALL attribute_directory.create_attribute_store(
     'another_data_source_name',
-    'some_entity_type_name',
+    'notificationstore_attrs_entity_type',
     ARRAY[]::attribute_directory.attribute_descr[]
 );
 
 SELECT bag_eq(
     $$ SELECT name FROM directory.data_source; $$,
-    ARRAY[ 'some_data_source_name', 'another_data_source_name' ],
+    ARRAY[ 'notificationstore_attrs_data_source', 'another_data_source_name' ],
     'creating notification store should create data source'
 );
 
@@ -66,7 +66,7 @@ SELECT lives_ok(
 
 SELECT bag_eq(
     $$ SELECT name FROM directory.data_source; $$,
-    ARRAY[ 'some_data_source_name', 'another_data_source_name' ],
+    ARRAY[ 'notificationstore_attrs_data_source', 'another_data_source_name' ],
     'creating a notification store for an existing data source does not create a new data source'
 );
 

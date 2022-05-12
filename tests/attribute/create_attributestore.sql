@@ -3,8 +3,8 @@ BEGIN;
 SELECT plan(27);
 
 CALL attribute_directory.create_attribute_store(
-    'some_data_source_name',
-    'some_entity_type_name',
+    'create_attributestore_data_source',
+    'create_attributestore_entity_type',
     ARRAY[
         ('x', 'integer', 'some column with integer values'),
 	('y', 'text', 'some column with text values')
@@ -13,13 +13,13 @@ CALL attribute_directory.create_attribute_store(
 
 SELECT has_table(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     'attribute history table should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     ARRAY[
         'id',
         'entity_id',
@@ -34,7 +34,7 @@ SELECT columns_are(
 
 SELECT col_type_is(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     'x',
     'pg_catalog',
     'integer',
@@ -43,7 +43,7 @@ SELECT col_type_is(
 
 SELECT col_type_is(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     'y',
     'pg_catalog',
     'text',
@@ -52,13 +52,13 @@ SELECT col_type_is(
 
 SELECT has_table(
     'attribute_base',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     'attribute base table should exist'
     );
 
 SELECT columns_are(
     'attribute_base',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -69,13 +69,13 @@ SELECT columns_are(
 
 SELECT has_table(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     'attribute staging table should exist'
     );
 
 SELECT columns_are(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -86,13 +86,13 @@ SELECT columns_are(
 
 SELECT has_table(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_compacted_tmp',
+    'create_attributestore_data_source_create_attributestore_entity_type_compacted_tmp',
     'temporary compacted table should exist'
     );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_compacted_tmp',
+    'create_attributestore_data_source_create_attributestore_entity_type_compacted_tmp',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -106,13 +106,13 @@ SELECT columns_are(
 
 SELECT has_table(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_curr_ptr',
+    'create_attributestore_data_source_create_attributestore_entity_type_curr_ptr',
     'current pointer table should exist'
     );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_curr_ptr',
+    'create_attributestore_data_source_create_attributestore_entity_type_curr_ptr',
     ARRAY[
         'id'
     ]
@@ -120,13 +120,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_changes',
+    'create_attributestore_data_source_create_attributestore_entity_type_changes',
     'changes view should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_changes',
+    'create_attributestore_data_source_create_attributestore_entity_type_changes',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -136,13 +136,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_run_length',
+    'create_attributestore_data_source_create_attributestore_entity_type_run_length',
     'run length view should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_run_length',
+    'create_attributestore_data_source_create_attributestore_entity_type_run_length',
     ARRAY[
 	'entity_id',
 	'start',
@@ -155,13 +155,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name_new',
+    'create_attributestore_data_source_create_attributestore_entity_type_new',
     'staging new view should exist'
 );
 
 SELECT columns_are(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name_new',
+    'create_attributestore_data_source_create_attributestore_entity_type_new',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -172,13 +172,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name_modified',
+    'create_attributestore_data_source_create_attributestore_entity_type_modified',
     'staging modified view should exist'
 );
 
 SELECT columns_are(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name_modified',
+    'create_attributestore_data_source_create_attributestore_entity_type_modified',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -189,13 +189,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     'attribute curr view should exist'
 );
 
 SELECT columns_are(
     'attribute',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_data_source_create_attributestore_entity_type',
     ARRAY[
         'id',
         'entity_id',
@@ -210,13 +210,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_compacted',
+    'create_attributestore_data_source_create_attributestore_entity_type_compacted',
     'attribute history compacted view should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_compacted',
+    'create_attributestore_data_source_create_attributestore_entity_type_compacted',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -230,13 +230,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_curr_selection',
+    'create_attributestore_data_source_create_attributestore_entity_type_curr_selection',
     'attribute history curr selection view should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_curr_selection',
+    'create_attributestore_data_source_create_attributestore_entity_type_curr_selection',
     ARRAY[
          'id'
          ]
