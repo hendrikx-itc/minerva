@@ -2,9 +2,9 @@ BEGIN;
 
 SELECT plan(3);
 
-SELECT directory.create_ds('test1');
+SELECT directory.create_data_source('test1');
 
-SELECT directory.create_et('rename_trend_et');
+SELECT directory.create_entity_type('rename_trend_et');
 
 SELECT trend_directory.create_trend_store(
     'test1',

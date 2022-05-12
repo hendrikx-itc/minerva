@@ -2,9 +2,9 @@ BEGIN;
 
 SELECT plan(2);
 
-SELECT directory.create_ds('test-data');
+SELECT directory.create_data_source('test-data');
 
-SELECT directory.create_et('Node');
+SELECT directory.create_entity_type('Node');
 
 SELECT trend_directory.create_trend_store(
     'test-data',

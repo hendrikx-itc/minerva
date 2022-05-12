@@ -4,7 +4,7 @@ SELECT plan(11);
 
 SELECT has_schema('entity');
 
-SELECT directory.create_et('Network');
+SELECT directory.create_entity_type('Network');
 
 SELECT has_table('entity', 'Network', 'Entity tables should be auto-created when entity types are created');
 

@@ -4,9 +4,9 @@ SELECT plan(5);
 
 SELECT results_eq('SELECT COUNT(*)::integer FROM trend_directory.materialization', ARRAY[0], 'No materialization should be predefined');
 
-SELECT directory.create_ds('datasource');
+SELECT directory.create_data_source('datasource');
 
-SELECT directory.create_et('entitytype');
+SELECT directory.create_entity_type('entitytype');
 
 SELECT trend_directory.create_trend_store(
     'test-data',

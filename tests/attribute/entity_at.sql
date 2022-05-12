@@ -10,7 +10,7 @@ CALL attribute_directory.create_attribute_store(
     ]::attribute_directory.attribute_descr[]
 );
 
-SELECT directory.create_et('network');
+SELECT directory.create_entity_type('network');
 SELECT entity.create_network('A');
 
 INSERT INTO attribute_staging."test_Node"(entity_id, timestamp, x)

@@ -8,7 +8,7 @@ SELECT bag_eq('SELECT name FROM directory.data_source', ARRAY[]::text[], 'No dat
 
 SELECT is(directory.get_ds('datasource'), null, 'Data sources should not be auto-created');
 
-SELECT isnt(directory.create_ds('datasource'), null, 'Data sources can be created');
+SELECT isnt(directory.create_data_source('datasource'), null, 'Data sources can be created');
 
 SELECT isnt(directory.get_ds('datasource'), null, 'Data sources should exist after being created');
 

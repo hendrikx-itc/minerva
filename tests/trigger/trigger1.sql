@@ -2,7 +2,7 @@ BEGIN;
 
 SELECT plan(2);
 
-SELECT directory.create_et('Cell');
+SELECT directory.create_entity_type('Cell');
 
 
 CREATE OR REPLACE VIEW trend."vtransform-retainability-cell_qtr" AS 

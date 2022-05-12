@@ -6,7 +6,7 @@ SELECT tables_are('entity', ARRAY[]::text[], 'There should be no entity type ini
 
 SELECT is(directory.get_et('Network'), null, 'Entity types are not automatically created');
 
-SELECT isnt(directory.create_et('Network'), null, 'Entity types can be created');
+SELECT isnt(directory.create_entity_type('Network'), null, 'Entity types can be created');
 
 SELECT isnt(directory.get_et('Network'), null, 'Entity types exist after being created');
 
