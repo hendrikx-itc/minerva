@@ -32,7 +32,7 @@ SELECT bag_eq(
     'Creating attribute stores should create the associated data source'
 );
 
-SELECT directory.delete_data_source('ds2');
+SELECT directory.delete_ds('ds2');
 
 SELECT bag_eq(
     $$ SELECT e.name FROM attribute_directory.attribute_store atts, directory.entity_type e WHERE atts.entity_type_id = e.id $$,

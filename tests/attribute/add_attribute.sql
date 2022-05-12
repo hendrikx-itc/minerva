@@ -3,8 +3,8 @@ BEGIN;
 SELECT plan(21);
 
 CALL attribute_directory.create_attribute_store(
-    'add_attribute_data_source',
-    'add_attribute_entity_type',
+    'add_attribute_ds',
+    'add_attribute_et',
     ARRAY[
         ('x', 'integer', 'some column with integer values'),
 	('y', 'text', 'some column with text values')
@@ -13,7 +13,7 @@ CALL attribute_directory.create_attribute_store(
 
 SELECT columns_are(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -26,7 +26,7 @@ SELECT columns_are(
 );
 
 SELECT attribute_directory.create_attribute(
-    attribute_directory.get_attribute_store('add_attribute_data_source', 'add_attribute_entity_type'),
+    attribute_directory.get_attribute_store('add_attribute_ds', 'add_attribute_et'),
     'z',
     'integer',
     'a new integer column'
@@ -34,7 +34,7 @@ SELECT attribute_directory.create_attribute(
 
 SELECT columns_are(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -50,7 +50,7 @@ SELECT columns_are(
 
 SELECT col_type_is(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     'z',
     'pg_catalog',
     'integer',
@@ -59,7 +59,7 @@ SELECT col_type_is(
 
 SELECT columns_are(
     'attribute_base',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -72,7 +72,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_staging',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -85,7 +85,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type_compacted_tmp',
+    'add_attribute_ds_add_attribute_et_compacted_tmp',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -101,7 +101,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type_curr_ptr',
+    'add_attribute_ds_add_attribute_et_curr_ptr',
     ARRAY[
         'entity_id',
         'timestamp'
@@ -111,7 +111,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_staging',
-    'add_attribute_data_source_add_attribute_entity_type_new',
+    'add_attribute_ds_add_attribute_et_new',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -124,7 +124,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_staging',
-    'add_attribute_data_source_add_attribute_entity_type_modified',
+    'add_attribute_ds_add_attribute_et_modified',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -137,7 +137,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -153,7 +153,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type_compacted',
+    'add_attribute_ds_add_attribute_et_compacted',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -168,7 +168,7 @@ SELECT columns_are(
 );
 
 PREPARE second_try AS SELECT attribute_directory.create_attribute(
-    attribute_directory.get_attribute_store('add_attribute_data_source', 'add_attribute_entity_type'),
+    attribute_directory.get_attribute_store('add_attribute_ds', 'add_attribute_et'),
     'z',
     'text',
     'a new text column'
@@ -177,13 +177,13 @@ PREPARE second_try AS SELECT attribute_directory.create_attribute(
 SELECT throws_like('second_try', '%duplicate key value%', 'Trying to create an attribute store twice should create an error');
 
 SELECT attribute_directory.drop_attribute(
-    attribute_directory.get_attribute_store('add_attribute_data_source', 'add_attribute_entity_type'),
+    attribute_directory.get_attribute_store('add_attribute_ds', 'add_attribute_et'),
     'x'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -198,7 +198,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_base',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -210,7 +210,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_staging',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -222,7 +222,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type_compacted_tmp',
+    'add_attribute_ds_add_attribute_et_compacted_tmp',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -237,7 +237,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_staging',
-    'add_attribute_data_source_add_attribute_entity_type_new',
+    'add_attribute_ds_add_attribute_et_new',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -249,7 +249,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_staging',
-    'add_attribute_data_source_add_attribute_entity_type_modified',
+    'add_attribute_ds_add_attribute_et_modified',
     ARRAY[
         'entity_id',
         'timestamp',
@@ -261,7 +261,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute',
-    'add_attribute_data_source_add_attribute_entity_type',
+    'add_attribute_ds_add_attribute_et',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -276,7 +276,7 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_history',
-    'add_attribute_data_source_add_attribute_entity_type_compacted',
+    'add_attribute_ds_add_attribute_et_compacted',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -290,7 +290,7 @@ SELECT columns_are(
 );
 
 PREPARE second_drop AS SELECT attribute_directory.drop_attribute(
-    attribute_directory.get_attribute_store('add_attribute_data_source', 'add_attribute_entity_type'),
+    attribute_directory.get_attribute_store('add_attribute_ds', 'add_attribute_et'),
     'a'
 );
 
