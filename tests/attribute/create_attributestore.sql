@@ -61,9 +61,9 @@ SELECT columns_are(
     'attribute_base',
     'create_attributestore_ds_create_attributestore_et',
     ARRAY[
-        'id',
         'entity_id',
         'timestamp',
+	'end',
         'x',
 	'y'
     ]
@@ -100,6 +100,7 @@ SELECT columns_are(
         'id', 
         'entity_id',
         'timestamp',
+	'first_appearance',
 	'end',
 	'modified',
 	'hash',
@@ -148,6 +149,7 @@ SELECT columns_are(
     'attribute_history',
     'create_attributestore_ds_create_attributestore_et_run_length',
     ARRAY[
+        'id',
 	'entity_id',
 	'start',
 	'end',
@@ -170,6 +172,7 @@ SELECT columns_are(
     ARRAY[
         'entity_id',
 	'timestamp',
+	'end',
 	'x',
 	'y'
 	]
@@ -224,8 +227,10 @@ SELECT columns_are(
     'attribute_history',
     'create_attributestore_ds_create_attributestore_et_compacted',
     ARRAY[
+        'id',
         'entity_id',
 	'timestamp',
+	'first_appearance',
 	'end',
         'modified',
         'hash',

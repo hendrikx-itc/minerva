@@ -38,6 +38,7 @@ SELECT columns_are(
     'attribute_history',
     'add_attribute_ds_add_attribute_et',
     ARRAY[
+        'id',
         'entity_id',
         'timestamp',
         'modified',
@@ -91,10 +92,12 @@ SELECT columns_are(
     'attribute_history',
     'add_attribute_ds_add_attribute_et_compacted_tmp',
     ARRAY[
+        'id',
         'entity_id',
         'timestamp',
 	'end',
 	'modified',
+	'first_appearance',
 	'hash',
         'x',
 	'y',
@@ -107,8 +110,7 @@ SELECT columns_are(
     'attribute_history',
     'add_attribute_ds_add_attribute_et_curr_ptr',
     ARRAY[
-        'entity_id',
-        'timestamp'
+        'id'
     ],
     'curr_ptr table should not be changed'
 );
@@ -119,6 +121,7 @@ SELECT columns_are(
     ARRAY[
         'entity_id',
 	'timestamp',
+	'end',
 	'x',
 	'y',
 	'z'
@@ -144,6 +147,7 @@ SELECT columns_are(
     'attribute',
     'add_attribute_ds_add_attribute_et',
     ARRAY[
+        'id',
         'entity_id',
 	'timestamp',
         'modified',
@@ -161,8 +165,10 @@ SELECT columns_are(
     'attribute_history',
     'add_attribute_ds_add_attribute_et_compacted',
     ARRAY[
+        'id',
         'entity_id',
 	'timestamp',
+	'first_appearance',
 	'end',
         'modified',
         'hash',
@@ -208,7 +214,6 @@ SELECT columns_are(
     'attribute_base',
     'add_attribute_ds_add_attribute_et',
     ARRAY[
-        'id',
         'entity_id',
         'timestamp',
 	'end',
@@ -235,10 +240,12 @@ SELECT columns_are(
     'attribute_history',
     'add_attribute_ds_add_attribute_et_compacted_tmp',
     ARRAY[
+        'id',
         'entity_id',
         'timestamp',
 	'end',
 	'modified',
+	'first_appearance',
 	'hash',
 	'y',
 	'z'
@@ -276,6 +283,7 @@ SELECT columns_are(
     'attribute',
     'add_attribute_ds_add_attribute_et',
     ARRAY[
+        'id',
         'entity_id',
 	'timestamp',
         'modified',
