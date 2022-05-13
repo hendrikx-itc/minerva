@@ -23,6 +23,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
         'x'
     ]
 );
@@ -49,6 +50,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
         'x',
         'y'
     ]
@@ -79,6 +81,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
         'x',
         'y',
         'z'
