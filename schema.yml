@@ -9912,6 +9912,62 @@ objects:
       FROM attribute_directory.attribute_store
       WHERE id = $1.attribute_store_id;
 
+- function:
+    name: modify_data_type
+    schema: attribute_directory
+    return_type: attribute_directory.attribute
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute
+    source: |-
+      SELECT
+          attribute_directory.create_dependees(
+              attribute_directory.modify_column_type(
+                  attribute_directory.drop_dependees(attribute_store),
+                  $1.name,
+                  $1.data_type
+              )
+          )
+      FROM attribute_directory.attribute_store
+      WHERE id = $1.attribute_store_id;
+
+      SELECT $1;
+
+- function:
+    name: update_data_type_on_change
+    schema: attribute_directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments: []
+    source: |-
+      BEGIN
+          IF OLD.data_type <> NEW.data_type THEN
+              PERFORM attribute_directory.modify_data_type(NEW);
+          END IF;
+
+          RETURN NEW;
+      END;
+
+- trigger:
+    table:
+      schema: attribute_directory
+      name: attribute
+    name: update_attribute_type
+    function:
+      schema: attribute_directory
+      name: update_data_type_on_change
+    when: after
+    events:
+    - update
+    affecteach: row
+
+
 ##########################
 ##########################
 ##                      ##

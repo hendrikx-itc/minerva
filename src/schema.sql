@@ -6233,6 +6233,43 @@ WHERE id = $1.attribute_store_id;
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "attribute_directory"."modify_data_type"(attribute_directory.attribute)
+    RETURNS attribute_directory.attribute
+AS $$
+SELECT
+    attribute_directory.create_dependees(
+        attribute_directory.modify_column_type(
+            attribute_directory.drop_dependees(attribute_store),
+            $1.name,
+            $1.data_type
+        )
+    )
+FROM attribute_directory.attribute_store
+WHERE id = $1.attribute_store_id;
+
+SELECT $1;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."update_data_type_on_change"()
+    RETURNS trigger
+AS $$
+BEGIN
+    IF OLD.data_type <> NEW.data_type THEN
+        PERFORM attribute_directory.modify_data_type(NEW);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE TRIGGER update_attribute_type
+  AFTER UPDATE ON "attribute_directory"."attribute"
+  FOR EACH ROW
+  EXECUTE PROCEDURE "attribute_directory"."update_data_type_on_change"();
+
+
 CREATE TYPE "notification_directory"."attr_def" AS (
   "name" name,
   "data_type" name,
