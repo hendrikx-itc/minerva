@@ -4412,9 +4412,9 @@ BEGIN
   IF action_count(format('SELECT 1 FROM attribute_directory.attribute WHERE attribute_store_id = %s', $1.id)) = 0
     THEN RETURN '''Q''';
   ELSE 
-    RETURN 'md5(''' ||
-      array_to_string(array_agg(format('(CASE WHEN %I IS NULL THEN '''' ELSE %I END)', name, name)), ' || ') ||
-      ''')' FROM attribute_directory.attribute WHERE attribute_store_id = $1.id;
+    RETURN 'md5(' ||
+      array_to_string(array_agg(format('(CASE WHEN %I IS NULL THEN '''' ELSE %I::text END)', name, name)), ' || ') ||
+      ')' FROM attribute_directory.attribute WHERE attribute_store_id = $1.id;
   END IF;
 END;
 $$ LANGUAGE plpgsql STABLE;
