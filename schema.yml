@@ -9137,17 +9137,19 @@ objects:
     name: create_at_func_ptr
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT public.action(
+      BEGIN
+        RETURN public.action(
           $1,
           attribute_directory.create_at_func_ptr_sql($1)
-      );
+        );
+      END;
 
 - function:
     name: drop_at_func_ptr_sql
@@ -9217,17 +9219,19 @@ objects:
     name: create_entity_at_func_ptr
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT public.action(
+      BEGIN
+        RETURN public.action(
           $1,
           attribute_directory.create_entity_at_func_ptr_sql($1)
-      );
+        );
+      END;
 
 - function:
     name: drop_entity_at_func_ptr_sql
@@ -9389,17 +9393,19 @@ objects:
     name: create_entity_at_func
     schema: attribute_directory
     return_type: attribute_directory.attribute_store
-    language: sql
+    language: plpgsql
     volatility: volatile
     strict: false
     secdef: false
     arguments:
     - data_type: attribute_directory.attribute_store
     source: |-
-      SELECT public.action(
+      BEGIN
+        RETURN public.action(
           $1,
           attribute_directory.create_entity_at_func_sql($1)
-      );
+        );
+      END;
 
 - function:
     name: create_dependees
@@ -9615,8 +9621,6 @@ objects:
         -- Separate table
         PERFORM attribute_directory.create_curr_ptr_table($1);
 
-        COMMIT;
-
         -- Other
         PERFORM attribute_directory.create_at_func_ptr($1);
         PERFORM attribute_directory.create_at_func($1);
@@ -9627,8 +9631,6 @@ objects:
         PERFORM attribute_directory.create_changes_view($1);
 
         PERFORM attribute_directory.create_run_length_view($1);
-
-        COMMIT;
 
         PERFORM attribute_directory.create_dependees($1);
 

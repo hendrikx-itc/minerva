@@ -5698,11 +5698,13 @@ $function$ LANGUAGE sql STABLE;
 CREATE FUNCTION "attribute_directory"."create_at_func_ptr"(attribute_directory.attribute_store)
     RETURNS attribute_directory.attribute_store
 AS $$
-SELECT public.action(
+BEGIN
+  RETURN public.action(
     $1,
     attribute_directory.create_at_func_ptr_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
+  );
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."drop_at_func_ptr_sql"(attribute_directory.attribute_store)
@@ -5754,11 +5756,13 @@ $function$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."create_entity_at_func_ptr"(attribute_directory.attribute_store)
     RETURNS attribute_directory.attribute_store
 AS $$
-SELECT public.action(
+BEGIN
+  RETURN public.action(
     $1,
     attribute_directory.create_entity_at_func_ptr_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
+  );
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."drop_entity_at_func_ptr_sql"(attribute_directory.attribute_store)
@@ -5878,11 +5882,13 @@ $function$ LANGUAGE sql STABLE;
 CREATE FUNCTION "attribute_directory"."create_entity_at_func"(attribute_directory.attribute_store)
     RETURNS attribute_directory.attribute_store
 AS $$
-SELECT public.action(
+BEGIN
+  RETURN public.action(
     $1,
     attribute_directory.create_entity_at_func_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
+  );
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."create_dependees"(attribute_directory.attribute_store)
@@ -6025,8 +6031,6 @@ BEGIN
   -- Separate table
   PERFORM attribute_directory.create_curr_ptr_table($1);
 
-  COMMIT;
-
   -- Other
   PERFORM attribute_directory.create_at_func_ptr($1);
   PERFORM attribute_directory.create_at_func($1);
@@ -6037,8 +6041,6 @@ BEGIN
   PERFORM attribute_directory.create_changes_view($1);
 
   PERFORM attribute_directory.create_run_length_view($1);
-
-  COMMIT;
 
   PERFORM attribute_directory.create_dependees($1);
 
