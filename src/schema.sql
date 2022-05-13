@@ -4413,7 +4413,7 @@ BEGIN
     THEN RETURN '''Q''';
   ELSE 
     RETURN 'md5(''' ||
-      array_to_string(array_agg(format('CASE WHEN %I IS NULL THEN '''' ELSE %I END', name, name)), ' || ') ||
+      array_to_string(array_agg(format('(CASE WHEN %I IS NULL THEN '''' ELSE %I END)', name, name)), ' || ') ||
       ''')' FROM attribute_directory.attribute WHERE attribute_store_id = $1.id;
   END IF;
 END;
