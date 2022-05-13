@@ -1,0 +1,12 @@
+#!/bin/bash
+
+IMAGE_REPOSITORY="hendrikxitc/minerva"
+IMAGE_TAG="$IMAGE_REPOSITORY:latest"
+
+echo "$DOCKER_REGISTRY_TOKEN" | docker login --username "$DOCKER_REGISTRY_USER" --password-stdin
+
+docker build -t "$IMAGE_TAG" -f production.dockerfile "$WORKSPACE"
+
+docker push "$IMAGE_TAG"
+
+docker logout
