@@ -5949,6 +5949,68 @@ SELECT attribute_directory.update_data_type(attribute, n.data_type)
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "attribute_directory"."drop_hash"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action(
+    $1,
+    ARRAY[
+        format('SELECT attribute_directory.drop_compacted_view(%s)', $1),
+        format('SELECT attribute_directory.drop_curr_view(%s)', $1),
+        format('SELECT attribute_directory.drop_run_length_view(%s)', $1),
+        format('SELECT attribute_directory.drop_changes_view(%s)', $1),
+        format('ALTER TABLE attribute_history.%I DROP COLUMN hash', attribute_directory.attribute_store_to_char($1.id))
+    ]
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."add_hash"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action(
+    $1,
+    ARRAY[
+        format(
+            'ALTER TABLE attribute_history.%I ADD COLUMN hash character varying GENERATED ALWAYS AS (%s) STORED',
+            attribute_directory.attribute_store_to_char($1.id),
+            attribute_directory.hash_query($1)
+        ),
+        format('SELECT attribute_directory.create_changes_view(%s)', $1),	
+        format('SELECT attribute_directory.create_run_length_view(%s)', $1),
+        format('SELECT attribute_directory.create_compacted_view(%s)', $1),
+        format('SELECT attribute_directory.create_curr_view(%s)', $1)
+    ]
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."drop_staging_dependees"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action(
+    $1,
+    ARRAY[
+        format('SELECT attribute_directory.drop_staging_modified_view(%s)', $1),
+        format('SELECT attribute_directory.drop_staging_new_view(%s)', $1)
+    ]
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."add_staging_dependees"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action(
+    $1,
+    ARRAY[
+        format('SELECT attribute_directory.create_staging_new_view(%s)', $1),
+        format('SELECT attribute_directory.create_staging_modified_view(%s)', $1)
+    ]
+);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "attribute_directory"."add_attribute_column"(attribute_directory.attribute_store, name, text)
     RETURNS attribute_directory.attribute_store
 AS $$
@@ -5957,10 +6019,13 @@ SELECT public.action(
     ARRAY[
         format('SELECT attribute_directory.drop_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id),
         format('ALTER TABLE attribute_base.%I ADD COLUMN %I %s', attribute_directory.to_char($1), $2, $3),
+        format('SELECT attribute_directory.drop_hash(%s::attribute_directory.attribute_store)', $1),
         format('ALTER TABLE attribute_history.%I ADD COLUMN %I %s', attribute_directory.to_char($1), $2, $3),
+        format('SELECT attribute_directory.add_hash(%s::attribute_directory.attribute_store)', $1),
         format('ALTER TABLE attribute_history.%I ADD COLUMN %I %s', attribute_directory.compacted_tmp_table_name($1), $2, $3),
+        format('SELECT attribute_directory.drop_staging_dependees(%s)', $1),
         format('ALTER TABLE attribute_staging.%I ADD COLUMN %I %s', attribute_directory.to_char($1), $2, $3),
-        format('SELECT attribute_directory.create_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id)
+        format('SELECT attribute_directory.add_staging_dependees(%s)', $1)
     ]
 );
 $$ LANGUAGE sql VOLATILE;
@@ -5985,10 +6050,14 @@ SELECT public.action(
     $1,
     ARRAY[
         format('SELECT attribute_directory.drop_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id),
+        format('SELECT attribute_directory.drop_hash(%s::attribute_directory.attribute_store)', $1),
         format('ALTER TABLE attribute_base.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+        format('SELECT attribute_directory.add_hash(%s::attribute_directory.attribute_store)', $1),
         format('ALTER TABLE attribute_history.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
         format('ALTER TABLE attribute_history.%I DROP COLUMN %I', attribute_directory.compacted_tmp_table_name($1), $2),
+        format('SELECT attribute_directory.drop_staging_dependees(%s)', $1),
         format('ALTER TABLE attribute_staging.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+        format('SELECT attribute_directory.add_staging_dependees(%s)', $1),
         format('SELECT attribute_directory.create_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id)
     ]
 );
@@ -6236,19 +6305,25 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."modify_data_type"(attribute_directory.attribute)
     RETURNS attribute_directory.attribute
 AS $$
-SELECT
-    attribute_directory.create_dependees(
-        attribute_directory.modify_column_type(
-            attribute_directory.drop_dependees(attribute_store),
-            $1.name,
-            $1.data_type
-        )
-    )
-FROM attribute_directory.attribute_store
-WHERE id = $1.attribute_store_id;
-
-SELECT $1;
-$$ LANGUAGE sql VOLATILE;
+DECLARE
+  store attribute_directory.attribute_store;
+BEGIN
+  SELECT * FROM attribute_directory.attribute_store WHERE id = $1.attribute_store_id INTO store;
+  RETURN public.action(
+      $1,
+      ARRAY[
+          format('ALTER TABLE attribute_base.%I ALTER %I TYPE %s', attribute_directory.to_char(store), $1.name, $1.data_type),
+          format('SELECT attribute_directory.drop_hash(%s::attribute_directory.attribute_store)', store),
+          format('ALTER TABLE attribute_history.%I ALTER %I TYPE %s', attribute_directory.to_char(store), $1.name, $1.data_type),
+          format('SELECT attribute_directory.add_hash(%s::attribute_directory.attribute_store)', store),
+          format('ALTER TABLE attribute_history.%I ALTER %I TYPE %s', attribute_directory.compacted_tmp_table_name(store), $1.name, $1.data_type),
+          format('SELECT attribute_directory.drop_staging_dependees(%s)', store),
+          format('ALTER TABLE attribute_staging.%I ALTER %I TYPE %s', attribute_directory.to_char(store), $1.name, $1.data_type),
+          format('SELECT attribute_directory.add_staging_dependees(%s)', store)
+      ]
+  );
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."update_data_type_on_change"()

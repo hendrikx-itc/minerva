@@ -44,6 +44,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
         'x',
 	'y',
 	'z'
