@@ -58,7 +58,8 @@ SELECT has_function(
 );
 
 SELECT bag_eq(
-    $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2018-01-01 00:00:00')$$,
+    $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2018-01-01 00:00:00') ptr
+      JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[
         '2017-01-01 00:00:00'::timestamp,
 	'2017-02-01 00:00:00'::timestamp
@@ -67,7 +68,8 @@ SELECT bag_eq(
 );
 
 SELECT bag_eq(
-    $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2016-08-01 00:00:00')$$,
+    $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2016-08-01 00:00:00') ptr
+      JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[
         '2016-01-01 00:00:00'::timestamp,
 	'2016-02-01 00:00:00'::timestamp
@@ -76,7 +78,8 @@ SELECT bag_eq(
 );
 
 SELECT bag_eq(
-    $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2015-01-01 00:00:00')$$,
+    $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2015-01-01 00:00:00') ptr
+      JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[]::timestamp[],
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give no result if used with too old timestamp'
 );
@@ -91,12 +94,14 @@ SELECT has_function(
     'at ptr function should exist'
 );
 
-SELECT is(attribute_history.created_function_ds_created_functions_et_at_ptr(1, '2018-01-01 00:00:00')::timestamp,
+SELECT results_eq('SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et
+                   WHERE id = attribute_history.created_function_ds_created_functions_et_at_ptr(1, ''2018-01-01 00:00:00'')::timestamp',
     '2017-01-01 00:00:00'::timestamp,
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give latest timestamp if used with more recent time'
 );
 
-SELECT is(attribute_history.created_function_ds_created_functions_et_at_ptr(1,'2016-08-01 00:00:00')::timestamp,
+SELECT results_eq('SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et
+                   WHERE id = attribute_history.created_function_ds_created_functions_et_at_ptr(1,''2016-08-01 00:00:00'')::timestamp',
     '2016-01-01 00:00:00'::timestamp,
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give older timestamp if used with older time'
 );

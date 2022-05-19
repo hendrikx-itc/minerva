@@ -4666,8 +4666,8 @@ DECLARE
 BEGIN
     view_sql = format(
         'SELECT DISTINCT ON (entity_id) '
-        'id '
-        'FROM attribute_history.%I '
+        'a.id '
+        'FROM attribute_history.%I a '
         'ORDER BY entity_id, timestamp DESC',
         table_name
     );
@@ -5677,8 +5677,8 @@ SELECT ARRAY[
 RETURNS TABLE(id integer)
 AS $$
     BEGIN
-        RETURN QUERY SELECT DISTINCT ON (entity_id) id
-            FROM attribute_history.%I
+        RETURN QUERY SELECT DISTINCT ON (entity_id) s.id
+            FROM attribute_history.%I s
             WHERE timestamp <= $1
             ORDER BY entity_id, timestamp DESC;
     END;
