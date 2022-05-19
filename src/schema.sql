@@ -5676,13 +5676,13 @@ SELECT ARRAY[
             'CREATE FUNCTION attribute_history.%I(timestamp with time zone)
 RETURNS TABLE(id integer)
 AS $$
-    SELECT DISTINCT ON (entity_id)
-        id
-    FROM
-        attribute_history.%I
-    WHERE timestamp <= $1
-    ORDER BY entity_id, timestamp DESC;
-$$ LANGUAGE sql STABLE',
+    BEGIN
+        RETURN QUERY SELECT DISTINCT ON (entity_id) id
+            FROM attribute_history.%I
+            WHERE timestamp <= $1
+            ORDER BY entity_id, timestamp DESC;
+    END;
+$$ LANGUAGE plpgsql STABLE',
             attribute_directory.at_ptr_function_name($1),
             attribute_directory.to_table_name($1)
         ),
@@ -5976,7 +5976,7 @@ SELECT public.action(
             attribute_directory.attribute_store_to_char($1.id),
             attribute_directory.hash_query($1)
         ),
-        format('SELECT attribute_directory.create_changes_view(%s)', $1),	
+        format('SELECT attribute_directory.create_changes_view(%s)', $1),
         format('SELECT attribute_directory.create_run_length_view(%s)', $1),
         format('SELECT attribute_directory.create_compacted_view(%s)', $1),
         format('SELECT attribute_directory.create_curr_view(%s)', $1)
