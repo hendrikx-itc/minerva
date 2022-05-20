@@ -6017,7 +6017,6 @@ AS $$
 SELECT public.action(
     $1,
     ARRAY[
-        format('SELECT attribute_directory.drop_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id),
         format('ALTER TABLE attribute_base.%I ADD COLUMN %I %s', attribute_directory.to_char($1), $2, $3),
         format('SELECT attribute_directory.drop_hash(%s::attribute_directory.attribute_store)', $1),
         format('ALTER TABLE attribute_history.%I ADD COLUMN %I %s', attribute_directory.to_char($1), $2, $3),

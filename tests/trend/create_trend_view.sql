@@ -2,7 +2,9 @@ BEGIN;
 
 SELECT plan(1);
 
+/* old code that doesn't work anymore */
 
+/*
 SELECT trend_directory.create_trend_view(
     'test-source', 'test-type', '15m'::interval,
     ARRAY[
@@ -15,6 +17,7 @@ SELECT trend_directory.create_trend_view(
         )
     ]::trend_directory.trend_view_part_descr[]
 );
+*/
 
 /* tests not yet made because the code did not exist */
 

@@ -253,7 +253,14 @@ SELECT columns_are(
          ]
 );
 
-PREPARE second_try AS CALL attribute_directory.create_attribute_store(
+CREATE FUNCTION "attribute_directory"."create_attribute_store_prep"("data_source_name" text, "entity_type_name" text, "attributes" attribute_directory.attribute_descr[])
+    RETURNS void
+AS $$
+    CALL attribute_directory.create_attribute_store($1, $2, $3);
+$$ LANGUAGE sql VOLATILE;
+
+
+PREPARE second_try AS SELECT attribute_directory.create_attribute_store_prep(
     'some_other_ds_name',
     'some_other_et_name',
     ARRAY[
