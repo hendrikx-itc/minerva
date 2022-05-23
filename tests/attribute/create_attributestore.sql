@@ -190,6 +190,7 @@ SELECT columns_are(
     ARRAY[
         'entity_id',
         'timestamp',
+	'end',
         'x',
 	'y'
     ]
@@ -267,6 +268,8 @@ PREPARE second_try AS SELECT attribute_directory.create_attribute_store_prep(
         ('z', 'text', 'some column with text values')
     ]::attribute_directory.attribute_descr[]
 );
+
+EXECUTE second_try;
 
 SELECT throws_like('second_try', '%already exists%', 'Trying to create an attribute store twice should create an error');
 

@@ -33,8 +33,8 @@ SELECT bag_eq(
     );
 
 SELECT trend_directory.define_trend_store(
-    'test2',
-    'define_trendstore_et',
+    directory.name_to_data_source('test2'),
+    directory.name_to_entity_type('define_trendstore_et'),
     '300 seconds'::interval,
     '1 day'::interval
     );

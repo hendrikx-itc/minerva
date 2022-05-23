@@ -48,6 +48,8 @@ objects:
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: entity
@@ -59,13 +61,17 @@ objects:
     default-privileges:
     - role: minerva_writer
       objclass: tables
-      privilege: SELECT,INSERT,UPDATE
+      privilege: SELECT,INSERT,UPDATE,DELETE
     - role: minerva
       objclass: tables
       privilege: SELECT
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: alias
@@ -74,6 +80,20 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,UPDATE,DELETE
+    - role: minerva_writer
+      objclass: sequences
+      privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)      
 
 - schema:
     name: alias_directory
@@ -86,6 +106,8 @@ objects:
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: relation
@@ -99,10 +121,13 @@ objects:
     default-privileges:
     - role: minerva_writer
       objclass: tables
-      privilege: SELECT,INSERT,UPDATE
+      privilege: SELECT,INSERT,UPDATE,DELETE
     - role: minerva
       objclass: tables
       privilege: SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT ON tables TO "minerva_writer"; $$)
 
 - schema:
     name: relation_directory
@@ -110,6 +135,8 @@ objects:
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: trend
@@ -122,11 +149,14 @@ objects:
     default-privileges:
     - role: minerva_writer
       objclass: tables
-      privilege: SELECT,INSERT,UPDATE
+      privilege: SELECT,INSERT,UPDATE,DELETE
     - role: minerva
       objclass: tables
       privilege: SELECT
- 
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT ON tables TO "minerva_writer"; $$)
+
 - schema:
     name: trend_partition
     comment: Holds partitions of the trend store tables in the trend schema.
@@ -138,10 +168,13 @@ objects:
     default-privileges:
     - role: minerva_writer
       objclass: tables
-      privilege: SELECT,INSERT,UPDATE
+      privilege: SELECT,INSERT,UPDATE,DELETE
     - role: minerva
       objclass: tables
       privilege: SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT ON tables TO "minerva_writer"; $$)
 
 - schema:
     name: trend_directory
@@ -162,6 +195,16 @@ objects:
       privilege: USAGE,CREATE
     - role: minerva
       privilege: USAGE
+    default-privileges:
+    - role: minerva_writer
+      objclass: tables
+      privilege: ALL
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT ALL ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva_writer"; $$)
 
 - schema:
     name: attribute_base
@@ -173,10 +216,13 @@ objects:
     default-privileges:
     - role: minerva_writer
       objclass: tables
-      privilege: SELECT,INSERT,UPDATE
+      privilege: ALL
     - role: minerva
       objclass: tables
       privilege: SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT ALL ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva_writer"; $$)
 
 - schema:
     name: attribute_directory
@@ -189,6 +235,8 @@ objects:
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: attribute_history
@@ -200,13 +248,17 @@ objects:
     default-privileges:
     - role: minerva_writer
       objclass: tables
-      privilege: SELECT,INSERT,UPDATE
+      privilege: ALL
     - role: minerva
       objclass: tables
       privilege: SELECT
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT ALL ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: attribute_staging
@@ -218,10 +270,13 @@ objects:
     default-privileges:
     - role: minerva_writer
       objclass: tables
-      privilege: SELECT,INSERT,UPDATE
+      privilege: SELECT,INSERT,UPDATE,DELETE
     - role: minerva
       objclass: tables
       privilege: SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT ON tables TO "minerva_writer"; $$)
 
 - schema:
     name: notification
@@ -235,8 +290,18 @@ objects:
       privilege: USAGE
     default-privileges:
     - role: minerva_writer
+      objclass: tables
+      privilege: ALL
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
+    - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT ALL ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: notification_directory
@@ -250,6 +315,8 @@ objects:
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: metric
@@ -282,6 +349,8 @@ objects:
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
     name: trigger_rule
@@ -291,9 +360,27 @@ objects:
     - role: minerva
       privilege: USAGE
     default-privileges:
+    - role: minerva
+      objclass: tables
+      privilege: SELECT
+    - role: minerva_admin
+      objclass: tables
+      privilege: ALL
+    - role: minerva_writer
+      objclass: tables
+      privilege: SELECT,INSERT,UPDATE,DELETE
     - role: minerva_writer
       objclass: sequences
       privilege: USAGE,SELECT
+    - role: minerva
+      objclass: functions
+      privilege: EXECUTE
+    postqueries:
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT SELECT ON tables TO "minerva"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT ALL ON tables TO "minerva_admin"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT EXECUTE ON functions TO "minerva"; $$)
 
 - schema:
     name: logging
@@ -1045,14 +1132,6 @@ objects:
             format(
                'SELECT create_reference_table(''entity.%I'');',
                $1.name
-            ),
-            format(
-               'GRANT SELECT ON TABLE entity.%I TO minerva;',
-               $1.name
-            ),
-            format(
-               'GRANT INSERT,UPDATE,DELETE ON TABLE entity.%I TO minerva_writer;',
-               $1.name
             )
         ];
 
@@ -1345,16 +1424,6 @@ objects:
           ),
           format(
               'CREATE INDEX ON %I.%I USING btree(entity_type_id);',
-              alias_directory.alias_schema(),
-              $1.name
-          ),
-          format(
-              'GRANT SELECT ON %I.%I TO minerva;',
-              alias_directory.alias_schema(),
-              $1.name
-          ),
-          format(
-              'GRANT INSERT,UPDATE,DELETE ON %I.%I TO minerva_writer;',
               alias_directory.alias_schema(),
               $1.name
           )
@@ -3488,16 +3557,6 @@ objects:
               'SELECT create_distributed_table(''%I.%I'', ''entity_id'')',
               trend_directory.base_table_schema(),
               trend_directory.base_table_name($1)
-          ),
-          format(
-              'GRANT SELECT ON TABLE %I.%I TO minerva;',
-              trend_directory.base_table_schema(),
-              trend_directory.base_table_name($1)
-          ),
-          format(
-              'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
-              trend_directory.base_table_schema(),
-              trend_directory.base_table_name($1)
           )
       ];
 
@@ -3581,16 +3640,6 @@ objects:
           ),
           format(
               'ALTER TABLE ONLY %I.%I ADD PRIMARY KEY (entity_id, "timestamp");',
-              trend_directory.staging_table_schema(),
-              trend_directory.staging_table_name($1)
-          ),
-          format(
-              'GRANT SELECT ON TABLE %I.%I TO minerva;',
-              trend_directory.staging_table_schema(),
-              trend_directory.staging_table_name($1)
-          ),
-          format(
-              'GRANT INSERT,DELETE,UPDATE ON TABLE %I.%I TO minerva_writer;',
               trend_directory.staging_table_schema(),
               trend_directory.staging_table_name($1)
           )
@@ -3814,8 +3863,7 @@ objects:
       data_type: text
     source: |-
       SELECT ARRAY[
-          format('CREATE VIEW %I.%I AS %s;', trend_directory.view_schema(), trend_directory.view_name($1), $2),
-          format('GRANT SELECT ON TABLE %I.%I TO minerva;', trend_directory.view_schema(), trend_directory.view_name($1))
+          format('CREATE VIEW %I.%I AS %s;', trend_directory.view_schema(), trend_directory.view_name($1), $2)
       ];
 
 - function:
@@ -7466,10 +7514,6 @@ objects:
           format(
               'ALTER TABLE attribute.%I OWNER TO minerva_writer',
               attribute_directory.curr_view_name($1)
-          ),
-          format(
-              'GRANT SELECT ON TABLE attribute.%I TO minerva',
-              attribute_directory.curr_view_name($1)
           )
       ];
 
@@ -7541,10 +7585,6 @@ objects:
           ),
           format(
               'ALTER TABLE attribute_history.%I OWNER TO minerva_writer',
-              attribute_directory.curr_ptr_table_name($1)
-          ),
-          format(
-              'GRANT SELECT ON TABLE attribute_history.%I TO minerva',
               attribute_directory.curr_ptr_table_name($1)
           )
       ];
@@ -7627,8 +7667,7 @@ objects:
                   'ALTER TABLE attribute_history.%I '
                   'OWNER TO minerva_writer',
                   view_name
-              ),
-              format('GRANT SELECT ON TABLE attribute_history.%I TO minerva', view_name)
+              )
           ];
       END;
 
@@ -7727,10 +7766,6 @@ objects:
           ),
           format(
               'ALTER TABLE attribute_base.%I OWNER TO minerva_writer',
-              attribute_directory.to_table_name($1)
-          ),
-          format(
-              'GRANT SELECT ON TABLE attribute_base.%I TO minerva',
               attribute_directory.to_table_name($1)
           ),
           format(
@@ -7846,10 +7881,6 @@ objects:
           ),
           format(
               'ALTER TABLE attribute_history.%I OWNER TO minerva_writer',
-              attribute_directory.to_table_name($1)
-          ),
-          format(
-              'GRANT SELECT ON TABLE attribute_history.%I TO minerva',
               attribute_directory.to_table_name($1)
           ),
           format(
@@ -10356,17 +10387,6 @@ objects:
                   notification_directory.table_name($1)
               ),
               format(
-                  'GRANT SELECT ON TABLE %I.%I TO minerva;',
-                  notification_directory.notification_store_schema(),
-                  notification_directory.table_name($1)
-              ),
-              format(
-                  'GRANT INSERT,DELETE,UPDATE '
-                  'ON TABLE %I.%I TO minerva_writer;',
-                  notification_directory.notification_store_schema(),
-                  notification_directory.table_name($1)
-              ),
-              format(
                   'CREATE INDEX %I ON %I.%I USING btree (timestamp);',
                   'idx_notification_' || notification_directory.table_name($1) || '_timestamp',
                   notification_directory.notification_store_schema(),
@@ -10411,17 +10431,6 @@ objects:
               ),
               format(
                   'ALTER TABLE %I.%I OWNER TO minerva_writer;',
-                  notification_directory.notification_store_schema(),
-                  notification_directory.staging_table_name($1)
-              ),
-              format(
-                  'GRANT SELECT ON TABLE %I.%I TO minerva;',
-                  notification_directory.notification_store_schema(),
-                  notification_directory.staging_table_name($1)
-              ),
-              format(
-                  'GRANT INSERT,DELETE,UPDATE '
-                  'ON TABLE %I.%I TO minerva_writer;',
                   notification_directory.notification_store_schema(),
                   notification_directory.staging_table_name($1)
               )
@@ -11456,8 +11465,7 @@ objects:
     source: |-
       SELECT ARRAY[
           format('CREATE OR REPLACE VIEW trigger_rule.%I AS %s', trigger.rule_view_name($1), $2),
-          format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.rule_view_name($1)),
-          format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.rule_view_name($1))
+          format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.rule_view_name($1))
       ];
 
 - function:
@@ -11573,8 +11581,7 @@ objects:
     source: |-
       SELECT ARRAY[
           trigger.kpi_view_sql($1, $2),
-          format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.kpi_view_name($1)),
-          format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.kpi_view_name($1))
+          format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.kpi_view_name($1))
       ];
 
 - function:
@@ -11750,7 +11757,6 @@ objects:
     source: |-
       SELECT trigger.action($1, format('CREATE OR REPLACE VIEW trigger_rule.%I AS %s', trigger.with_threshold_view_name($1), trigger.with_threshold_view_sql($1)));
       SELECT trigger.action($1, format('ALTER VIEW trigger_rule.%I OWNER TO minerva_admin', trigger.with_threshold_view_name($1)));
-      SELECT trigger.action($1, format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.with_threshold_view_name($1)));
 
 - function:
     name: drop_with_threshold_view_sql
@@ -11855,13 +11861,7 @@ objects:
     - data_type: trigger.rule
     source: "SELECT trigger.action($1, trigger.exception_weight_table_sql($1));\n\
       SELECT trigger.action($1, format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin',\
-      \ trigger.exception_weight_table_name($1)));\nSELECT trigger.action($1, format('GRANT\
-      \ SELECT ON trigger_rule.%I TO minerva', trigger.exception_weight_table_name($1)));\n\
-      SELECT trigger.action($1, format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I\
-      \ TO minerva_writer', trigger.exception_weight_table_name($1)));\nSELECT trigger.action(\n\
-      \t$1,\n\tformat(\n\t\t'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',\n\
-      \t\tpg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_weight_table_name($1)),\
-      \ 'id')\n\t)\n);"
+      \ trigger.exception_weight_table_name($1)));"
 
 - function:
     name: drop_exception_weight_table_sql
@@ -12049,19 +12049,6 @@ objects:
         'ALTER TABLE trigger_rule.%I OWNER TO minerva_admin',
         trigger.exception_threshold_table_name($1)
       ));
-      SELECT trigger.action($1, format(
-        'GRANT SELECT ON trigger_rule.%I TO minerva',
-        trigger.exception_threshold_table_name($1)
-      ));
-      SELECT trigger.action($1, format(
-        'GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer',
-        trigger.exception_threshold_table_name($1)
-      ));
-      SELECT trigger.action($1, format(
-        'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
-        pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_threshold_table_name($1)),
-        'id')
-      ));
 
 - function:
     name: set_thresholds_fn_name
@@ -12097,10 +12084,6 @@ objects:
       ));
       SELECT trigger.action($1, format(
           'ALTER VIEW trigger_rule.%I OWNER TO minerva_admin',
-          trigger.threshold_view_name($1)
-      ));
-      SELECT trigger.action($1, format(
-          'GRANT SELECT ON trigger_rule.%I TO minerva',
           trigger.threshold_view_name($1)
       ));
 
@@ -12230,10 +12213,6 @@ objects:
               trigger.weight_fn_sql($1, $2),
               format(
                   'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
-                  trigger.weight_fn_name($1), trigger.details_type_name($1)
-              ),
-              format(
-                  'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
                   trigger.weight_fn_name($1), trigger.details_type_name($1)
               )
           ]
@@ -12785,12 +12764,6 @@ objects:
     source: |-
       SELECT public.action($1, trigger.create_exception_threshold_table_sql($1, $2));
       SELECT public.action($1, format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_threshold_table_name($1)));
-      SELECT public.action($1, format('GRANT SELECT ON trigger_rule.%I TO minerva', trigger.exception_threshold_table_name($1)));
-      SELECT public.action($1, format('GRANT INSERT, UPDATE, DELETE ON trigger_rule.%I TO minerva_writer', trigger.exception_threshold_table_name($1)));
-      SELECT public.action($1, format(
-          'GRANT USAGE, SELECT ON SEQUENCE %s TO minerva_writer',
-          pg_get_serial_sequence(format('trigger_rule.%I', trigger.exception_threshold_table_name($1)), 'id')
-      ));
 
 #-------------------------------
 # Function <rule>_with_threshold
@@ -12890,10 +12863,6 @@ objects:
               ),
               format(
                   'ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin',
-                  trigger.with_threshold_fn_name($1)
-              ),
-              format(
-                  'GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva',
                   trigger.with_threshold_fn_name($1)
               )
           ]
@@ -12995,11 +12964,6 @@ objects:
                   'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
                   trigger.notification_message_fn_name($1),
                   trigger.details_type_name($1)
-              ),
-              format(
-                  'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
-                  trigger.notification_message_fn_name($1),
-                  trigger.details_type_name($1)
               )
           ]
       );
@@ -13090,11 +13054,6 @@ objects:
                   'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
                   trigger.notification_data_fn_name($1),
                   trigger.details_type_name($1)
-              ),
-              format(
-                  'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
-                  trigger.notification_data_fn_name($1),
-                  trigger.details_type_name($1)
               )
           ]
       );
@@ -13165,10 +13124,6 @@ objects:
           ),
           format(
               'ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin',
-              trigger.rule_fn_name($1)
-          ),
-          format(
-              'GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva',
               trigger.rule_fn_name($1)
           )
       ];
@@ -13261,8 +13216,7 @@ objects:
     source: |-
       SELECT ARRAY[
           trigger.notification_fn_sql($1),
-          format('ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin', trigger.notification_fn_name($1)),
-          format('GRANT EXECUTE ON FUNCTION trigger_rule.%I(timestamp with time zone) TO minerva', trigger.notification_fn_name($1))
+          format('ALTER FUNCTION trigger_rule.%I(timestamp with time zone) OWNER TO minerva_admin', trigger.notification_fn_name($1))
       ];
 
 - function:
