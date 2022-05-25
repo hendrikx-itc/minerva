@@ -2,7 +2,7 @@ BEGIN;
 
 SET minerva.trigger_mark_modified TO on;
 
-SELECT plan(7);
+SELECT plan(5);
 
 CALL attribute_directory.create_attribute_store(
     'created_triggers_ds',
@@ -39,30 +39,15 @@ SELECT is_empty(
     'modification entry should not have been added in advance'
 );
 
-INSERT INTO attribute_history.created_triggers_ds_created_triggers_et ("entity_id", "timestamp", "modified", "hash", "first_appearance", "x", "y") VALUES
+INSERT INTO attribute_history.created_triggers_ds_created_triggers_et ("entity_id", "timestamp", "modified", "first_appearance", "x", "y") VALUES
     (
         1,
         '2016-01-01 00:00:00',
         '2017-07-01 00:00:00',
-	'false_hash',
         '2016-01-01 00:00:00',
         17,
         'old'
     );
-
-SELECT set_hasnt(
-    $$SELECT hash FROM attribute_history.created_triggers_ds_created_triggers_et$$,
-    $$SELECT 'false_hash'::text AS hash FROM attribute_history.created_triggers_ds_created_triggers_et LIMIT 1$$,
-    'hash should be added after creation'
-);
-
-UPDATE attribute_history.created_triggers_ds_created_triggers_et SET hash = 'false_hash';
-
-SELECT set_hasnt(
-    $$SELECT hash FROM attribute_history.created_triggers_ds_created_triggers_et$$,
-    $$SELECT 'false_hash'::text AS hash FROM attribute_history.created_triggers_ds_created_triggers_et LIMIT 1$$,
-    'hash should be changed after update'
-);
 
 SELECT isnt_empty(
     $$SELECT modified FROM attribute_directory.attribute_store_modified$$,
