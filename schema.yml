@@ -605,6 +605,19 @@ objects:
       SELECT sum(t) FROM unnest($1) t;
 
 - function:
+    name: array_to_text
+    schema: public
+    return_type: text
+    language: sql
+    volatility: immutable
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: anyarray
+    source: |-
+      SELECT array_to_string($1, ',')
+
+- function:
     name: to_pdf
     schema: public
     return_type: integer[]
@@ -7279,6 +7292,23 @@ objects:
       SELECT (attribute_directory.to_table_name($1) || '_curr_ptr')::name;
 
 - function:
+    name: hash_query_part
+    schema: attribute_directory
+    return_type: text
+    language: sql
+    volatility: stable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: attribute_directory.attribute
+    source: |-
+      SELECT CASE
+        WHEN $1.data_type LIKE '%[]'
+        THEN format('array_to_text(%I)', $1.name)
+        ELSE format('%I::text', $1.name)
+      END;
+
+- function:
     name: hash_query
     schema: attribute_directory
     return_type: text
@@ -7294,8 +7324,8 @@ objects:
           THEN RETURN '''Q''';
         ELSE 
           RETURN 'md5(' ||
-            array_to_string(array_agg(format('(CASE WHEN %I IS NULL THEN '''' ELSE %I::text END)', name, name)), ' || ') ||
-            ')' FROM attribute_directory.attribute WHERE attribute_store_id = $1.id;
+            array_to_string(array_agg(format('(CASE WHEN %I IS NULL THEN '''' ELSE %s END)', name, attribute_directory.hash_query_part(a))), ' || ') ||
+            ')' FROM attribute_directory.attribute a WHERE attribute_store_id = $1.id;
         END IF;
       END;
  

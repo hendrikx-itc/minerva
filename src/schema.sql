@@ -393,6 +393,13 @@ SELECT sum(t) FROM unnest($1) t;
 $$ LANGUAGE sql IMMUTABLE STRICT;
 
 
+CREATE FUNCTION "public"."array_to_text"(anyarray)
+    RETURNS text
+AS $$
+SELECT array_to_string($1, ',')
+$$ LANGUAGE sql IMMUTABLE STRICT;
+
+
 CREATE FUNCTION "public"."to_pdf"(text)
     RETURNS integer[]
 AS $$
@@ -4423,6 +4430,17 @@ SELECT (attribute_directory.to_table_name($1) || '_curr_ptr')::name;
 $$ LANGUAGE sql STABLE;
 
 
+CREATE FUNCTION "attribute_directory"."hash_query_part"(attribute_directory.attribute)
+    RETURNS text
+AS $$
+SELECT CASE
+  WHEN $1.data_type LIKE '%[]'
+  THEN format('array_to_text(%I)', $1.name)
+  ELSE format('%I::text', $1.name)
+END;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION "attribute_directory"."hash_query"(attribute_directory.attribute_store)
     RETURNS text
 AS $$
@@ -4431,8 +4449,8 @@ BEGIN
     THEN RETURN '''Q''';
   ELSE 
     RETURN 'md5(' ||
-      array_to_string(array_agg(format('(CASE WHEN %I IS NULL THEN '''' ELSE %I::text END)', name, name)), ' || ') ||
-      ')' FROM attribute_directory.attribute WHERE attribute_store_id = $1.id;
+      array_to_string(array_agg(format('(CASE WHEN %I IS NULL THEN '''' ELSE %s END)', name, attribute_directory.hash_query_part(a))), ' || ') ||
+      ')' FROM attribute_directory.attribute a WHERE attribute_store_id = $1.id;
   END IF;
 END;
 $$ LANGUAGE plpgsql STABLE;
