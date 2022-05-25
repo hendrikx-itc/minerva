@@ -271,7 +271,7 @@ PREPARE second_try AS SELECT attribute_directory.create_attribute_store_prep(
 
 EXECUTE second_try;
 
-SELECT throws_like('second_try', '%already exists%', 'Trying to create an attribute store twice should create an error');
+SELECT throws_like('second_try', '%duplicate key value%', 'Trying to create an attribute store twice should create an error');
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -5736,12 +5736,14 @@ SELECT ARRAY[
         'CREATE FUNCTION attribute_history.%I(entity_id integer, timestamp with time zone)
 RETURNS integer
 AS $$
-    SELECT id
+  BEGIN
+    RETURN a.id
     FROM
-        attribute_history.%I
-    WHERE timestamp <= $2 AND entity_id = $1
-    ORDER BY timestamp DESC LIMIT 1;
-$$ LANGUAGE sql STABLE',
+        attribute_history.%I a
+    WHERE a.timestamp <= $2 AND a.entity_id = $1
+    ORDER BY a.timestamp DESC LIMIT 1;
+  END;
+$$ LANGUAGE plpgsql STABLE',
         attribute_directory.at_ptr_function_name($1),
         attribute_directory.to_table_name($1)
     ),
@@ -5795,13 +5797,15 @@ SELECT public.action(
         'CREATE FUNCTION attribute_history.%I(timestamp with time zone)
         RETURNS SETOF attribute_history.%I
         AS $$
-            SELECT a.*
+          BEGIN
+            RETURN QUERY SELECT a.*
             FROM
                 attribute_history.%I a
             JOIN
                 attribute_HISTORY.%I($1) at
-            ON at.id = a.id
-        $$ LANGUAGE sql STABLE;',
+            ON at.id = a.id;
+          END;
+        $$ LANGUAGE plpgsql STABLE;',
         attribute_directory.at_function_name($1),
         attribute_directory.to_table_name($1),
         attribute_directory.to_table_name($1),
@@ -5861,12 +5865,18 @@ SELECT ARRAY[
             'CREATE FUNCTION attribute_history.%I(entity_id integer, timestamp with time zone)
     RETURNS attribute_history.%I
 AS $$
-SELECT *
-FROM
-    attribute_history.%I
-WHERE id = attribute_history.%I($1, $2);
-$$ LANGUAGE sql STABLE;',
+DECLARE
+  result attribute_history.%I;
+BEGIN
+  SELECT *
+    FROM attribute_history.%I
+    WHERE id = attribute_history.%I($1, $2)
+  INTO result;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql STABLE;',
             attribute_directory.at_function_name($1),
+            attribute_directory.to_table_name($1),
             attribute_directory.to_table_name($1),
             attribute_directory.to_table_name($1),
             attribute_directory.at_ptr_function_name($1)
