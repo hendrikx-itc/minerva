@@ -7106,6 +7106,13 @@ SELECT ($1.name || '_exception_threshold')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
+CREATE FUNCTION "trigger"."notification_view_name"(trigger.rule)
+    RETURNS name
+AS $$
+SELECT ($1.name || '_notification')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
 CREATE FUNCTION "trigger"."get_rule"(name)
     RETURNS trigger.rule
 AS $$

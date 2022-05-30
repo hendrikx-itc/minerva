@@ -11410,6 +11410,19 @@ objects:
       SELECT ($1.name || '_exception_threshold')::name;
 
 - function:
+    name: notification_view_name
+    schema: trigger
+    return_type: name
+    language: sql
+    volatility: immutable
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trigger.rule
+    source: |-
+      SELECT ($1.name || '_notification')::name;
+
+- function:
     name: get_rule
     schema: trigger
     return_type: trigger.rule
