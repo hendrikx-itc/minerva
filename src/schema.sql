@@ -398,6 +398,7 @@ CREATE FUNCTION "public"."array_to_text"(anyarray)
 AS $$
 SELECT array_to_string($1, ',')
 $$ LANGUAGE sql IMMUTABLE STRICT;
+SELECT create_distributed_function('array_to_text(anyarray)');
 
 
 CREATE FUNCTION "public"."to_pdf"(text)
@@ -7186,7 +7187,11 @@ CREATE FUNCTION "trigger"."kpi_view_sql"(trigger.rule, "sql" text)
     RETURNS text
 AS $$
 SELECT format(
-    'CREATE OR REPLACE VIEW trigger_rule.%I AS %s',
+    'DROP VIEW IF EXISTS trigger_rule.%I',
+    "trigger".kpi_view_name($1)
+);
+SELECT format(
+    'CREATE VIEW trigger_rule.%I AS %s',
     "trigger".kpi_view_name($1), $2
 );
 $$ LANGUAGE sql IMMUTABLE;
@@ -7527,7 +7532,11 @@ CREATE FUNCTION "trigger"."set_thresholds"(trigger.rule, "exprs" text)
     RETURNS trigger.rule
 AS $$
 SELECT trigger.action($1, format(
-    'CREATE OR REPLACE VIEW trigger_rule.%I AS '
+    'DROP VIEW IF EXISTS  trigger_rule.%I',
+    trigger.threshold_view_name($1)
+));
+SELECT trigger.action($1, format(
+    'CREATE VIEW trigger_rule.%I AS '
     'SELECT %s',
     trigger.threshold_view_name($1),
     $2

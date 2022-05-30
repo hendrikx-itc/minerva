@@ -614,6 +614,8 @@ objects:
     secdef: false
     arguments:
     - data_type: anyarray
+    postqueries:
+    - query: create_distributed_function('array_to_text(anyarray)')
     source: |-
       SELECT array_to_string($1, ',')
 
@@ -11576,7 +11578,11 @@ objects:
       data_type: text
     source: |-
       SELECT format(
-          'CREATE OR REPLACE VIEW trigger_rule.%I AS %s',
+          'DROP VIEW IF EXISTS trigger_rule.%I',
+          "trigger".kpi_view_name($1)
+      );
+      SELECT format(
+          'CREATE VIEW trigger_rule.%I AS %s',
           "trigger".kpi_view_name($1), $2
       );
 
@@ -12115,7 +12121,11 @@ objects:
       data_type: text
     source: |-
       SELECT trigger.action($1, format(
-          'CREATE OR REPLACE VIEW trigger_rule.%I AS '
+          'DROP VIEW IF EXISTS  trigger_rule.%I',
+          trigger.threshold_view_name($1)
+      ));
+      SELECT trigger.action($1, format(
+          'CREATE VIEW trigger_rule.%I AS '
           'SELECT %s',
           trigger.threshold_view_name($1),
           $2
