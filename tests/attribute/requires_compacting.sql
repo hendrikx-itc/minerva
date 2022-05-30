@@ -2,6 +2,8 @@ BEGIN;
 
 SELECT plan(4);
 
+SELECT switch_off_citus();
+
 CALL attribute_directory.create_attribute_store('ds', 'type1');
 CALL attribute_directory.create_attribute_store('ds', 'type2');
 CALL attribute_directory.create_attribute_store('ds', 'type3');

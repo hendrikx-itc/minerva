@@ -2,6 +2,8 @@ BEGIN;
 
 SELECT plan(9);
 
+SELECT switch_off_citus();
+
 SET minerva.trigger_mark_modified TO on;
 
 CALL attribute_directory.create_attribute_store('ds2', 'type2', ARRAY[('x','integer','some column')]::attribute_directory.attribute_descr[]);

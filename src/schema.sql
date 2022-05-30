@@ -493,6 +493,15 @@ END;
 $$ LANGUAGE plpgsql VOLATILE;
 
 
+CREATE FUNCTION "public"."switch_off_citus"()
+    RETURNS void
+AS $function$
+CREATE OR REPLACE FUNCTION create_distributed_table(text, text) RETURNS VOID AS $$ SELECT 42; $$ LANGUAGE sql STABLE;
+CREATE OR REPLACE FUNCTION create_reference_table(text) RETURNS VOID AS $$ SELECT 42; $$ LANGUAGE sql STABLE;
+CREATE OR REPLACE FUNCTION create_distributed_function(text) RETURNS VOID AS $$ SELECT 42; $$ LANGUAGE sql STABLE;
+$function$ LANGUAGE sql VOLATILE;
+
+
 CREATE AGGREGATE first (anyelement) (
     sfunc = fst,
     stype = anyelement

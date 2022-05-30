@@ -772,6 +772,17 @@ objects:
           RAISE INFO '%', message;
       END;
 
+- function:
+    name: switch_off_citus
+    schema: public
+    return_type: void
+    language: sql
+    volatility: volatile
+    source: |-
+      CREATE OR REPLACE FUNCTION create_distributed_table(text, text) RETURNS VOID AS $$ SELECT 42; $$ LANGUAGE sql STABLE;
+      CREATE OR REPLACE FUNCTION create_reference_table(text) RETURNS VOID AS $$ SELECT 42; $$ LANGUAGE sql STABLE;
+      CREATE OR REPLACE FUNCTION create_distributed_function(text) RETURNS VOID AS $$ SELECT 42; $$ LANGUAGE sql STABLE;
+
 - aggregate:
     name: first
     schema: public
