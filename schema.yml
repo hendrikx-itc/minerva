@@ -49,6 +49,7 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "directory"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -69,8 +70,9 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "entity"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT ON tables TO "minerva"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -91,8 +93,9 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "alias"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT ON tables TO "minerva"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)      
 
 - schema:
@@ -107,6 +110,7 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "alias_directory"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -126,8 +130,9 @@ objects:
       objclass: tables
       privilege: SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "relation"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT ON tables TO "minerva"; $$)
 
 - schema:
     name: relation_directory
@@ -136,6 +141,7 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "relation_directory"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -154,8 +160,9 @@ objects:
       objclass: tables
       privilege: SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "trend"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT ON tables TO "minerva"; $$)
 
 - schema:
     name: trend_partition
@@ -173,8 +180,9 @@ objects:
       objclass: tables
       privilege: SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "trend_partition"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT ON tables TO "minerva"; $$)
 
 - schema:
     name: trend_directory
@@ -203,8 +211,9 @@ objects:
       objclass: tables
       privilege: SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "attribute"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT ALL ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva"; $$)
 
 - schema:
     name: attribute_base
@@ -221,8 +230,9 @@ objects:
       objclass: tables
       privilege: SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "attribute_base"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT ALL ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva"; $$)
 
 - schema:
     name: attribute_directory
@@ -236,6 +246,7 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "attribute_directory"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -256,8 +267,9 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "attribute_history"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT ALL ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT SELECT ON tables TO "minerva"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -275,8 +287,9 @@ objects:
       objclass: tables
       privilege: SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "attribute_staging"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT ON tables TO "minerva"; $$)
 
 - schema:
     name: notification
@@ -299,8 +312,9 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "notification"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT ALL ON tables TO "minerva_writer"; $$)
-    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT SELECT ON tables TO "minerva_writer"; $$)
+    - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT SELECT ON tables TO "minerva"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -316,6 +330,7 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "notification_directory"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -350,6 +365,7 @@ objects:
       objclass: sequences
       privilege: USAGE,SELECT
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "trigger"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$)
 
 - schema:
@@ -376,6 +392,7 @@ objects:
       objclass: functions
       privilege: EXECUTE
     postqueries:
+    - query: run_command_on_workers($$ CREATE SCHEMA "trigger_rule"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT SELECT ON tables TO "minerva"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT ALL ON tables TO "minerva_admin"; $$)
     - query: run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$)

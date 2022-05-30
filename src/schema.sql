@@ -52,6 +52,7 @@ COMMENT ON SCHEMA "directory" IS 'Stores contextual information for the data. Th
 GRANT USAGE ON SCHEMA "directory" TO "minerva";
 ALTER DEFAULT PRIVILEGES IN SCHEMA "directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "directory"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -64,8 +65,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT ON tables TO "minerva";
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "entity"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT SELECT ON tables TO "minerva"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "entity" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -78,8 +80,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT,UPDATE,DELETE ON tables 
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "alias"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT SELECT ON tables TO "minerva"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -88,6 +91,7 @@ GRANT USAGE,CREATE ON SCHEMA "alias_directory" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "alias_directory" TO "minerva";
 ALTER DEFAULT PRIVILEGES IN SCHEMA "alias_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "alias_directory"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "alias_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -100,13 +104,15 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT,INSERT,UPDATE,DELETE 
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT ON tables TO "minerva";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "relation"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation" GRANT SELECT ON tables TO "minerva"; $$);
 
 
 CREATE SCHEMA IF NOT EXISTS "relation_directory";
 ALTER DEFAULT PRIVILEGES IN SCHEMA "relation_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "relation_directory"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "relation_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -118,8 +124,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT,INSERT,UPDATE,DELETE ON 
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT ON tables TO "minerva";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "trend"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend" GRANT SELECT ON tables TO "minerva"; $$);
 
 
 CREATE SCHEMA IF NOT EXISTS "trend_partition";
@@ -130,8 +137,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT,INSERT,UPDATE,
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT ON tables TO "minerva";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "trend_partition"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trend_partition" GRANT SELECT ON tables TO "minerva"; $$);
 
 
 CREATE SCHEMA IF NOT EXISTS "trend_directory";
@@ -148,8 +156,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute" GRANT ALL ON tables TO "minerva_w
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute" GRANT SELECT ON tables TO "minerva";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "attribute"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT ALL ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva"; $$);
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute_base";
@@ -159,8 +168,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT ALL ON tables TO "mine
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "attribute_base"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT ALL ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_base" GRANT SELECT ON tables TO "minerva"; $$);
 
 
 CREATE SCHEMA IF NOT EXISTS "attribute_directory";
@@ -168,6 +178,7 @@ GRANT USAGE,CREATE ON SCHEMA "attribute_directory" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "attribute_directory" TO "minerva";
 ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "attribute_directory"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -180,8 +191,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT SELECT ON tables TO
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "attribute_history"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT ALL ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT SELECT ON tables TO "minerva"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_history" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -192,8 +204,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT,INSERT,UPDAT
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT ON tables TO "minerva";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "attribute_staging"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "attribute_staging" GRANT SELECT ON tables TO "minerva"; $$);
 
 
 CREATE SCHEMA IF NOT EXISTS "notification";
@@ -207,8 +220,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT SELECT ON tables TO "min
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "notification"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT ALL ON tables TO "minerva_writer"; $$);
-SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT SELECT ON tables TO "minerva_writer"; $$);
+SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT SELECT ON tables TO "minerva"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -218,6 +232,7 @@ GRANT USAGE,CREATE ON SCHEMA "notification_directory" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "notification_directory" TO "minerva";
 ALTER DEFAULT PRIVILEGES IN SCHEMA "notification_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "notification_directory"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "notification_directory" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -239,6 +254,7 @@ GRANT USAGE,CREATE ON SCHEMA "trigger" TO "minerva_writer";
 GRANT USAGE ON SCHEMA "trigger" TO "minerva";
 ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger" GRANT USAGE,SELECT ON sequences TO "minerva_writer";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "trigger"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger" GRANT USAGE,SELECT ON sequences TO "minerva_writer"; $$);
 
 
@@ -255,6 +271,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT USAGE,SELECT ON sequence
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT EXECUTE ON functions TO "minerva";
 
+SELECT run_command_on_workers($$ CREATE SCHEMA "trigger_rule"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT SELECT ON tables TO "minerva"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT ALL ON tables TO "minerva_admin"; $$);
 SELECT run_command_on_workers($$ ALTER DEFAULT PRIVILEGES IN SCHEMA "trigger_rule" GRANT SELECT,INSERT,UPDATE,DELETE ON tables TO "minerva_writer"; $$);
