@@ -5041,7 +5041,6 @@ CREATE FUNCTION "attribute_directory"."create_staging_modified_view_sql"(attribu
 AS $$
 DECLARE
     table_name name;
-    staging_table_name name;
     view_name name;
 BEGIN
     table_name = attribute_directory.to_table_name($1);
@@ -6553,7 +6552,8 @@ SELECT ARRAY[
             '  id serial PRIMARY KEY,'
             '  entity_id integer NOT NULL,'
             '  "timestamp" timestamp with time zone NOT NULL'
-            '%s'
+            '  %s,'
+            '  data json'
             ');',
             notification_directory.notification_store_schema(),
             notification_directory.table_name($1),
@@ -6589,7 +6589,8 @@ SELECT ARRAY[
             'CREATE TABLE %I.%I ('
             '  entity_id integer NOT NULL,'
             '  "timestamp" timestamp with time zone NOT NULL'
-            '%s'
+            '  %s,'
+            '  data json'
             ');',
             notification_directory.notification_store_schema(),
             notification_directory.staging_table_name($1),
