@@ -6446,6 +6446,21 @@ objects:
       END;
 
 - function:
+    name: materialize
+    schema: trend_directory
+    return_type: trend_directory.transfer_result
+    language: sql
+    volatility: volatile
+    strict: false
+    secdef: false
+    arguments:
+    - data_type: trend_directory.materialization
+    - name: timestamp
+      data_type: timestamp with time zone
+    source: |-
+      SELECT trend_directory.materialize($1.id, $2);
+
+- function:
     name: show_trends
     schema: trend_directory
     return_type: trend_directory.trend_descr

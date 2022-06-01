@@ -3996,6 +3996,13 @@ COMMENT ON FUNCTION "trend_directory"."materialize"("materialization_id" integer
 ';
 
 
+CREATE FUNCTION "trend_directory"."materialize"(trend_directory.materialization, "timestamp" timestamp with time zone)
+    RETURNS trend_directory.transfer_result
+AS $$
+SELECT trend_directory.materialize($1.id, $2);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "trend_directory"."show_trends"("trend_store_part_id" integer)
     RETURNS SETOF trend_directory.trend_descr
 AS $$
