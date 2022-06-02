@@ -6021,7 +6021,7 @@ SELECT public.action(
         format('SELECT attribute_directory.drop_curr_view(%s)', $1),
         format('SELECT attribute_directory.drop_run_length_view(%s)', $1),
         format('SELECT attribute_directory.drop_changes_view(%s)', $1),
-        format('ALTER TABLE attribute_history.%I DROP COLUMN hash', attribute_directory.attribute_store_to_char($1.id))
+        format('ALTER TABLE attribute_history.%I DROP COLUMN hash CASCADE', attribute_directory.attribute_store_to_char($1.id))
     ]
 );
 $$ LANGUAGE sql VOLATILE;
@@ -6111,12 +6111,12 @@ SELECT public.action(
     $1,
     ARRAY[
         format('SELECT attribute_directory.drop_hash(%s::attribute_directory.attribute_store)', $1),
-        format('ALTER TABLE attribute_base.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+        format('ALTER TABLE attribute_base.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
         format('SELECT attribute_directory.add_hash(%s::attribute_directory.attribute_store)', $1),
-        format('ALTER TABLE attribute_history.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
-        format('ALTER TABLE attribute_history.%I DROP COLUMN %I', attribute_directory.compacted_tmp_table_name($1), $2),
+        format('ALTER TABLE attribute_history.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
+        format('ALTER TABLE attribute_history.%I DROP COLUMN %I CASCADE', attribute_directory.compacted_tmp_table_name($1), $2),
         format('SELECT attribute_directory.drop_staging_dependees(%s)', $1),
-        format('ALTER TABLE attribute_staging.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+        format('ALTER TABLE attribute_staging.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
         format('SELECT attribute_directory.add_staging_dependees(%s)', $1)
     ]
 );
@@ -6293,21 +6293,6 @@ AS $$
 SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.entity_type_id = $1.id;
 DELETE FROM directory.entity_type WHERE id = $1.id;
 $$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "directory"."cleanup_on_data_source_delete"("data_source_id" integer)
-    RETURNS void
-AS $$
-SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = id;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "directory"."delete_data_source"(text)
-    RETURNS directory.data_source
-AS $$
-SELECT directory.cleanup_on_data_source_delete(s.id) FROM directory.data_source s WHERE s.name = $1;
-DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
-$$ LANGUAGE sql VOLATILE STRICT;
 
 
 CREATE VIEW "attribute_directory"."dependencies" AS
@@ -6916,15 +6901,20 @@ CREATE CAST ("notification_directory"."notification_store" AS text)
   WITH FUNCTION "notification_directory"."to_char"("notification_directory"."notification_store");
 
 
-CREATE FUNCTION "notification_directory"."cleanup_on_data_source_delete"()
-    RETURNS trigger
+CREATE FUNCTION "directory"."cleanup_on_data_source_delete"("data_source_id" integer)
+    RETURNS void
 AS $$
-BEGIN
-    DELETE FROM notification_directory.notification_store WHERE data_source_id = OLD.id;
+SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = id;
+DELETE FROM notification_directory.notification_store WHERE data_source_id = $1;
+$$ LANGUAGE sql VOLATILE;
 
-    RETURN OLD;
-END;
-$$ LANGUAGE plpgsql VOLATILE;
+
+CREATE FUNCTION "directory"."delete_data_source"(text)
+    RETURNS directory.data_source
+AS $$
+SELECT directory.cleanup_on_data_source_delete(s.id) FROM directory.data_source s WHERE s.name = $1;
+DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
+$$ LANGUAGE sql VOLATILE STRICT;
 
 
 CREATE FUNCTION "virtual_entity"."update"("name" name)

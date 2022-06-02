@@ -9624,7 +9624,7 @@ objects:
                 format('SELECT attribute_directory.drop_curr_view(%s)', $1),
                 format('SELECT attribute_directory.drop_run_length_view(%s)', $1),
                 format('SELECT attribute_directory.drop_changes_view(%s)', $1),
-                format('ALTER TABLE attribute_history.%I DROP COLUMN hash', attribute_directory.attribute_store_to_char($1.id))
+                format('ALTER TABLE attribute_history.%I DROP COLUMN hash CASCADE', attribute_directory.attribute_store_to_char($1.id))
             ]
         );
 
@@ -9748,12 +9748,12 @@ objects:
           $1,
           ARRAY[
               format('SELECT attribute_directory.drop_hash(%s::attribute_directory.attribute_store)', $1),
-              format('ALTER TABLE attribute_base.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+              format('ALTER TABLE attribute_base.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
               format('SELECT attribute_directory.add_hash(%s::attribute_directory.attribute_store)', $1),
-              format('ALTER TABLE attribute_history.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
-              format('ALTER TABLE attribute_history.%I DROP COLUMN %I', attribute_directory.compacted_tmp_table_name($1), $2),
+              format('ALTER TABLE attribute_history.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
+              format('ALTER TABLE attribute_history.%I DROP COLUMN %I CASCADE', attribute_directory.compacted_tmp_table_name($1), $2),
               format('SELECT attribute_directory.drop_staging_dependees(%s)', $1),
-              format('ALTER TABLE attribute_staging.%I DROP COLUMN %I', attribute_directory.to_char($1), $2),
+              format('ALTER TABLE attribute_staging.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
               format('SELECT attribute_directory.add_staging_dependees(%s)', $1)
           ]
       );
@@ -10015,34 +10015,6 @@ objects:
     source: |-
       SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.entity_type_id = $1.id;
       DELETE FROM directory.entity_type WHERE id = $1.id;
-
-- function:
-    name: cleanup_on_data_source_delete
-    schema: directory
-    return_type: void
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-      - data_type: integer
-        name: data_source_id
-    source: |-
-      SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = id;
-
-- function:
-    name: delete_data_source
-    schema: directory
-    return_type: directory.data_source
-    language: sql
-    volatility: volatile
-    strict: true
-    secdef: false
-    arguments:
-    - data_type: text
-    source: |-
-      SELECT directory.cleanup_on_data_source_delete(s.id) FROM directory.data_source s WHERE s.name = $1;
-      DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
 
 - view:
     name: dependencies
@@ -11029,19 +11001,32 @@ objects:
 
 - function:
     name: cleanup_on_data_source_delete
-    schema: notification_directory
-    return_type: trigger
-    language: plpgsql
+    schema: directory
+    return_type: void
+    language: sql
     volatility: volatile
     strict: false
     secdef: false
-    arguments: []
+    arguments:
+      - data_type: integer
+        name: data_source_id
     source: |-
-      BEGIN
-          DELETE FROM notification_directory.notification_store WHERE data_source_id = OLD.id;
+      SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = id;
+      DELETE FROM notification_directory.notification_store WHERE data_source_id = $1;
 
-          RETURN OLD;
-      END;
+- function:
+    name: delete_data_source
+    schema: directory
+    return_type: directory.data_source
+    language: sql
+    volatility: volatile
+    strict: true
+    secdef: false
+    arguments:
+    - data_type: text
+    source: |-
+      SELECT directory.cleanup_on_data_source_delete(s.id) FROM directory.data_source s WHERE s.name = $1;
+      DELETE FROM directory.data_source WHERE name = $1 RETURNING *;
 
 - function:
     name: update
