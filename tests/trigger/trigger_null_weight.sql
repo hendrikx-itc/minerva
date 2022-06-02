@@ -21,22 +21,20 @@ GRANT SELECT ON TABLE trend."vtransform-accessibility-cell_qtr" TO minerva;
 CREATE TYPE trigger_rule."3G/quarterly/badCssrSpeech_kpi" AS (
    entity_id integer,
    timestamp timestamp with time zone,
-   Drops numeric,
-   CSSRSpeech numeric
+   "Drops" numeric,
+   "CSSRSpeech" numeric
 );
 
 CREATE FUNCTION trigger_rule."3G/quarterly/badCssrSpeech_kpi"(timestamp with time zone)
   RETURNS SETOF trigger_rule."3G/quarterly/badCssrSpeech_kpi"
   AS $$
-      BEGIN
-	RETURN QUERY SELECT entity_id, timestamp, "Drops", "CSSRSpeech"
-	FROM trend."vtransform-accessibility-cell_qtr";
-      END;
-     $$ LANGUAGE plpgsql STABLE;
+	SELECT entity_id, timestamp, "Drops"::numeric, "CSSRSpeech"::numeric
+	  FROM trend."vtransform-accessibility-cell_qtr";
+     $$ LANGUAGE sql STABLE;
 
 SELECT trigger.create_rule(
   '3G/quarterly/badCssrSpeech',
-  ARRAY[('Drops', 'numeric'), ('CSSRSpeech', 'numeric'), ('threshold_Drops', 'numeric'), ('threshold_CSSRSpeech', 'numeric')]::trigger.threshold_def[]
+  ARRAY[('threshold_Drops', 'numeric'), ('threshold_CSSRSpeech', 'numeric')]::trigger.threshold_def[]
 );
 
 -- SELECT trigger.create_rule(
