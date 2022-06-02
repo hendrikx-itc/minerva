@@ -10,24 +10,29 @@ SELECT * FROM (
 	VALUES
 	((entity."to_Cell"('4321')).id, '2014-03-06 14:00+01'::timestamp with time zone, 34, 0.99),
 	((entity."to_Cell"('4322')).id, '2014-03-06 14:00+01'::timestamp with time zone, 44, 0.94)
-) dummy_values(entity_id, timesxsxtamp, "Drops", "CCRSpeech");
+) dummy_values(entity_id, timestamp, "Drops", "CCRSpeech");
 
 ALTER VIEW trend."vtransform-retainability-cell_qtr" OWNER TO minerva_admin;
 GRANT SELECT ON TABLE trend."vtransform-retainability-cell_qtr" TO minerva;
 
+CREATE TYPE trigger_rule."3G/quarterly/badCcrSpeech_kpi" AS (
+   entity_id integer,
+   timestamp timestamp with time zone,
+   "Drops" numeric,
+   "CCRSpeech" numeric
+);
+
+CREATE FUNCTION trigger_rule."3G/quarterly/badCcrSpeech_kpi"(timestamp with time zone)
+  RETURNS SETOF trigger_rule."3G/quarterly/badCcrSpeech_kpi"
+  AS $$
+	SELECT entity_id, timestamp, "Drops"::numeric, "CCRSpeech"::numeric
+	  FROM trend."vtransform-retainability-cell_qtr";
+     $$ LANGUAGE sql STABLE;
 
 SELECT trigger.create_rule(
-	'3G/quarterly/badCcrSpeech',
-$$
-	SELECT entity_id, timestamp, "Drops", "CCRSpeech"
-	FROM trend."vtransform-retainability-cell_qtr" 
-$$,
-ARRAY['Drops', 'CCRSpeech'],
-$$
-	"Drops" > "threshold_Drops" AND
-	"CCRSpeech" < "threshold_CCRSpeech"
-$$);
-
+  '3G/quarterly/badCcrSpeech',
+  ARRAY[('threshold_Drops', 'numeric'), ('threshold_CCRSpeech', 'numeric')]::trigger.threshold_def[]
+);
 
 SELECT trigger.set_thresholds(
 	'3G/quarterly/badCcrSpeech',
@@ -44,7 +49,7 @@ $$
 $$);
 
 
-SELECT trigger.define_notification(
+SELECT trigger.define_notification_message(
 	'3G/quarterly/badCcrSpeech',
 $$
 	format('CCR Speech: %s', trim(to_char($1."CCRSpeech" * 100, '999D99')))
