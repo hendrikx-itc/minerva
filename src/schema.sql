@@ -6112,9 +6112,9 @@ SELECT public.action(
     ARRAY[
         format('SELECT attribute_directory.drop_hash(%s::attribute_directory.attribute_store)', $1),
         format('ALTER TABLE attribute_base.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
-        format('SELECT attribute_directory.add_hash(%s::attribute_directory.attribute_store)', $1),
         format('ALTER TABLE attribute_history.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
         format('ALTER TABLE attribute_history.%I DROP COLUMN %I CASCADE', attribute_directory.compacted_tmp_table_name($1), $2),
+        format('SELECT attribute_directory.add_hash(%s::attribute_directory.attribute_store)', $1),
         format('SELECT attribute_directory.drop_staging_dependees(%s)', $1),
         format('ALTER TABLE attribute_staging.%I DROP COLUMN %I CASCADE', attribute_directory.to_char($1), $2),
         format('SELECT attribute_directory.add_staging_dependees(%s)', $1)
