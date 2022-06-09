@@ -1,6 +1,8 @@
 BEGIN;
 
-SELECT plan(21);
+SELECT plan(17);
+
+SELECT switch_off_citus();
 
 CALL attribute_directory.create_attribute_store(
     'created_views_ds',
@@ -160,11 +162,10 @@ SELECT bag_eq(
     'staging-modified should only contain timestamps where data has already been included, whether changed or unchanged'
 );
 
-INSERT INTO attribute_history.created_views_ds_created_views_et_curr_ptr ("entity_id", "timestamp") VALUES
-    (1, '2017-01-01 00:00:00');
-INSERT INTO attribute_history.created_views_ds_created_views_et_curr_ptr ("entity_id", "timestamp") VALUES
-    (2, '2016-02-01 00:00:00');
-
+INSERT INTO attribute_history.created_views_ds_created_views_et_curr_ptr (id)
+    SELECT id FROM attribute_history.created_views_ds_created_views_et WHERE entity_id = 1 AND timestamp = '2017-01-01 00:00:00';
+INSERT INTO attribute_history.created_views_ds_created_views_et_curr_ptr (id)
+    SELECT id FROM attribute_history.created_views_ds_created_views_et WHERE entity_id = 2 AND timestamp = '2016-02-01 00:00:00';
 
 SELECT bag_eq(
     $$SELECT x FROM attribute.created_views_ds_created_views_et WHERE entity_id = 1$$,
@@ -176,35 +177,6 @@ SELECT bag_eq(
     $$SELECT x FROM attribute.created_views_ds_created_views_et WHERE entity_id = 2$$,
     ARRAY[3],
     'current attribute view should follow curr_ptr even if it does not have most recent value'
-);
-
-UPDATE attribute_history.created_views_ds_created_views_et_curr_ptr SET timestamp = '2018-01-01 00:00:00'::timestamp WHERE entity_id = 1;
-
-SELECT bag_eq(
-    $$SELECT x FROM attribute.created_views_ds_created_views_et WHERE entity_id = 1$$,
-    ARRAY[]::integer[],
-    'current attribute view should give no data when curr_ptr points to time without data'
-);
-
-SELECT bag_eq(
-    $$SELECT entity_id FROM attribute_history.created_views_ds_created_views_et_compacted$$,
-    ARRAY[1],
-    'compacted history only contains runs of length > 1'
-);
-
-SELECT bag_eq(
-    $$SELECT timestamp FROM attribute_history.created_views_ds_created_views_et_compacted$$,
-    ARRAY['2016-12-31 23:00:00'::timestamp],
-    'compacted history uses start date as date'
-);
-
-SELECT bag_eq(
-    $$SELECT timestamp FROM attribute_history.created_views_ds_created_views_et_curr_selection$$,
-    ARRAY[
-        '2017-01-01 00:00:00'::timestamp,
-	'2017-02-01 00:00:00'::timestamp
-	],
-    'curr_selection should give last date for each entity'
 );
 
 SELECT attribute_directory.delete_attribute_store(

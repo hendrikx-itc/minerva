@@ -2,6 +2,8 @@ BEGIN;
 
 SELECT plan(19);
 
+SELECT switch_off_citus();
+
 CALL attribute_directory.create_attribute_store(
     'created_function_ds',
     'created_functions_et',
@@ -47,7 +49,7 @@ INSERT INTO attribute_history.created_function_ds_created_functions_et ("entity_
         5,
         'new'
     );
-	
+
 SELECT has_function(
     'attribute_history',
     'created_function_ds_created_functions_et_at_ptr',
@@ -95,14 +97,14 @@ SELECT has_function(
 );
 
 SELECT results_eq('SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et
-                   WHERE id = attribute_history.created_function_ds_created_functions_et_at_ptr(1, ''2018-01-01 00:00:00'')::timestamp',
-    '2017-01-01 00:00:00'::timestamp,
+                   WHERE id = attribute_history.created_function_ds_created_functions_et_at_ptr(1, ''2018-01-01 00:00:00''::timestamp)',
+    ARRAY['2017-01-01 00:00:00']::timestamp[],
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give latest timestamp if used with more recent time'
 );
 
 SELECT results_eq('SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et
-                   WHERE id = attribute_history.created_function_ds_created_functions_et_at_ptr(1,''2016-08-01 00:00:00'')::timestamp',
-    '2016-01-01 00:00:00'::timestamp,
+                   WHERE id = attribute_history.created_function_ds_created_functions_et_at_ptr(1,''2016-08-01 00:00:00''::timestamp)',
+    ARRAY['2016-01-01 00:00:00']::timestamp[],
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give older timestamp if used with older time'
 );
 

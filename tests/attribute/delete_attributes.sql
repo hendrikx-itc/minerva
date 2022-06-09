@@ -154,7 +154,7 @@ SELECT hasnt_view('attribute_history', 'ds2_type2_curr_selection', 'curr selecti
 SELECT hasnt_view('attribute', 'ds2_type2', 'curr view should have been deleted');
 SELECT hasnt_view('attribute_history', 'ds2_type2_compacted', 'compacted view should have been deleted');
 
-SELECT attribute_directory.delete_attribute_store(as) FROM attribute_directory.attribute_store as;
+SELECT attribute_directory.delete_attribute_store(atstore) FROM attribute_directory.attribute_store atstore;
 
 SELECT hasnt_table('attribute_base', 'ds1_type1', 'base table should have been deleted');
 SELECT hasnt_function('attribute_history', 'ds1_type1_at_ptr', 'pointer function should have been deleted');
