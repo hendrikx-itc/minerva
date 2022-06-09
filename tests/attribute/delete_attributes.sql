@@ -108,6 +108,7 @@ SELECT columns_are(
     'attribute',
     'ds1_type1',
     ARRAY[
+        'id',
         'entity_id',
 	'timestamp',
 	'modified',
