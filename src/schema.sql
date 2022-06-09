@@ -6904,7 +6904,7 @@ CREATE CAST ("notification_directory"."notification_store" AS text)
 CREATE FUNCTION "directory"."cleanup_on_data_source_delete"("data_source_id" integer)
     RETURNS void
 AS $$
-SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = id;
+SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = $1;
 DELETE FROM notification_directory.notification_store WHERE data_source_id = $1;
 $$ LANGUAGE sql VOLATILE;
 

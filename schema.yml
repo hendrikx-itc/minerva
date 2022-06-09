@@ -11011,7 +11011,7 @@ objects:
       - data_type: integer
         name: data_source_id
     source: |-
-      SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = id;
+      SELECT attribute_directory.delete_attribute_store(s.id) FROM attribute_directory.attribute_store s WHERE s.data_source_id = $1;
       DELETE FROM notification_directory.notification_store WHERE data_source_id = $1;
 
 - function:
