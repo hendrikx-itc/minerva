@@ -24,7 +24,7 @@ CREATE TYPE trigger_rule."test-rule_kpi" AS (
 CREATE FUNCTION trigger_rule."test-rule_kpi"(timestamp with time zone)
   RETURNS SETOF trigger_rule."test-rule_kpi"
   AS $$
-    SELECT entity_id, timestamp, "sales"
+    SELECT entity_id, timestamp, "sales"::numeric
       FROM trend."global_sales_day";
   $$ LANGUAGE sql STABLE;
 
@@ -59,6 +59,8 @@ SELECT trigger.define_notification_message('test-rule', '''test-rule fired''');
 --$$
 --    "sales" < "threshold_sales"
 --$$);
+
+INSERT INTO directory.tag_group(name, complementary) VALUES ('default', false);
 
 INSERT INTO directory.tag(name, tag_group_id)
 SELECT 'LTE', id FROM directory.tag_group WHERE name = 'default';
