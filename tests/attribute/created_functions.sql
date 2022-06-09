@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(19);
+SELECT plan(16);
 
 SELECT switch_off_citus();
 
@@ -63,8 +63,8 @@ SELECT bag_eq(
     $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2018-01-01 00:00:00') ptr
       JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[
-        '2017-01-01 00:00:00'::timestamp,
-	'2017-02-01 00:00:00'::timestamp
+        '2017-01-01 00:00:00+00'::timestamptz,
+	'2017-02-01 00:00:00+00'::timestamptz
 	],
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give latest timestamps if used with more recent time'
 );
@@ -73,8 +73,8 @@ SELECT bag_eq(
     $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2016-08-01 00:00:00') ptr
       JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[
-        '2016-01-01 00:00:00'::timestamp,
-	'2016-02-01 00:00:00'::timestamp
+        '2016-01-01 00:00:00+00'::timestamptz,
+	'2016-02-01 00:00:00+00'::timestamptz
 	],
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give older timestamps if used with older time'
 );
@@ -82,7 +82,7 @@ SELECT bag_eq(
 SELECT bag_eq(
     $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2015-01-01 00:00:00') ptr
       JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
-    ARRAY[]::timestamp[],
+    ARRAY[]::timestamptz[],
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give no result if used with too old timestamp'
 );
 
@@ -166,38 +166,6 @@ SELECT is(attribute_history.created_function_ds_created_functions_et_at(1,'2015-
     null,
     'attribute_history.created_function_ds_created_functions_et_at should give no result when using too old date'
 );
-
-SELECT has_function(
-    'attribute_history',
-    'values_hash',
-    ARRAY[
-	'attribute_history.created_function_ds_created_functions_et'
-	],
-    'values_hash should be defined'
-);
-
-SELECT function_returns(
-    'attribute_history',
-    'values_hash',
-    ARRAY[
-	'attribute_history.created_function_ds_created_functions_et'
-	],
-    'text'
-);
-
-SELECT attribute_directory.delete_attribute_store(
-    attribute_directory.get_attribute_store('created_function_ds', 'created_functions_et')
-    );
-
-SELECT hasnt_function(
-    'attribute_history'
-    'values_hash',
-    ARRAY[
-	'attribute_history.created_function_ds_created_functions_et'
-	],
-    'values_hash should be removed'
-);
-    
 
 SELECT * FROM finish();
 ROLLBACK;
