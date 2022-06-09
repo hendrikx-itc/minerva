@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(37);
+SELECT plan(36);
 
 CALL attribute_directory.create_attribute_store(
     'ds1',
@@ -52,6 +52,7 @@ SELECT columns_are(
     ARRAY[
         'entity_id',
 	'timestamp',
+	'end',
 	'x',
 	'y'
     ],
@@ -73,6 +74,7 @@ SELECT columns_are(
     ARRAY[
         'entity_id',
 	'timestamp',
+	'end',
 	'y'
     ],
     'column should be deleted from attribute base'
@@ -84,6 +86,7 @@ SELECT columns_are(
     ARRAY[
         'entity_id',
 	'timestamp',
+	'end',
 	'y'
     ],
     'column should be deleted from staging new view'
@@ -91,10 +94,11 @@ SELECT columns_are(
 
 SELECT columns_are(
     'attribute_staging',
-    'ds1_type1_new',
+    'ds1_type1_modified',
     ARRAY[
         'entity_id',
 	'timestamp',
+	'end',
 	'y'
     ],
     'column should be deleted from staging modified view'
@@ -109,6 +113,7 @@ SELECT columns_are(
 	'modified',
 	'hash',
 	'first_appearance',
+	'end',
 	'y'
     ],
     'column should be deleted from attribute view'
@@ -118,11 +123,13 @@ SELECT columns_are(
     'attribute_history',
     'ds1_type1_compacted',
     ARRAY[
+	'id',
         'entity_id',
 	'timestamp',
 	'end',
 	'modified',
 	'hash',
+	'first_appearance',
 	'y'
     ],
     'column should be deleted from compacted view'
@@ -146,10 +153,7 @@ SELECT hasnt_view('attribute_history', 'ds2_type2_curr_selection', 'curr selecti
 SELECT hasnt_view('attribute', 'ds2_type2', 'curr view should have been deleted');
 SELECT hasnt_view('attribute_history', 'ds2_type2_compacted', 'compacted view should have been deleted');
 
-SELECT lives_ok(
-    $$ DELETE FROM attribute_directory.attribute_store; $$,
-    'Deletion of attribute stores should be possible'
-);
+SELECT attribute_directory.delete_attribute_store(as) FROM attribute_directory.attribute_store as;
 
 SELECT hasnt_table('attribute_base', 'ds1_type1', 'base table should have been deleted');
 SELECT hasnt_function('attribute_history', 'ds1_type1_at_ptr', 'pointer function should have been deleted');

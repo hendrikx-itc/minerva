@@ -10,20 +10,20 @@ CALL attribute_directory.create_attribute_store('ds', 'type3');
 CALL attribute_directory.create_attribute_store('ds', 'type4');
 
 INSERT INTO attribute_history.ds_type1(entity_id, timestamp) VALUES
-    ((entity.to_type1('entity1')).id, now());
+    ((entity.to_type1('entity1')).id, '2018-01-01 00:00:00');
 INSERT INTO attribute_history.ds_type1(entity_id, timestamp) VALUES
-    ((entity.to_type1('entity2')).id, now());
+    ((entity.to_type1('entity2')).id, '2018-01-01 00:00:00');
 INSERT INTO attribute_history.ds_type1(entity_id, timestamp) VALUES
-    ((entity.to_type1('entity3')).id, now());
+    ((entity.to_type1('entity3')).id, '2018-01-01 00:00:00');
 
 SELECT attribute_directory.compact(attribute_directory.get_attribute_store('ds', 'type1'), 0);
 SELECT attribute_directory.compact(attribute_directory.get_attribute_store('ds', 'type2'), 0);
 
 
 INSERT INTO attribute_history.ds_type1(entity_id, timestamp) VALUES
-    ((entity.to_type1('entity1')).id, now());
+    ((entity.to_type1('entity1')).id, '2018-01-01 01:00:00');
 INSERT INTO attribute_history.ds_type1(entity_id, timestamp) VALUES
-    ((entity.to_type1('entity2')).id, now());
+    ((entity.to_type1('entity2')).id, '2018-01-01 01:00:00');
 
 SELECT attribute_directory.compact(attribute_directory.get_attribute_store('ds', 'type1'), 0);
 
