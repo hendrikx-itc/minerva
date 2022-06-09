@@ -63,9 +63,9 @@ SELECT bag_eq(
     $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2018-01-01 00:00:00') ptr
       JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[
-        '2017-01-01 00:00:00+00',
-	'2017-02-01 00:00:00+00'
-	]::timestamptz[],
+        '2017-01-01 00:00:00',
+	'2017-02-01 00:00:00'
+	]::timestamp[],
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give latest timestamps if used with more recent time'
 );
 
@@ -73,9 +73,9 @@ SELECT bag_eq(
     $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2016-08-01 00:00:00') ptr
       JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[
-        '2016-01-01 00:00:00+00',
-	'2016-02-01 00:00:00+00'
-	]::timestamptz[],
+        '2016-01-01 00:00:00',
+	'2016-02-01 00:00:00'
+	]::timestamp[],
     'attribute_history.created_function_ds_created_functions_et_at_ptr should give older timestamps if used with older time'
 );
 
