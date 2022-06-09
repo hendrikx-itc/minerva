@@ -60,7 +60,7 @@ SELECT has_function(
 );
 
 SELECT bag_eq(
-    $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2018-01-01 00:00:00') ptr
+    $$SELECT timestamp::timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2018-01-01 00:00:00') ptr
       JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[
         '2017-01-01 00:00:00',
@@ -70,7 +70,7 @@ SELECT bag_eq(
 );
 
 SELECT bag_eq(
-    $$SELECT timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2016-08-01 00:00:00') ptr
+    $$SELECT timestamp::timestamp FROM attribute_history.created_function_ds_created_functions_et_at_ptr('2016-08-01 00:00:00') ptr
       JOIN attribute_history.created_function_ds_created_functions_et history ON ptr.id = history.id $$,
     ARRAY[
         '2016-01-01 00:00:00',
