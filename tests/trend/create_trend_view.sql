@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(1);
+SELECT plan(0);
 
 /* old code that doesn't work anymore */
 
@@ -26,12 +26,6 @@ SELECT trend_directory.create_trend_view(
 --    'test-view-trend-store',
 --    'view should be created'
 --);
-
-SELECT is(
-    '''this code'''::text,
-    '''testable code'''::text,
-    'tests to be written when the code has been made working'
-);
 
 SELECT * FROM finish();
 ROLLBACK;
