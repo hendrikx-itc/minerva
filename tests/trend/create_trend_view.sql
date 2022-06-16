@@ -1,6 +1,8 @@
 BEGIN;
 
-SELECT plan(0);
+SELECT plan(1);
+
+SELECT is(1, 1, 'stand-in test');
 
 /* old code that doesn't work anymore */
 

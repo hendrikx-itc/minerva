@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(1);
+SELECT plan(2);
 
 SELECT directory.create_data_source('test-data');
 
@@ -48,6 +48,8 @@ SELECT trend_directory.define_materialization(
         trend_directory.get_trend_store_id(trend_directory.get_trend_store('test-data', 'Node', '900'::interval)),
         'test-trend-store-main')),
     '900'::interval, '86400'::interval, '86400'::interval);
+
+SELECT is(1, 1, 'stand-in test');
 
 /*
 Old test code - this piece of code does not seem to be working yet
