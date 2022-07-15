@@ -2,7 +2,7 @@ BEGIN;
 
 SELECT plan(3);
 
-SELECT attribute_directory.create_attribute_store(
+CALL attribute_directory.create_attribute_store(
     'test',
     'Node',
     ARRAY[
@@ -23,6 +23,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
         'x'
     ]
 );
@@ -49,6 +50,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
         'x',
         'y'
     ]
@@ -79,6 +81,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
         'x',
         'y',
         'z'

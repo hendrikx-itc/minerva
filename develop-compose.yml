@@ -13,5 +13,5 @@ services:
       - ./postgresql.conf:/etc/postgresql/postgresql.conf
       - ./tests:/tests
       - ./test_results:/test_results
-      - ./src:/minerva
+      - ./src:/src
     command: ["-c", "config_file=/etc/postgresql/postgresql.conf"]

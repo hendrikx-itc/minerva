@@ -4,11 +4,11 @@ SELECT plan(3);
 
 SELECT directory.create_data_source('test1');
 
-SELECT directory.create_entity_type('some_entity_type_name');
+SELECT directory.create_entity_type('rename_trend_et');
 
 SELECT trend_directory.create_trend_store(
     'test1',
-    'some_entity_type_name',
+    'rename_trend_et',
     '900'::interval,
     '86400'::interval,
     ARRAY[
@@ -39,7 +39,7 @@ ON trend_store.entity_type_id = entity_type.id
 JOIN directory.data_source
 ON trend_store.data_source_id = data_source.id
 WHERE data_source.name = 'test1'
-AND entity_type.name = 'some_entity_type_name';
+AND entity_type.name = 'rename_trend_et';
 
 SELECT trend_directory.alter_trend_name(
     trend_store_part,
@@ -59,7 +59,7 @@ ON trend_store.entity_type_id = entity_type.id
 JOIN directory.data_source
 ON trend_store.data_source_id = data_source.id
 WHERE data_source.name = 'test1'
-AND entity_type.name = 'some_entity_type_name';
+AND entity_type.name = 'rename_trend_et';
 
 SELECT columns_are(
     'trend',
@@ -80,7 +80,7 @@ ON trend_store.entity_type_id = entity_type.id
 JOIN directory.data_source
 ON trend_store.data_source_id = data_source.id
 WHERE data_source.name = 'test1'
-AND entity_type.name = 'some_entity_type_name';
+AND entity_type.name = 'rename_trend_et';
 
 SELECT * FROM finish();
 ROLLBACK;

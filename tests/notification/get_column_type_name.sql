@@ -4,7 +4,7 @@ SELECT plan(3);
 
 SELECT isa_ok(
     notification_directory.create_notification_store(
-        'some_data_source_name',
+        'get_column_type_ds',
         ARRAY[('NV_ALARM_ID', 'integer', ''),
 	      ('some_name', 'text', '')]::notification_directory.attr_def[]
     ),
@@ -14,7 +14,7 @@ SELECT isa_ok(
     
 SELECT alike(
     notification_directory.get_column_type_name(
-        'notification'::name, 'some_data_source_name'::name, 'NV_ALARM_ID'::name
+        'notification'::name, 'get_column_type_ds'::name, 'NV_ALARM_ID'::name
     ),
     'int%',
     'NV_ALARM_ID should have some integer type'
@@ -22,7 +22,7 @@ SELECT alike(
 
 SELECT is(
     notification_directory.get_column_type_name(
-        'notification'::name, 'some_data_source_name'::name, 'some_name'::name
+        'notification'::name, 'get_column_type_ds'::name, 'some_name'::name
     ),
     'text',
     'some_name should be of type text'

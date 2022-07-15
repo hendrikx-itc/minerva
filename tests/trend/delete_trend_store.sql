@@ -4,11 +4,11 @@ SELECT plan(6);
 
 SELECT directory.create_data_source('test2');
 
-SELECT directory.create_entity_type('some_entity_type_name');
+SELECT directory.create_entity_type('delete_trendstore_et');
 
 SELECT trend_directory.create_trend_store(
     'test2',
-    'some_entity_type_name',
+    'delete_trendstore_et',
     '300 seconds'::interval,
     '1 day'::interval,
     ARRAY[
@@ -40,7 +40,7 @@ SELECT results_eq(
     'table trend should be created'
     );
 
-SELECT trend_directory.delete_trend_store('test2', 'some_entity_type_name', '300 seconds'::interval);
+SELECT trend_directory.delete_trend_store('test2', 'delete_trendstore_et', '300 seconds'::interval);
 
 SELECT results_eq(
     $$SELECT id from trend_directory.trend_store_part;$$,

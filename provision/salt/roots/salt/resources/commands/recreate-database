@@ -1,8 +1,0 @@
-#!/bin/bash
-set -e
-SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-
-$SCRIPT_DIR/drop-database
-$SCRIPT_DIR/create-database
-$SCRIPT_DIR/init-database
-PGDATABASE=$MINERVA_DB_NAME psql -c "CREATE EXTENSION pgtap;"

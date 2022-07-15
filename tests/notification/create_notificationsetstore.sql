@@ -3,7 +3,7 @@ BEGIN;
 SELECT plan(9);
 
 SELECT notification_directory.create_notification_store(
-        'some_data_source_name',
+        'create_notificationsetstore_ds',
         ARRAY[('NV_ALARM_ID', 'integer', '')]::notification_directory.attr_def[]
 );
 
@@ -15,7 +15,7 @@ SELECT bag_eq(
 
 SELECT notification_directory.create_notification_set_store('some_name', store)
 FROM notification_directory.notification_store store, directory.data_source ds
-WHERE store.data_source_id = ds.id AND ds.name = 'some_data_source_name';
+WHERE store.data_source_id = ds.id AND ds.name = 'create_notificationsetstore_ds';
 
 SELECT bag_eq(
     $$ SELECT name from notification_directory.notification_set_store; $$,
@@ -49,7 +49,7 @@ SELECT columns_are(
     'link table should have correct columns'
 );
 
-INSERT INTO notification.some_data_source_name (id, entity_id, timestamp) VALUES (35, 40, '2017-01-01 00:00:00');
+INSERT INTO notification.create_notificationsetstore_ds (id, entity_id, timestamp) VALUES (35, 40, '2017-01-01 00:00:00');
 INSERT INTO notification.some_name VALUES (30);
 
 SELECT throws_like(

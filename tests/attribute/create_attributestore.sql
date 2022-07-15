@@ -2,9 +2,9 @@ BEGIN;
 
 SELECT plan(27);
 
-SELECT attribute_directory.create_attribute_store(
-    'some_data_source_name',
-    'some_entity_type_name',
+CALL attribute_directory.create_attribute_store(
+    'create_attributestore_ds',
+    'create_attributestore_et',
     ARRAY[
         ('x', 'integer', 'some column with integer values'),
 	('y', 'text', 'some column with text values')
@@ -13,13 +13,13 @@ SELECT attribute_directory.create_attribute_store(
 
 SELECT has_table(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     'attribute history table should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     ARRAY[
         'id',
         'entity_id',
@@ -27,6 +27,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
         'x',
 	'y'
     ]
@@ -34,7 +35,7 @@ SELECT columns_are(
 
 SELECT col_type_is(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     'x',
     'pg_catalog',
     'integer',
@@ -43,7 +44,7 @@ SELECT col_type_is(
 
 SELECT col_type_is(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     'y',
     'pg_catalog',
     'text',
@@ -52,16 +53,17 @@ SELECT col_type_is(
 
 SELECT has_table(
     'attribute_base',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     'attribute base table should exist'
     );
 
 SELECT columns_are(
     'attribute_base',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     ARRAY[
         'entity_id',
         'timestamp',
+	'end',
         'x',
 	'y'
     ]
@@ -69,16 +71,17 @@ SELECT columns_are(
 
 SELECT has_table(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     'attribute staging table should exist'
     );
 
 SELECT columns_are(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     ARRAY[
         'entity_id',
         'timestamp',
+	'end',
         'x',
 	'y'
     ]
@@ -86,16 +89,18 @@ SELECT columns_are(
 
 SELECT has_table(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_compacted_tmp',
+    'create_attributestore_ds_create_attributestore_et_compacted_tmp',
     'temporary compacted table should exist'
     );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_compacted_tmp',
+    'create_attributestore_ds_create_attributestore_et_compacted_tmp',
     ARRAY[
+        'id', 
         'entity_id',
         'timestamp',
+	'first_appearance',
 	'end',
 	'modified',
 	'hash',
@@ -106,13 +111,13 @@ SELECT columns_are(
 
 SELECT has_table(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_curr_ptr',
+    'create_attributestore_ds_create_attributestore_et_curr_ptr',
     'current pointer table should exist'
     );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_curr_ptr',
+    'create_attributestore_ds_create_attributestore_et_curr_ptr',
     ARRAY[
         'id'
     ]
@@ -120,13 +125,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_changes',
+    'create_attributestore_ds_create_attributestore_et_changes',
     'changes view should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_changes',
+    'create_attributestore_ds_create_attributestore_et_changes',
     ARRAY[
         'entity_id',
 	'timestamp',
@@ -136,18 +141,20 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_run_length',
+    'create_attributestore_ds_create_attributestore_et_run_length',
     'run length view should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_run_length',
+    'create_attributestore_ds_create_attributestore_et_run_length',
     ARRAY[
+        'id',
 	'entity_id',
 	'start',
 	'end',
 	'first_appearance',
+	'end',
 	'modified',
 	'run_length'
 	]
@@ -155,16 +162,17 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name_new',
+    'create_attributestore_ds_create_attributestore_et_new',
     'staging new view should exist'
 );
 
 SELECT columns_are(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name_new',
+    'create_attributestore_ds_create_attributestore_et_new',
     ARRAY[
         'entity_id',
 	'timestamp',
+	'end',
 	'x',
 	'y'
 	]
@@ -172,16 +180,17 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name_modified',
+    'create_attributestore_ds_create_attributestore_et_modified',
     'staging modified view should exist'
 );
 
 SELECT columns_are(
     'attribute_staging',
-    'some_data_source_name_some_entity_type_name_modified',
+    'create_attributestore_ds_create_attributestore_et_modified',
     ARRAY[
         'entity_id',
         'timestamp',
+	'end',
         'x',
 	'y'
     ]
@@ -189,13 +198,13 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     'attribute curr view should exist'
 );
 
 SELECT columns_are(
     'attribute',
-    'some_data_source_name_some_entity_type_name',
+    'create_attributestore_ds_create_attributestore_et',
     ARRAY[
         'id',
         'entity_id',
@@ -203,6 +212,7 @@ SELECT columns_are(
         'modified',
         'hash',
         'first_appearance',
+	'end',
 	'x',
 	'y'
 	]
@@ -210,16 +220,18 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_compacted',
+    'create_attributestore_ds_create_attributestore_et_compacted',
     'attribute history compacted view should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_compacted',
+    'create_attributestore_ds_create_attributestore_et_compacted',
     ARRAY[
+        'id',
         'entity_id',
 	'timestamp',
+	'first_appearance',
 	'end',
         'modified',
         'hash',
@@ -230,27 +242,36 @@ SELECT columns_are(
 
 SELECT has_view(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_curr_selection',
+    'create_attributestore_ds_create_attributestore_et_curr_selection',
     'attribute history curr selection view should exist'
 );
 
 SELECT columns_are(
     'attribute_history',
-    'some_data_source_name_some_entity_type_name_curr_selection',
+    'create_attributestore_ds_create_attributestore_et_curr_selection',
     ARRAY[
          'id'
          ]
 );
 
-PREPARE second_try AS SELECT attribute_directory.create_attribute_store(
-    'some_other_data_source_name',
-    'some_other_entity_type_name',
+CREATE FUNCTION "attribute_directory"."create_attribute_store_prep"("data_source_name" text, "entity_type_name" text, "attributes" attribute_directory.attribute_descr[])
+    RETURNS void
+AS $$
+    CALL attribute_directory.create_attribute_store($1, $2, $3);
+$$ LANGUAGE sql VOLATILE;
+
+
+PREPARE second_try AS SELECT attribute_directory.create_attribute_store_prep(
+    'some_other_ds_name',
+    'some_other_et_name',
     ARRAY[
         ('z', 'text', 'some column with text values')
     ]::attribute_directory.attribute_descr[]
 );
 
-SELECT throws_like('second_try', '%already exists%', 'Trying to create an attribute store twice should create an error');
+EXECUTE second_try;
+
+SELECT throws_like('second_try', '%duplicate key value%', 'Trying to create an attribute store twice should create an error');
 
 SELECT * FROM finish();
 ROLLBACK;
