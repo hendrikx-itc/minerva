@@ -360,6 +360,7 @@ SELECT CASE
         $1 / $2
     END;
 $$ LANGUAGE sql IMMUTABLE;
+SELECT create_distributed_function('safe_division(anyelement, anyelement)');
 
 
 CREATE FUNCTION "public"."add_array"(anyarray, anyarray)

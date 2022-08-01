@@ -537,6 +537,8 @@ objects:
       data_type: anyelement
     - name: denominator
       data_type: anyelement
+    postqueries:
+    - query: create_distributed_function('safe_division(anyelement, anyelement)')
     source: |-
       SELECT CASE
           WHEN $2 = 0 THEN
