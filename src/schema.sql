@@ -5015,7 +5015,7 @@ BEGIN
 
     EXECUTE format('TRUNCATE attribute_staging.%I', table_name);
 
-    EXECUTE attribute_directory.mark_modified($1);
+    EXECUTE attribute_directory.mark_modified($1.id);
 
     RETURN row_count;
 END;
