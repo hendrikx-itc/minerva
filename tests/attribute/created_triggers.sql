@@ -1,7 +1,5 @@
 BEGIN;
 
-SET minerva.trigger_mark_modified TO on;
-
 SELECT plan(7);
 
 SELECT attribute_directory.create_attribute_store(

@@ -7953,26 +7953,7 @@ objects:
       SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_directory.store_compacted($1, $2));
 
 - function:
-    name: update_modified
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store_modified
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: attribute_store_id
-      data_type: integer
-    - name: modified
-      data_type: timestamp with time zone
-    source: |-
-      UPDATE attribute_directory.attribute_store_modified
-      SET modified = greatest(modified, $2)
-      WHERE attribute_store_id = $1
-      RETURNING attribute_store_modified;
-
-- function:
-    name: store_modified
+    name: mark_modified
     schema: attribute_directory
     return_type: attribute_directory.attribute_store_modified
     language: sql
@@ -7987,6 +7968,8 @@ objects:
     source: |-
       INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
       VALUES ($1, $2)
+      ON CONFLICT (attribute_store_id) DO UPDATE
+      SET modified = EXCLUDED.modified
       RETURNING attribute_store_modified;
 
 - function:
@@ -8000,181 +7983,8 @@ objects:
     arguments:
     - name: attribute_store_id
       data_type: integer
-    - name: modified
-      data_type: timestamp with time zone
     source: |-
-      SELECT COALESCE(attribute_directory.update_modified($1, $2), attribute_directory.store_modified($1, $2));
-
-- function:
-    name: mark_modified
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store_modified
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - name: attribute_store_id
-      data_type: integer
-    source: |-
-      SELECT CASE
-        WHEN current_setting('minerva.trigger_mark_modified') = 'off' THEN
-            (SELECT asm FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1)
-
-        ELSE
-            attribute_directory.mark_modified($1, now())
-
-        END;
-
-- function:
-    name: create_modified_trigger_function_sql
-    schema: attribute_directory
-    return_type: text[]
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT ARRAY[
-          format('CREATE FUNCTION attribute_history.mark_modified_%s()
-      RETURNS TRIGGER
-      AS $$
-      BEGIN
-          PERFORM attribute_directory.mark_modified(%s);
-
-          RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql', $1.id, $1.id),
-          format('ALTER FUNCTION attribute_history.mark_modified_%s()
-              OWNER TO minerva_writer', $1.id)
-      ];
-
-- function:
-    name: create_modified_trigger_function
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-          $1,
-          attribute_directory.create_modified_trigger_function_sql($1)
-      );
-
-- function:
-    name: drop_modified_trigger_function_sql
-    schema: attribute_directory
-    return_type: text
-    language: sql
-    volatility: stable
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT format('DROP FUNCTION attribute_history.mark_modified_%s()', $1.id);
-
-- function:
-    name: drop_modified_trigger_function
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-          $1,
-          attribute_directory.drop_modified_trigger_function_sql($1)
-      );
-
-- function:
-    name: create_modified_triggers_sql
-    schema: attribute_directory
-    return_type: text[]
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT ARRAY[
-          format('CREATE TRIGGER mark_modified_on_update
-              AFTER UPDATE ON attribute_history.%I
-              FOR EACH STATEMENT EXECUTE PROCEDURE attribute_history.mark_modified_%s()',
-              attribute_directory.to_table_name($1),
-              $1.id
-          ),
-          format('CREATE TRIGGER mark_modified_on_insert
-              AFTER INSERT ON attribute_history.%I
-              FOR EACH STATEMENT EXECUTE PROCEDURE attribute_history.mark_modified_%s()',
-              attribute_directory.to_table_name($1),
-              $1.id
-          )
-      ];
-
-- function:
-    name: create_modified_triggers
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-          $1,
-          attribute_directory.create_modified_triggers_sql($1)
-      );
-
-- function:
-    name: drop_modified_triggers_sql
-    schema: attribute_directory
-    return_type: text[]
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT ARRAY[
-          format('DROP TRIGGER mark_modified_on_update
-              ON attribute_history.%I',
-              attribute_directory.to_table_name($1)
-          ),
-          format('DROP TRIGGER mark_modified_on_insert
-              ON attribute_history.%I',
-              attribute_directory.to_table_name($1)
-          )
-      ];
-
-- function:
-    name: drop_modified_triggers
-    schema: attribute_directory
-    return_type: attribute_directory.attribute_store
-    language: sql
-    volatility: volatile
-    strict: false
-    secdef: false
-    arguments:
-    - data_type: attribute_directory.attribute_store
-    source: |-
-      SELECT public.action(
-          $1,
-          attribute_directory.drop_modified_triggers_sql($1)
-      );
+      SELECT attribute_directory.mark_modified($1, now())
 
 - function:
     name: drop_hash_function
@@ -8395,6 +8205,8 @@ objects:
           );
 
           EXECUTE format('TRUNCATE attribute_staging.%I', table_name);
+
+          EXECUTE attribute_directory.mark_modified($1);
 
           RETURN row_count;
       END;
@@ -9681,9 +9493,6 @@ objects:
 
       SELECT attribute_directory.create_hash_triggers($1);
 
-      SELECT attribute_directory.create_modified_trigger_function($1);
-      SELECT attribute_directory.create_modified_triggers($1);
-
       SELECT attribute_directory.create_changes_view($1);
 
       SELECT attribute_directory.create_run_length_view($1);
@@ -9707,9 +9516,6 @@ objects:
       SELECT attribute_directory.drop_run_length_view($1);
 
       SELECT attribute_directory.drop_changes_view($1);
-
-      SELECT attribute_directory.drop_modified_triggers($1);
-      SELECT attribute_directory.drop_modified_trigger_function($1);
 
       SELECT attribute_directory.drop_hash_triggers($1);
 
@@ -13563,10 +13369,6 @@ objects:
           trigger.truncate(now(), $1.granularity) - $1.default_interval,
           - $1.granularity
       );
-
-- setting:
-    name: minerva.trigger_mark_modified
-    value: 'on'
 
 - composite_type:
     name: trend_data

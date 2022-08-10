@@ -4865,145 +4865,21 @@ SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_director
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."update_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
-    RETURNS attribute_directory.attribute_store_modified
-AS $$
-UPDATE attribute_directory.attribute_store_modified
-SET modified = greatest(modified, $2)
-WHERE attribute_store_id = $1
-RETURNING attribute_store_modified;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."store_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
+CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
     RETURNS attribute_directory.attribute_store_modified
 AS $$
 INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
 VALUES ($1, $2)
+ON CONFLICT (attribute_store_id) DO UPDATE
+SET modified = EXCLUDED.modified
 RETURNING attribute_store_modified;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
-    RETURNS attribute_directory.attribute_store_modified
-AS $$
-SELECT COALESCE(attribute_directory.update_modified($1, $2), attribute_directory.store_modified($1, $2));
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer)
     RETURNS attribute_directory.attribute_store_modified
 AS $$
-SELECT CASE
-  WHEN current_setting('minerva.trigger_mark_modified') = 'off' THEN
-      (SELECT asm FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1)
-
-  ELSE
-      attribute_directory.mark_modified($1, now())
-
-  END;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_trigger_function_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $function$
-SELECT ARRAY[
-    format('CREATE FUNCTION attribute_history.mark_modified_%s()
-RETURNS TRIGGER
-AS $$
-BEGIN
-    PERFORM attribute_directory.mark_modified(%s);
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql', $1.id, $1.id),
-    format('ALTER FUNCTION attribute_history.mark_modified_%s()
-        OWNER TO minerva_writer', $1.id)
-];
-$function$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_trigger_function"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.create_modified_trigger_function_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_modified_trigger_function_sql"(attribute_directory.attribute_store)
-    RETURNS text
-AS $$
-SELECT format('DROP FUNCTION attribute_history.mark_modified_%s()', $1.id);
-$$ LANGUAGE sql STABLE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_modified_trigger_function"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.drop_modified_trigger_function_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_triggers_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    format('CREATE TRIGGER mark_modified_on_update
-        AFTER UPDATE ON attribute_history.%I
-        FOR EACH STATEMENT EXECUTE PROCEDURE attribute_history.mark_modified_%s()',
-        attribute_directory.to_table_name($1),
-        $1.id
-    ),
-    format('CREATE TRIGGER mark_modified_on_insert
-        AFTER INSERT ON attribute_history.%I
-        FOR EACH STATEMENT EXECUTE PROCEDURE attribute_history.mark_modified_%s()',
-        attribute_directory.to_table_name($1),
-        $1.id
-    )
-];
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."create_modified_triggers"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.create_modified_triggers_sql($1)
-);
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_modified_triggers_sql"(attribute_directory.attribute_store)
-    RETURNS text[]
-AS $$
-SELECT ARRAY[
-    format('DROP TRIGGER mark_modified_on_update
-        ON attribute_history.%I',
-        attribute_directory.to_table_name($1)
-    ),
-    format('DROP TRIGGER mark_modified_on_insert
-        ON attribute_history.%I',
-        attribute_directory.to_table_name($1)
-    )
-];
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."drop_modified_triggers"(attribute_directory.attribute_store)
-    RETURNS attribute_directory.attribute_store
-AS $$
-SELECT public.action(
-    $1,
-    attribute_directory.drop_modified_triggers_sql($1)
-);
+SELECT attribute_directory.mark_modified($1, now())
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -5138,6 +5014,8 @@ BEGIN
     );
 
     EXECUTE format('TRUNCATE attribute_staging.%I', table_name);
+
+    EXECUTE attribute_directory.mark_modified($1);
 
     RETURN row_count;
 END;
@@ -6041,9 +5919,6 @@ SELECT attribute_directory.create_entity_at_func($1);
 
 SELECT attribute_directory.create_hash_triggers($1);
 
-SELECT attribute_directory.create_modified_trigger_function($1);
-SELECT attribute_directory.create_modified_triggers($1);
-
 SELECT attribute_directory.create_changes_view($1);
 
 SELECT attribute_directory.create_run_length_view($1);
@@ -6063,9 +5938,6 @@ SELECT attribute_directory.drop_dependees($1);
 SELECT attribute_directory.drop_run_length_view($1);
 
 SELECT attribute_directory.drop_changes_view($1);
-
-SELECT attribute_directory.drop_modified_triggers($1);
-SELECT attribute_directory.drop_modified_trigger_function($1);
 
 SELECT attribute_directory.drop_hash_triggers($1);
 
@@ -8465,13 +8337,6 @@ SELECT generate_series(
     - $1.granularity
 );
 $$ LANGUAGE sql STABLE;
-
-
-DO $$ BEGIN
-EXECUTE 'ALTER DATABASE ' || current_database() || ' SET minerva.trigger_mark_modified TO on';
-END; $$;
-
-SET minerva.trigger_mark_modified TO on;
 
 
 CREATE TYPE "trend"."trend_data" AS (
