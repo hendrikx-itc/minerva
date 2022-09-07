@@ -2,6 +2,9 @@
 
 The PostgreSQL based database schema for the Minerva ETL platform.
 
+A complete setup guide can be found in [Minerva
+book](https://minerva-book.readthedocs.io).
+
 [![License](https://img.shields.io/github/license/hendrikx-itc/minerva)](LICENSE)
 
 ## Contributing
