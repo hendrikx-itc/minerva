@@ -1,5 +1,12 @@
 
 
+CREATE OR REPLACE FUNCTION "system"."version"()
+    RETURNS system.version_tuple
+AS $$
+SELECT (5,3,1)::system.version_tuple;
+$$ LANGUAGE sql IMMUTABLE;
+
+
 DROP FUNCTION "trend_directory"."define_materialization"(integer, interval, interval, interval);
 
 ALTER TABLE "trend_directory"."materialization" ADD COLUMN "description" jsonb NOT NULL DEFAULT '{}';
