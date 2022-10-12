@@ -1215,6 +1215,7 @@ CREATE TABLE "trend_directory"."materialization"
   "stability_delay" interval NOT NULL,
   "reprocessing_period" interval NOT NULL,
   "enabled" bool NOT NULL DEFAULT false,
+  "description" jsonb NOT NULL DEFAULT '{}',
   PRIMARY KEY (id)
 );
 
@@ -1236,6 +1237,9 @@ COMMENT ON COLUMN "trend_directory"."materialization"."reprocessing_period" IS '
 ';
 
 COMMENT ON COLUMN "trend_directory"."materialization"."enabled" IS 'Indicates if jobs should be created for this materialization (manual execution is always possible)
+';
+
+COMMENT ON COLUMN "trend_directory"."materialization"."description" IS 'Gives a description of the function used for the materialization in json format
 ';
 
 CREATE UNIQUE INDEX "ix_materialization_uniqueness" ON "trend_directory"."materialization" USING btree (dst_trend_store_part_id);
@@ -1362,16 +1366,16 @@ CREATE TRIGGER cleanup_on_view_materialization_delete
   EXECUTE PROCEDURE "trend_directory"."cleanup_for_view_materialization"();
 
 
-CREATE FUNCTION "trend_directory"."define_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval)
+CREATE FUNCTION "trend_directory"."define_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "description" jsonb)
     RETURNS trend_directory.materialization
 AS $$
-INSERT INTO trend_directory.materialization(dst_trend_store_part_id, processing_delay, stability_delay, reprocessing_period)
-VALUES ($1, $2, $3, $4)
+INSERT INTO trend_directory.materialization(dst_trend_store_part_id, processing_delay, stability_delay, reprocessing_period, description)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT DO NOTHING
 RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
-COMMENT ON FUNCTION "trend_directory"."define_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval) IS 'Define a materialization';
+COMMENT ON FUNCTION "trend_directory"."define_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "description" jsonb) IS 'Define a materialization';
 
 
 CREATE FUNCTION "trend_directory"."undefine_materialization"("name" name)
@@ -1384,11 +1388,20 @@ $$ LANGUAGE sql VOLATILE;
 COMMENT ON FUNCTION "trend_directory"."undefine_materialization"("name" name) IS 'Undefine and remove a materialization';
 
 
-CREATE FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass)
+CREATE FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass, "description" jsonb)
     RETURNS trend_directory.view_materialization
 AS $$
 INSERT INTO trend_directory.view_materialization(materialization_id, src_view)
-VALUES((trend_directory.define_materialization($1, $2, $3, $4)).id, $5) RETURNING *;
+VALUES((trend_directory.define_materialization($1, $2, $3, $4, $6)).id, $5) RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass, "description" jsonb) IS 'Define a materialization that uses a view as source';
+
+
+CREATE FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass)
+    RETURNS trend_directory.view_materialization
+AS $$
+SELECT trend_directory.define_view_materialization($1, $2, $3, $4, $5, NULL);
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass) IS 'Define a materialization that uses a view as source';
@@ -1420,13 +1433,22 @@ CREATE UNIQUE INDEX "ix_function_materialization_uniqueness" ON "trend_directory
 
 
 
-CREATE FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc)
+CREATE FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc, "description" jsonb)
     RETURNS trend_directory.function_materialization
 AS $$
 INSERT INTO trend_directory.function_materialization(materialization_id, src_function)
-VALUES((trend_directory.define_materialization($1, $2, $3, $4)).id, $5::text)
+VALUES((trend_directory.define_materialization($1, $2, $3, $4, $6)).id, $5::text)
 ON CONFLICT DO NOTHING
 RETURNING *;
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc, "description" jsonb) IS 'Define a materialization that uses a function as source';
+
+
+CREATE FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc)
+    RETURNS trend_directory.function_materialization
+AS $$
+SELECT trend_directory.define_function_materialization($1, $2, $3, $4, $5, NULL)
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc) IS 'Define a materialization that uses a function as source';

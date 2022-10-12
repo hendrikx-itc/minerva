@@ -2174,6 +2174,13 @@ objects:
         description: >
           Indicates if jobs should be created for this materialization (manual
           execution is always possible)
+      - name: description
+        data_type: jsonb
+        nullable: false
+        default: "'{}'"
+        description: >
+          Gives a description of the function used for the materialization
+          in json format
     primary_key:
       name: materialization_pkey
       columns:
@@ -2413,9 +2420,11 @@ objects:
         data_type: interval
       - name: reprocessing_period
         data_type: interval
+      - name: description
+        data_type: jsonb
     source: |-
-      INSERT INTO trend_directory.materialization(dst_trend_store_part_id, processing_delay, stability_delay, reprocessing_period)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO trend_directory.materialization(dst_trend_store_part_id, processing_delay, stability_delay, reprocessing_period, description)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT DO NOTHING
       RETURNING *;
 
@@ -2451,10 +2460,32 @@ objects:
         data_type: interval
       - name: src_view
         data_type: regclass
+      - name: description
+        data_type: jsonb
     source: |-
       INSERT INTO trend_directory.view_materialization(materialization_id, src_view)
-      VALUES((trend_directory.define_materialization($1, $2, $3, $4)).id, $5) RETURNING *;
+      VALUES((trend_directory.define_materialization($1, $2, $3, $4, $6)).id, $5) RETURNING *;
 
+- function:
+    name: define_view_materialization
+    schema: trend_directory
+    return_type: trend_directory.view_materialization
+    description: Define a materialization that uses a view as source
+    language: sql
+    volatility: volatile
+    arguments:
+      - name: dst_trend_store_part_id
+        data_type: integer
+      - name: processing_delay
+        data_type: interval
+      - name: stability_delay
+        data_type: interval
+      - name: reprocessing_period
+        data_type: interval
+      - name: src_view
+        data_type: regclass
+    source: SELECT trend_directory.define_view_materialization($1, $2, $3, $4, $5, NULL);
+ 
 - table:
     name: function_materialization
     schema: trend_directory
@@ -2520,11 +2551,33 @@ objects:
         data_type: interval
       - name: src_function
         data_type: regproc
+      - name: description
+        data_type: jsonb
     source: |-
       INSERT INTO trend_directory.function_materialization(materialization_id, src_function)
-      VALUES((trend_directory.define_materialization($1, $2, $3, $4)).id, $5::text)
+      VALUES((trend_directory.define_materialization($1, $2, $3, $4, $6)).id, $5::text)
       ON CONFLICT DO NOTHING
       RETURNING *;
+
+- function:
+    name: define_function_materialization
+    schema: trend_directory
+    return_type: trend_directory.function_materialization
+    description: Define a materialization that uses a function as source
+    language: sql
+    volatility: volatile
+    arguments:
+      - name: dst_trend_store_part_id
+        data_type: integer
+      - name: processing_delay
+        data_type: interval
+      - name: stability_delay
+        data_type: interval
+      - name: reprocessing_period
+        data_type: interval
+      - name: src_function
+        data_type: regproc
+    source: SELECT trend_directory.define_function_materialization($1, $2, $3, $4, $5, NULL)
 
 - function:
     name: cleanup_for_function_materialization
