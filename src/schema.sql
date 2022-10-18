@@ -5743,6 +5743,24 @@ SELECT public.action(
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "attribute_directory"."add_attribute_columns"(attribute_directory.attribute_store, attribute_directory.attribute[])
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action(
+    $1,
+    ARRAY[
+        format('SELECT attribute_directory.drop_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id),
+        format(
+            'ALTER TABLE attribute_base.%I %s',
+            attribute_directory.to_char($1),
+            (SELECT array_to_string(array_agg(format('ADD COLUMN %I %s', attribute.name, attribute.data_type)), ',') FROM unnest($2) AS attribute)
+        ),
+        format('SELECT attribute_directory.create_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id)
+    ]
+);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "attribute_directory"."create_attribute"(attribute_directory.attribute_store, name, text, text)
     RETURNS attribute_directory.attribute
 AS $$

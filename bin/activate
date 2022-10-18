@@ -30,36 +30,24 @@ export MINERVA_ROOT=${SCRIPT_DIR%/*}
 
 export PATH=$MINERVA_ROOT/bin:$PATH
 
+# Test if at virtual environment is already configured, and if not, create one
+# and install dependencies
+if [ -z "$VIRTUAL_ENV" ] || [ ! -d "$VIRTUAL_ENV" ]
+then
+    VENV_DIR="$MINERVA_ROOT/venv"
 
+    if [ ! -d "$VENV_DIR" ]
+    then
+        echo "Creating virtualenv at '$VENV_DIR'"
 
-if [ $SHELL_NAME = "bash" ]; then
-    _db ()   #  By convention, the function name
-    {                 #+ starts with an underscore.
-      local cur
-      # Pointer to current completion word.
-      # By convention, it's named "cur" but this isn't strictly necessary.
+        python3 -m venv "$VENV_DIR"
 
-      COMPREPLY=()   # Array variable storing the possible completions.
-      cur=${COMP_WORDS[COMP_CWORD]}
+        source "$VENV_DIR/bin/activate"
 
-      case "$cur" in
-        -*)
-        COMPREPLY=( $( compgen -W '-a -d -f -l -t -h --aoption --debug \
-                                   --file --log --test --help --' -- $cur ) );;
-    #   Generate the completion matches and load them into $COMPREPLY array.
-    #   xx) May add more cases here.
-    #   yy)
-    #   zz)
-      esac
+        pip3 install -r "$MINERVA_ROOT/bin/requirements.txt"
+    else
+        echo "Activating virtualenv at '$VENV_DIR'"
 
-      return 0
-    }
-
-    complete -F _db -o filenames db
-#
-elif [ $SHELL_NAME = "zsh" ]; then
-    fpath+=~/projects/minerva50/minerva/bin
-    autoload -U compinit
-    compinit
+        source "$VENV_DIR/bin/activate"
+    fi
 fi
-
