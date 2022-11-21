@@ -1401,7 +1401,7 @@ COMMENT ON FUNCTION "trend_directory"."define_view_materialization"("dst_trend_s
 CREATE FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass)
     RETURNS trend_directory.view_materialization
 AS $$
-SELECT trend_directory.define_view_materialization($1, $2, $3, $4, $5, NULL);
+SELECT trend_directory.define_view_materialization($1, $2, $3, $4, $5, '{}'::jsonb);
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass) IS 'Define a materialization that uses a view as source';
@@ -1448,7 +1448,7 @@ COMMENT ON FUNCTION "trend_directory"."define_function_materialization"("dst_tre
 CREATE FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc)
     RETURNS trend_directory.function_materialization
 AS $$
-SELECT trend_directory.define_function_materialization($1, $2, $3, $4, $5, NULL)
+SELECT trend_directory.define_function_materialization($1, $2, $3, $4, $5, '{}'::jsonb)
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc) IS 'Define a materialization that uses a function as source';

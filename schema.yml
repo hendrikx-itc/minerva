@@ -2484,7 +2484,7 @@ objects:
         data_type: interval
       - name: src_view
         data_type: regclass
-    source: SELECT trend_directory.define_view_materialization($1, $2, $3, $4, $5, NULL);
+    source: SELECT trend_directory.define_view_materialization($1, $2, $3, $4, $5, '{}'::jsonb);
  
 - table:
     name: function_materialization
@@ -2577,7 +2577,7 @@ objects:
         data_type: interval
       - name: src_function
         data_type: regproc
-    source: SELECT trend_directory.define_function_materialization($1, $2, $3, $4, $5, NULL)
+    source: SELECT trend_directory.define_function_materialization($1, $2, $3, $4, $5, '{}'::jsonb)
 
 - function:
     name: cleanup_for_function_materialization
