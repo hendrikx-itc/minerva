@@ -409,7 +409,7 @@ CREATE TYPE "system"."version_tuple" AS (
 CREATE FUNCTION "system"."version"()
     RETURNS system.version_tuple
 AS $$
-SELECT (5,3,1)::system.version_tuple;
+SELECT (5,3,2)::system.version_tuple;
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -6757,6 +6757,7 @@ CREATE TABLE "trigger"."rule"
   "granularity" interval,
   "default_interval" interval,
   "enabled" bool NOT NULL DEFAULT false,
+  "description" text,
   PRIMARY KEY (id)
 );
 
