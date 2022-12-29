@@ -11147,6 +11147,9 @@ objects:
       data_type: bool
       nullable: false
       default: 'false'
+    - name: description
+      data_type: text
+      nullable: true
     primary_key:
       name: rule_pkey
       columns:

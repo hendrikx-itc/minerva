@@ -362,6 +362,18 @@ SELECT CASE
 $$ LANGUAGE sql IMMUTABLE;
 
 
+CREATE FUNCTION "public"."safe_division"("numerator" anyelement, "denominator" anyelement, "division_by_zero_indicator" anyelement)
+    RETURNS anyelement
+AS $$
+SELECT CASE
+    WHEN $2 = 0 THEN
+        $3
+    ELSE
+        $1 / $2
+    END;
+$$ LANGUAGE sql IMMUTABLE;
+
+
 CREATE FUNCTION "public"."add_array"(anyarray, anyarray)
     RETURNS anyarray
 AS $$
@@ -6965,6 +6977,7 @@ CREATE TABLE "trigger"."rule"
   "granularity" interval,
   "default_interval" interval,
   "enabled" bool NOT NULL DEFAULT false,
+  "description" text,
   PRIMARY KEY (id)
 );
 
