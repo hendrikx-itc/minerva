@@ -1840,7 +1840,7 @@ objects:
     - name: name
       data_type: name
       nullable: false
-    - name: trend_store_id
+    - name: trend_view_id
       data_type: integer
       nullable: false
     primary_key:
@@ -1848,9 +1848,9 @@ objects:
       columns:
       - id
     foreign_keys:
-    - name: trend_view_part_trend_store_id_fkey
+    - name: trend_view_part_trend_view_id_fkey
       columns:
-      - trend_store_id
+      - trend_view_id
       references:
         table:
           name: trend_view
@@ -1858,6 +1858,57 @@ objects:
         columns:
         - id
       on_delete: cascade
+
+- table:
+    name: view_trend
+    schema: trend_directory
+    columns:
+    - name: id
+      data_type: integer
+      generated_identity: by_default
+      nullable: false
+    - name: trend_view_part_id
+      data_type: integer
+      nullable: false
+    - name: name
+      data_type: name
+      nullable: false
+    - name: data_type
+      data_type: text
+      nullable: false
+    - name: extra_data
+      data_type: jsonb
+      nullable: false
+      default: "'{}'"
+    - name: description
+      data_type: text
+      nullable: false
+    - name: time_aggregation
+      data_type: text
+      nullable: false
+    - name: entity_aggregation
+      data_type: text
+      nullable: false
+    primary_key:
+      name: trend_pkey
+      columns:
+      - id
+    foreign_keys:
+    - name: table_trend_trend_view_part_id_fkey
+      columns:
+      - trend_view_part_id
+      references:
+        table:
+          name: trend_view_part
+          schema: trend_directory
+        columns:
+        - id
+      on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
 
 - table:
     name: table_trend
