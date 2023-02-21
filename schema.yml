@@ -2066,7 +2066,7 @@ objects:
     - name: name
       data_type: name
       nullable: false
-    - name: trend_store_id
+    - name: trend_view_id
       data_type: integer
       nullable: false
     primary_key:
@@ -2074,9 +2074,9 @@ objects:
       columns:
       - id
     foreign_keys:
-    - name: trend_view_part_trend_store_id_fkey
+    - name: trend_view_part_trend_view_id_fkey
       columns:
-      - trend_store_id
+      - trend_view_id
       references:
         table:
           name: trend_view
@@ -2084,6 +2084,57 @@ objects:
         columns:
         - id
       on_delete: cascade
+
+- table:
+    name: view_trend
+    schema: trend_directory
+    columns:
+    - name: id
+      data_type: integer
+      generated_identity: by_default
+      nullable: false
+    - name: trend_view_part_id
+      data_type: integer
+      nullable: false
+    - name: name
+      data_type: name
+      nullable: false
+    - name: data_type
+      data_type: text
+      nullable: false
+    - name: extra_data
+      data_type: jsonb
+      nullable: false
+      default: "'{}'"
+    - name: description
+      data_type: text
+      nullable: false
+    - name: time_aggregation
+      data_type: text
+      nullable: false
+    - name: entity_aggregation
+      data_type: text
+      nullable: false
+    primary_key:
+      name: trend_pkey
+      columns:
+      - id
+    foreign_keys:
+    - name: table_trend_trend_view_part_id_fkey
+      columns:
+      - trend_view_part_id
+      references:
+        table:
+          name: trend_view_part
+          schema: trend_directory
+        columns:
+        - id
+      on_delete: cascade
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
 
 - table:
     name: table_trend
@@ -2396,6 +2447,13 @@ objects:
         description: >
           Indicates if jobs should be created for this materialization (manual
           execution is always possible)
+      - name: description
+        data_type: jsonb
+        nullable: false
+        default: "'{}'"
+        description: >
+          Gives a description of the function used for the materialization
+          in json format
     primary_key:
       name: materialization_pkey
       columns:
@@ -2669,9 +2727,11 @@ objects:
         data_type: interval
       - name: reprocessing_period
         data_type: interval
+      - name: description
+        data_type: jsonb
     source: |-
-      INSERT INTO trend_directory.materialization(dst_trend_store_part_id, processing_delay, stability_delay, reprocessing_period)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO trend_directory.materialization(dst_trend_store_part_id, processing_delay, stability_delay, reprocessing_period, description)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT DO NOTHING
       RETURNING *;
 
@@ -2708,9 +2768,11 @@ objects:
         data_type: interval
       - name: src_view
         data_type: regclass
+      - name: description
+        data_type: jsonb
     source: |-
       INSERT INTO trend_directory.view_materialization(materialization_id, src_view)
-      VALUES((trend_directory.define_materialization($1, $2, $3, $4)).id, $5) RETURNING *;
+      VALUES((trend_directory.define_materialization($1, $2, $3, $4, $6)).id, $5) RETURNING *;
 
 - table:
     name: function_materialization
@@ -2776,9 +2838,11 @@ objects:
         data_type: interval
       - name: src_function
         data_type: regproc
+      - name: description
+        data_type: jsonb
     source: |-
       INSERT INTO trend_directory.function_materialization(materialization_id, src_function)
-      VALUES((trend_directory.define_materialization($1, $2, $3, $4)).id, $5::text)
+      VALUES((trend_directory.define_materialization($1, $2, $3, $4, $6)).id, $5::text)
       ON CONFLICT DO NOTHING
       RETURNING *;
 
@@ -13672,10 +13736,6 @@ objects:
           trigger.truncate(now(), $1.granularity) - $1.default_interval,
           - $1.granularity
       );
-
-- setting:
-    name: minerva.trigger_mark_modified
-    value: 'on'
 
 - composite_type:
     name: trend_data
