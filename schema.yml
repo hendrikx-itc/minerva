@@ -8513,7 +8513,11 @@ objects:
     - name: modified
       data_type: timestamp with time zone
     source: |-
-      SELECT COALESCE(attribute_directory.update_modified($1, $2), attribute_directory.store_modified($1, $2));
+      INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
+      VALUES ($1, $2)
+      ON CONFLICT (attribute_store_id) DO UPDATE
+      SET modified = EXCLUDED.modified
+      RETURNING attribute_store_modified;
 
 - function:
     name: mark_modified
@@ -8527,12 +8531,7 @@ objects:
     - name: attribute_store_id
       data_type: integer
     source: |-
-      SELECT
-        CASE WHEN current_setting('minerva.trigger_mark_modified') = 'off'
-          THEN asm.*
-          ELSE attribute_directory.mark_modified($1, now())
-        END
-        FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1;
+      SELECT attribute_directory.mark_modified($1, now())
 
 - function:
     name: define_attribute_store
@@ -8549,8 +8548,7 @@ objects:
       data_type: integer
     source: |-
       INSERT INTO attribute_directory.attribute_store(data_source_id, entity_type_id)
-        VALUES ($1, $2);
-      SELECT * FROM attribute_directory.attribute_store WHERE data_source_id = $1 AND entity_type_id = $2;
+      VALUES ($1, $2) RETURNING attribute_store;
 
 - function:
     name: define_attribute_store

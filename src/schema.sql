@@ -5217,19 +5217,18 @@ $$ LANGUAGE sql VOLATILE;
 CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
     RETURNS attribute_directory.attribute_store_modified
 AS $$
-SELECT COALESCE(attribute_directory.update_modified($1, $2), attribute_directory.store_modified($1, $2));
+INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
+VALUES ($1, $2)
+ON CONFLICT (attribute_store_id) DO UPDATE
+SET modified = EXCLUDED.modified
+RETURNING attribute_store_modified;
 $$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer)
     RETURNS attribute_directory.attribute_store_modified
 AS $$
-SELECT
-  CASE WHEN current_setting('minerva.trigger_mark_modified') = 'off'
-    THEN asm.*
-    ELSE attribute_directory.mark_modified($1, now())
-  END
-  FROM attribute_directory.attribute_store_modified asm WHERE asm.attribute_store_id = $1;
+SELECT attribute_directory.mark_modified($1, now())
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -5237,8 +5236,7 @@ CREATE FUNCTION "attribute_directory"."define_attribute_store"("data_source_id" 
     RETURNS attribute_directory.attribute_store
 AS $$
 INSERT INTO attribute_directory.attribute_store(data_source_id, entity_type_id)
-  VALUES ($1, $2);
-SELECT * FROM attribute_directory.attribute_store WHERE data_source_id = $1 AND entity_type_id = $2;
+VALUES ($1, $2) RETURNING attribute_store;
 $$ LANGUAGE sql VOLATILE;
 
 
