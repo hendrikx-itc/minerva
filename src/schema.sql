@@ -8574,13 +8574,37 @@ CREATE FUNCTION "entity_set"."remove_entity_from_set"(directory.entity_set, "ent
     RETURNS void
 AS $$
 SELECT action(FORMAT(
-  'DELETE FROM entity_set.%I es USING entity.%I e WHERE es.id = e.id AND e.name = ''%s'';',
+  'DELETE FROM entity_set.%I es USING entity.%I e '
+  'WHERE es.entity_set_id = %s AND es.id = e.id AND e.name = ''%s'';',
   entity_set.get_entity_type_name($1),
   entity_set.get_entity_type_name($1),
+  $1.id,
   $2
 ));
 UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
 $$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity_set"."add_entities_to_set"(directory.entity_set, "entities" text[])
+    RETURNS void
+AS $$
+SELECT entity_set.add_entity_to_set($1, e) FROM unnest($2) e;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "entity_set"."change_set_entities"(directory.entity_set, "entities" text[])
+    RETURNS void
+AS $$
+SELECT action(FORMAT(
+  'DELETE FROM entity_set.%I WHERE entity_set_id = %s;',
+  entity_set.get_entity_type_name($1),
+  $1.id
+));
+UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
+SELECT entity_set.add_entities_to_set($1, $2);
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "entity_set"."change_set_entities"(directory.entity_set, "entities" text[]) IS 'Set the entities in the set to exactly the specified entities';
 
 
 CREATE FUNCTION "entity_set"."get_entity_set_members"(directory.entity_set)

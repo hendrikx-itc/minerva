@@ -13780,12 +13780,47 @@ objects:
       name: entity
     source: |-
       SELECT action(FORMAT(
-        'DELETE FROM entity_set.%I es USING entity.%I e WHERE es.id = e.id AND e.name = ''%s'';',
+        'DELETE FROM entity_set.%I es USING entity.%I e '
+        'WHERE es.entity_set_id = %s AND es.id = e.id AND e.name = ''%s'';',
         entity_set.get_entity_type_name($1),
         entity_set.get_entity_type_name($1),
+        $1.id,
         $2
       ));
       UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
+
+- function:
+    name: add_entities_to_set
+    schema: entity_set
+    return_type: void
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_set
+    - data_type: text[]
+      name: entities
+    source: |-
+      SELECT entity_set.add_entity_to_set($1, e) FROM unnest($2) e;
+
+- function:
+    name: change_set_entities
+    schema: entity_set
+    return_type: void
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_set
+    - data_type: text[]
+      name: entities
+    description: Set the entities in the set to exactly the specified entities
+    source: |-
+      SELECT action(FORMAT(
+        'DELETE FROM entity_set.%I WHERE entity_set_id = %s;',
+        entity_set.get_entity_type_name($1),
+        $1.id
+      ));
+      UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
+      SELECT entity_set.add_entities_to_set($1, $2);
 
 - function:
     name: get_entity_set_members
