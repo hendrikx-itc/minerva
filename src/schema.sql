@@ -8498,6 +8498,17 @@ SELECT name from directory.entity_type WHERE id = $1.entity_type_id;
 $$ LANGUAGE sql STABLE;
 
 
+CREATE FUNCTION "entity_set"."entity_set_exists"("owner" text, "name" text)
+    RETURNS boolean
+AS $$
+SELECT CASE COUNT(*)
+  WHEN 0 THEN false
+  ELSE true
+END
+FROM directory.entity_set WHERE owner = $1 AND name = $2;
+$$ LANGUAGE sql STABLE;
+
+
 CREATE FUNCTION "entity_set"."create_entity_set_table_if_not_exist"(directory.entity_type)
     RETURNS void
 AS $$
@@ -8605,6 +8616,65 @@ SELECT entity_set.add_entities_to_set($1, $2);
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "entity_set"."change_set_entities"(directory.entity_set, "entities" text[]) IS 'Set the entities in the set to exactly the specified entities';
+
+
+CREATE FUNCTION "entity_set"."change_set_entities_guarded"(directory.entity_set, "entities" text[])
+    RETURNS text[]
+AS $$
+DECLARE
+  entity text;
+  real_entity text;
+  result text[];
+  newresult text[];
+BEGIN
+  SELECT $2 INTO result;
+  FOREACH entity IN ARRAY $2 LOOP
+    EXECUTE FORMAT(
+      'SELECT name FROM entity.%I WHERE name = ''%s'';',
+      entity_set.get_entity_type_name($1),
+      entity
+    ) INTO real_entity;
+    SELECT array_remove(result, real_entity) INTO result;
+  END LOOP;
+  IF ARRAY_LENGTH(result, 1) IS NULL THEN
+    PERFORM entity_set.change_set_entities($1, $2);
+  END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+COMMENT ON FUNCTION "entity_set"."change_set_entities_guarded"(directory.entity_set, "entities" text[]) IS 'Only sets the entities if all specified entities are actually valid.
+Returns those entities that were invalid.';
+
+
+CREATE FUNCTION "entity_set"."create_entity_set_guarded"("name" text, "group" text, "entity_type_name" text, "owner" text, "description" text, "entities" text[])
+    RETURNS text[]
+AS $$
+DECLARE
+  entity text;
+  real_entity text;
+  result text[];
+  newresult text[];
+  entityset integer;
+BEGIN
+  SELECT $6 INTO result;
+  FOREACH entity IN ARRAY $6 LOOP
+    EXECUTE FORMAT(
+      'SELECT name FROM entity.%I WHERE name = ''%s'';',
+      $3,
+      entity
+    ) INTO real_entity;
+    SELECT array_remove(result, real_entity) INTO result;
+  END LOOP;
+  IF ARRAY_LENGTH(result, 1) IS NULL THEN
+    SELECT id FROM entity_set.create_entity_set($1, $2, $3, $4, $5) INTO entityset;
+    PERFORM entity_set.change_set_entities(t, $6) 
+      FROM directory.entity_set t
+      WHERE t.id = entityset;
+  END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "entity_set"."get_entity_set_members"(directory.entity_set)

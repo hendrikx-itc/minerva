@@ -13674,6 +13674,24 @@ objects:
       SELECT name from directory.entity_type WHERE id = $1.entity_type_id;
 
 - function:
+    name: entity_set_exists
+    schema: entity_set
+    return_type: boolean
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: text
+      name: owner
+    - data_type: text
+      name: name
+    source: |-
+      SELECT CASE COUNT(*)
+        WHEN 0 THEN false
+        ELSE true
+      END
+      FROM directory.entity_set WHERE owner = $1 AND name = $2;
+
+- function:
     name: create_entity_set_table_if_not_exist
     schema: entity_set
     return_type: void
@@ -13821,6 +13839,86 @@ objects:
       ));
       UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
       SELECT entity_set.add_entities_to_set($1, $2);
+
+- function:
+    name: change_set_entities_guarded
+    schema: entity_set
+    return_type: text[]
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_set
+    - data_type: text[]
+      name: entities
+    description: |-
+      Only sets the entities if all specified entities are actually valid.
+      Returns those entities that were invalid.
+    source: |-
+      DECLARE
+        entity text;
+        real_entity text;
+        result text[];
+        newresult text[];
+      BEGIN
+        SELECT $2 INTO result;
+        FOREACH entity IN ARRAY $2 LOOP
+          EXECUTE FORMAT(
+            'SELECT name FROM entity.%I WHERE name = ''%s'';',
+            entity_set.get_entity_type_name($1),
+            entity
+          ) INTO real_entity;
+          SELECT array_remove(result, real_entity) INTO result;
+        END LOOP;
+        IF ARRAY_LENGTH(result, 1) IS NULL THEN
+          PERFORM entity_set.change_set_entities($1, $2);
+        END IF;
+        RETURN result;
+      END;
+
+- function:
+    name: create_entity_set_guarded
+    schema: entity_set
+    return_type: text[]
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - data_type: text
+      name: name
+    - data_type: text
+      name: group
+    - data_type: text
+      name: entity_type_name
+    - data_type: text
+      name: owner
+    - data_type: text
+      name: description    
+    - data_type: text[]
+      name: entities
+    source: |-
+      DECLARE
+        entity text;
+        real_entity text;
+        result text[];
+        newresult text[];
+        entityset integer;
+      BEGIN
+        SELECT $6 INTO result;
+        FOREACH entity IN ARRAY $6 LOOP
+          EXECUTE FORMAT(
+            'SELECT name FROM entity.%I WHERE name = ''%s'';',
+            $3,
+            entity
+          ) INTO real_entity;
+          SELECT array_remove(result, real_entity) INTO result;
+        END LOOP;
+        IF ARRAY_LENGTH(result, 1) IS NULL THEN
+          SELECT id FROM entity_set.create_entity_set($1, $2, $3, $4, $5) INTO entityset;
+          PERFORM entity_set.change_set_entities(t, $6) 
+            FROM directory.entity_set t
+            WHERE t.id = entityset;
+        END IF;
+        RETURN result;
+      END;
 
 - function:
     name: get_entity_set_members
