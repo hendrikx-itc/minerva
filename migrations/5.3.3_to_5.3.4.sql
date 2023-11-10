@@ -14,28 +14,28 @@ DROP FUNCTION "trigger"."create_exception_threshold_table"(trigger.rule, name[])
 DROP FUNCTION "trigger"."create_rule"(name, trigger.threshold_def[]);
 
 CREATE FUNCTION "trigger"."get_exception_threshold_fn_name"(trigger.rule)
-    RETURNS text
+    RETURNS name
 AS $$
 SELECT ($1.name || '_get_exception_threshold')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trigger"."create_exception_threshold_fn_name"(trigger.rule)
-    RETURNS text
+    RETURNS name
 AS $$
 SELECT ($1.name || '_create_exception_threshold')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trigger"."get_or_create_exception_threshold_fn_name"(trigger.rule)
-    RETURNS text
+    RETURNS name
 AS $$
 SELECT ($1.name || '_get_or_create_exception_threshold')::name;
 $$ LANGUAGE sql IMMUTABLE;
 
 
 CREATE FUNCTION "trigger"."change_exception_threshold_fn_name"(trigger.rule)
-    RETURNS text
+    RETURNS name
 AS $$
 SELECT ($1.name || '_add_or_change_threshold_exception')::name;
 $$ LANGUAGE sql IMMUTABLE;

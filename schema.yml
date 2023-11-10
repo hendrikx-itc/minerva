@@ -11909,7 +11909,7 @@ objects:
 - function:
     name: get_exception_threshold_fn_name
     schema: trigger
-    return_type: text
+    return_type: name
     language: sql
     volatility: immutable
     arguments:
@@ -11920,7 +11920,7 @@ objects:
 - function:
     name: create_exception_threshold_fn_name
     schema: trigger
-    return_type: text
+    return_type: name
     language: sql
     volatility: immutable
     arguments:
@@ -11931,7 +11931,7 @@ objects:
 - function:
     name: get_or_create_exception_threshold_fn_name
     schema: trigger
-    return_type: text
+    return_type: name
     language: sql
     volatility: immutable
     arguments:
@@ -11942,7 +11942,7 @@ objects:
 - function:
     name: change_exception_threshold_fn_name
     schema: trigger
-    return_type: text
+    return_type: name
     language: sql
     volatility: immutable
     arguments:
