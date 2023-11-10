@@ -207,6 +207,12 @@ objects:
     - role: minerva
       privilege: USAGE
 
+- schema:
+    name: entity_set
+    privileges:
+    - role: minerva
+      privilege: USAGE
+
 - function:
     name: integer_to_array
     schema: public
@@ -862,6 +868,84 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
+
+- table:
+    name: entity_set
+    schema: directory
+    columns:
+    - name: id
+      data_type: integer
+      generated_identity: by_default
+      nullable: false
+    - name: name
+      data_type: text
+    - name: group
+      data_type: text
+    - name: entity_type_id
+      data_type: integer
+    - name: owner
+      data_type: text
+    - name: created
+      data_type: timestamptz
+      default: now()
+    - name: modified
+      data_type: timestamptz
+      default: now()
+    - name: description
+      data_type: text
+    primary_key:
+      name: entity_set_pkey
+      columns:
+      - id
+    foreign_keys:
+    - name: entity_set_entity_type_id_fkey
+      columns:
+      - entity_type_id
+      references:
+        table:
+          name: entity_type
+          schema: directory
+        columns:
+        - id
+      on_delete: cascade
+    indexes:
+    - name: entity_set_name_idx
+      unique: true
+      definition: btree(name, owner)
+    - name: entity_set_entity_type_idx
+      unique: false
+      definition: btree(entity_type_id)
+    privileges:
+    - role: minerva
+      privilege: SELECT
+    - role: minerva_writer
+      privilege: INSERT,UPDATE,DELETE
+
+- function:
+    name: update_modified_column
+    schema: directory
+    return_type: trigger
+    language: plpgsql
+    volatility: volatile
+    arguments: []
+    source: |-
+      BEGIN
+        NEW.modified = now();
+        RETURN NEW;
+      END;
+
+- trigger:
+    table:
+      schema: directory
+      name: entity_set
+    name: update_modified_column
+    function:
+      schema: directory
+      name: update_modified_column
+    when: before
+    events:
+    - update
+    affecteach: row
 
 - function:
     name: get_entity_type_name
@@ -13569,6 +13653,312 @@ objects:
           trigger.truncate(now(), $1.granularity) - $1.default_interval,
           - $1.granularity
       );
+
+###################
+###################
+###             ###
+### entity sets ###
+###             ###
+###################
+###################
+
+- function:
+    name: get_entity_type_name
+    schema: entity_set
+    return_type: text
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: directory.entity_set
+    source: |-
+      SELECT name from directory.entity_type WHERE id = $1.entity_type_id;
+
+- function:
+    name: entity_set_exists
+    schema: entity_set
+    return_type: boolean
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: text
+      name: owner
+    - data_type: text
+      name: name
+    source: |-
+      SELECT CASE COUNT(*)
+        WHEN 0 THEN false
+        ELSE true
+      END
+      FROM directory.entity_set WHERE owner = $1 AND name = $2;
+
+- function:
+    name: create_entity_set_table_if_not_exist
+    schema: entity_set
+    return_type: void
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_type
+    source: |-
+      DECLARE
+        entity_set_count integer;
+      BEGIN
+        SELECT count(*) FROM directory.entity_set WHERE entity_type_id = $1.id INTO entity_set_count;
+        IF entity_set_count = 0
+        THEN
+          EXECUTE FORMAT(
+            'CREATE TABLE IF NOT EXISTS entity_set.%I('
+              'id integer,'
+              'entity_set_id integer,'
+              'primary key (id, entity_set_id)'
+            ');',
+            $1.name
+          );
+          EXECUTE FORMAT(
+            'GRANT SELECT ON entity_set.%I TO minerva;',
+            $1.name
+          );
+          EXECUTE FORMAT(
+            'GRANT INSERT,UPDATE,DELETE ON entity_set.%I to minerva_writer;',
+            $1.name
+          );
+          EXECUTE FORMAT(
+            'CREATE INDEX IF NOT EXISTS entity_set_%s_id_idx ON entity_set.%I(id);',
+            $1.name,
+            $1.name
+          );
+          EXECUTE FORMAT(
+            'CREATE INDEX IF NOT EXISTS entity_set_%s_entityt_set_id_idx ON entity_set.%I(entity_set_id);',
+            $1.name,
+            $1.name
+          );           
+        END IF;
+      END;
+
+- function:
+    name: create_entity_set
+    schema: entity_set
+    return_type: directory.entity_set
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - data_type: text
+      name: name
+    - data_type: text
+      name: group
+    - data_type: text
+      name: entity_type_name
+    - data_type: text
+      name: owner
+    - data_type: text
+      name: description
+    source: |-
+      DECLARE
+        entity_type directory.entity_type;
+      BEGIN
+        SELECT * FROM directory.entity_type et WHERE et.name = entity_type_name INTO entity_type;
+        PERFORM entity_set.create_entity_set_table_if_not_exist(et) from directory.entity_type et WHERE et.name = entity_type_name;
+        INSERT INTO directory.entity_set(name, "group", entity_type_id, owner, description)
+          VALUES ($1, $2, entity_type.id, $4, $5);
+        RETURN es FROM directory.entity_set es WHERE es.name = $1 AND es.owner = $4;
+      END;
+
+- function:
+    name: add_entity_to_set
+    schema: entity_set
+    return_type: void
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_set
+    - data_type: text
+      name: entity
+    source: |-
+      SELECT action(FORMAT(
+        'INSERT INTO entity_set.%I(id, entity_set_id) '
+         'SELECT id, %s '
+         'FROM entity.%I WHERE name = ''%s'' '
+         'ON CONFLICT DO NOTHING;',
+        entity_set.get_entity_type_name($1),
+        $1.id,
+        entity_set.get_entity_type_name($1),
+        $2
+      ));
+      UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
+
+- function:
+    name: remove_entity_from_set
+    schema: entity_set
+    return_type: void
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_set
+    - data_type: text
+      name: entity
+    source: |-
+      SELECT action(FORMAT(
+        'DELETE FROM entity_set.%I es USING entity.%I e '
+        'WHERE es.entity_set_id = %s AND es.id = e.id AND e.name = ''%s'';',
+        entity_set.get_entity_type_name($1),
+        entity_set.get_entity_type_name($1),
+        $1.id,
+        $2
+      ));
+      UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
+
+- function:
+    name: add_entities_to_set
+    schema: entity_set
+    return_type: void
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_set
+    - data_type: text[]
+      name: entities
+    source: |-
+      SELECT entity_set.add_entity_to_set($1, e) FROM unnest($2) e;
+
+- function:
+    name: change_set_entities
+    schema: entity_set
+    return_type: void
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_set
+    - data_type: text[]
+      name: entities
+    description: Set the entities in the set to exactly the specified entities
+    source: |-
+      SELECT action(FORMAT(
+        'DELETE FROM entity_set.%I WHERE entity_set_id = %s;',
+        entity_set.get_entity_type_name($1),
+        $1.id
+      ));
+      UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
+      SELECT entity_set.add_entities_to_set($1, $2);
+
+- function:
+    name: change_set_entities_guarded
+    schema: entity_set
+    return_type: text[]
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - data_type: directory.entity_set
+    - data_type: text[]
+      name: entities
+    description: |-
+      Only sets the entities if all specified entities are actually valid.
+      Returns those entities that were invalid.
+    source: |-
+      DECLARE
+        entity text;
+        real_entity text;
+        result text[];
+        newresult text[];
+      BEGIN
+        SELECT $2 INTO result;
+        FOREACH entity IN ARRAY $2 LOOP
+          EXECUTE FORMAT(
+            'SELECT name FROM entity.%I WHERE name = ''%s'';',
+            entity_set.get_entity_type_name($1),
+            entity
+          ) INTO real_entity;
+          SELECT array_remove(result, real_entity) INTO result;
+        END LOOP;
+        IF ARRAY_LENGTH(result, 1) IS NULL THEN
+          PERFORM entity_set.change_set_entities($1, $2);
+        END IF;
+        RETURN result;
+      END;
+
+- function:
+    name: create_entity_set_guarded
+    schema: entity_set
+    return_type: text[]
+    language: plpgsql
+    volatility: volatile
+    arguments:
+    - data_type: text
+      name: name
+    - data_type: text
+      name: group
+    - data_type: text
+      name: entity_type_name
+    - data_type: text
+      name: owner
+    - data_type: text
+      name: description    
+    - data_type: text[]
+      name: entities
+    source: |-
+      DECLARE
+        entity text;
+        real_entity text;
+        result text[];
+        newresult text[];
+        entityset integer;
+      BEGIN
+        SELECT $6 INTO result;
+        FOREACH entity IN ARRAY $6 LOOP
+          EXECUTE FORMAT(
+            'SELECT name FROM entity.%I WHERE name = ''%s'';',
+            $3,
+            entity
+          ) INTO real_entity;
+          SELECT array_remove(result, real_entity) INTO result;
+        END LOOP;
+        IF ARRAY_LENGTH(result, 1) IS NULL THEN
+          SELECT id FROM entity_set.create_entity_set($1, $2, $3, $4, $5) INTO entityset;
+          PERFORM entity_set.change_set_entities(t, $6) 
+            FROM directory.entity_set t
+            WHERE t.id = entityset;
+        END IF;
+        RETURN result;
+      END;
+
+- function:
+    name: get_entity_set_members
+    schema: entity_set
+    return_type: text[]
+    language: plpgsql
+    volatility: stable
+    arguments:
+    - data_type: directory.entity_set
+    source: |-
+      DECLARE
+        result text[];
+      BEGIN
+        EXECUTE FORMAT(
+          'SELECT array_agg(e.name) '
+          'FROM entity_set.%I es JOIN entity.%I e ON es.id = e.id '
+          'WHERE es.entity_set_id = %s',
+          entity_set.get_entity_type_name($1),
+          entity_set.get_entity_type_name($1),
+          $1.id
+        ) INTO result;
+        RETURN result;
+      END;
+
+- function:
+    name: get_entity_set_members
+    schema: entity_set
+    return_type: text[]
+    language: sql
+    volatility: stable
+    arguments:
+    - name: owner
+      data_type: text
+    - name: name
+      data_type: text
+    source: |-
+      SELECT entity_set.get_entity_set_members(es) FROM directory.entity_set es WHERE owner = $1 AND name = $2;
+
+################### Fullas games
+###################
 
 - composite_type:
     name: trend_data
