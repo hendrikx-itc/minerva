@@ -3,6 +3,17 @@
 DO
 $$
 BEGIN
+  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'postgres') THEN
+    CREATE ROLE postgres
+      SUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+  END IF;
+END
+$$;
+
+
+DO
+$$
+BEGIN
   IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva') THEN
     CREATE ROLE minerva
       NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
@@ -37,6 +48,8 @@ $$;
 GRANT minerva TO minerva_admin;
 
 GRANT minerva_writer TO minerva_admin;
+
+GRANT postgres TO minerva_admin;
 
 
 CREATE SCHEMA IF NOT EXISTS "public";

@@ -1,5 +1,9 @@
 objects:
 - role:
+    name: postgres
+    super: true
+    
+- role:
     name: minerva
     super: false
     inherit: true
@@ -27,6 +31,7 @@ objects:
     memberships:
     - minerva
     - minerva_writer
+    - postgres
 
 - schema:
     name: public
