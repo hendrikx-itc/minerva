@@ -212,12 +212,6 @@ objects:
     - role: minerva
       privilege: USAGE
 
-- schema:
-    name: entity_set
-    privileges:
-    - role: minerva
-      privilege: USAGE
-
 - function:
     name: integer_to_array
     schema: public
@@ -873,84 +867,6 @@ objects:
       privilege: SELECT
     - role: minerva_writer
       privilege: INSERT,UPDATE,DELETE
-
-- table:
-    name: entity_set
-    schema: directory
-    columns:
-    - name: id
-      data_type: integer
-      generated_identity: by_default
-      nullable: false
-    - name: name
-      data_type: text
-    - name: group
-      data_type: text
-    - name: entity_type_id
-      data_type: integer
-    - name: owner
-      data_type: text
-    - name: created
-      data_type: timestamptz
-      default: now()
-    - name: modified
-      data_type: timestamptz
-      default: now()
-    - name: description
-      data_type: text
-    primary_key:
-      name: entity_set_pkey
-      columns:
-      - id
-    foreign_keys:
-    - name: entity_set_entity_type_id_fkey
-      columns:
-      - entity_type_id
-      references:
-        table:
-          name: entity_type
-          schema: directory
-        columns:
-        - id
-      on_delete: cascade
-    indexes:
-    - name: entity_set_name_idx
-      unique: true
-      definition: btree(name, owner)
-    - name: entity_set_entity_type_idx
-      unique: false
-      definition: btree(entity_type_id)
-    privileges:
-    - role: minerva
-      privilege: SELECT
-    - role: minerva_writer
-      privilege: INSERT,UPDATE,DELETE
-
-- function:
-    name: update_modified_column
-    schema: directory
-    return_type: trigger
-    language: plpgsql
-    volatility: volatile
-    arguments: []
-    source: |-
-      BEGIN
-        NEW.modified = now();
-        RETURN NEW;
-      END;
-
-- trigger:
-    table:
-      schema: directory
-      name: entity_set
-    name: update_modified_column
-    function:
-      schema: directory
-      name: update_modified_column
-    when: before
-    events:
-    - update
-    affecteach: row
 
 - function:
     name: get_entity_type_name
@@ -13667,20 +13583,31 @@ objects:
 ###################
 ###################
 
-- function:
-    name: get_entity_type_name
-    schema: entity_set
-    return_type: text
-    language: sql
-    volatility: stable
-    arguments:
-    - data_type: directory.entity_set
-    source: |-
-      SELECT name from directory.entity_type WHERE id = $1.entity_type_id;
+- query:
+    query: directory.create_entity_type('entity_set')
+
+- query:
+    query: directory.create_data_source('minerva')
+
+- query:
+    query: |-
+      attribute_directory.create_attribute_store(
+        'minerva',
+        'entity_set',
+        ARRAY[
+          ('name', 'text', ''),
+          ('fullname', 'text', ''),
+          ('group', 'text', ''),
+          ('source_entity_type', 'text', ''),
+          ('owner', 'text', ''),
+          ('description', 'text', ''),
+          ('last_update', 'date', '')
+        ]::attribute_directory.attribute_descr[]
+      )
 
 - function:
     name: entity_set_exists
-    schema: entity_set
+    schema: relation_directory
     return_type: boolean
     language: sql
     volatility: stable
@@ -13694,56 +13621,12 @@ objects:
         WHEN 0 THEN false
         ELSE true
       END
-      FROM directory.entity_set WHERE owner = $1 AND name = $2;
-
-- function:
-    name: create_entity_set_table_if_not_exist
-    schema: entity_set
-    return_type: void
-    language: plpgsql
-    volatility: volatile
-    arguments:
-    - data_type: directory.entity_type
-    source: |-
-      DECLARE
-        entity_set_count integer;
-      BEGIN
-        SELECT count(*) FROM directory.entity_set WHERE entity_type_id = $1.id INTO entity_set_count;
-        IF entity_set_count = 0
-        THEN
-          EXECUTE FORMAT(
-            'CREATE TABLE IF NOT EXISTS entity_set.%I('
-              'id integer,'
-              'entity_set_id integer,'
-              'primary key (id, entity_set_id)'
-            ');',
-            $1.name
-          );
-          EXECUTE FORMAT(
-            'GRANT SELECT ON entity_set.%I TO minerva;',
-            $1.name
-          );
-          EXECUTE FORMAT(
-            'GRANT INSERT,UPDATE,DELETE ON entity_set.%I to minerva_writer;',
-            $1.name
-          );
-          EXECUTE FORMAT(
-            'CREATE INDEX IF NOT EXISTS entity_set_%s_id_idx ON entity_set.%I(id);',
-            $1.name,
-            $1.name
-          );
-          EXECUTE FORMAT(
-            'CREATE INDEX IF NOT EXISTS entity_set_%s_entityt_set_id_idx ON entity_set.%I(entity_set_id);',
-            $1.name,
-            $1.name
-          );           
-        END IF;
-      END;
+      FROM attribute.minerva_entity_set WHERE owner = $1 AND name = $2;
 
 - function:
     name: create_entity_set
-    schema: entity_set
-    return_type: directory.entity_set
+    schema: relation_directory
+    return_type: attribute.minerva_entity_set
     language: plpgsql
     volatility: volatile
     arguments:
@@ -13759,100 +13642,159 @@ objects:
       name: description
     source: |-
       DECLARE
-        entity_type directory.entity_type;
+        entity_id integer;
       BEGIN
-        SELECT * FROM directory.entity_type et WHERE et.name = entity_type_name INTO entity_type;
-        PERFORM entity_set.create_entity_set_table_if_not_exist(et) from directory.entity_type et WHERE et.name = entity_type_name;
-        INSERT INTO directory.entity_set(name, "group", entity_type_id, owner, description)
-          VALUES ($1, $2, entity_type.id, $4, $5);
-        RETURN es FROM directory.entity_set es WHERE es.name = $1 AND es.owner = $4;
+        EXECUTE FORMAT(
+          'CREATE TABLE IF NOT EXISTS relation."%s->entity_set"('
+          'source_id integer, '
+          'target_id integer, '
+          'PRIMARY KEY (source_id, target_id));',
+          entity_type_name
+        );
+        PERFORM relation_directory.name_to_type(entity_type_name || '->entity_set');
+        SELECT id FROM entity.to_entity_set(name || '_' || "group" || '_' || owner) INTO entity_id;
+        INSERT INTO attribute_staging.minerva_entity_set(
+            entity_id, timestamp, name, fullname, "group", source_entity_type, owner, description, last_update
+          ) VALUES (
+            entity_id,
+            now(),
+            name,
+            name || '_' || "group" || '_' || owner,
+            "group",
+            entity_type_name,
+            owner,
+            description,
+            CURRENT_DATE
+          );
+        PERFORM attribute_directory.transfer_staged(attribute_directory.get_attribute_store('minerva', 'entity_set'));
+        PERFORM attribute_directory.materialize_curr_ptr(attribute_directory.get_attribute_store('minerva', 'entity_set'));
+        RETURN es FROM attribute.minerva_entity_set es WHERE es.name = $1 AND es.owner = $4;
       END;
 
 - function:
-    name: add_entity_to_set
-    schema: entity_set
+    name: update_entity_set_attributes
+    schema: relation_directory
     return_type: void
     language: sql
     volatility: volatile
     arguments:
-    - data_type: directory.entity_set
+    - data_type: attribute.minerva_entity_set
+    source: |-
+      INSERT INTO attribute_staging.minerva_entity_set(
+        entity_id, timestamp, name, fullname, "group", source_entity_type, owner, description, last_update
+      ) VALUES (
+        $1.entity_id,
+        now(),
+        $1.name,
+        $1.fullname,
+        $1."group",
+        $1.source_entity_type,
+        $1.owner,
+        $1.description,
+        CURRENT_DATE
+      );
+
+- function:
+    name: get_entity_set_data
+    schema: relation_directory
+    return_type: attribute.minerva_entity_set
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: text
+      name: name
+    - data_type: text
+      name: owner
+    source: SELECT * FROM attribute.minerva_entity_set WHERE name = $1 AND owner = $2;
+
+- function:
+    name: add_entity_to_set
+    schema: relation_directory
+    return_type: attribute.minerva_entity_set
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: attribute.minerva_entity_set
     - data_type: text
       name: entity
     source: |-
+      SELECT relation_directory.update_entity_set_attributes($1);
       SELECT action(FORMAT(
-        'INSERT INTO entity_set.%I(id, entity_set_id) '
-         'SELECT id, %s '
-         'FROM entity.%I WHERE name = ''%s'' '
-         'ON CONFLICT DO NOTHING;',
-        entity_set.get_entity_type_name($1),
-        $1.id,
-        entity_set.get_entity_type_name($1),
+        'INSERT INTO relation."%s->entity_set" (source_id, target_id) '
+        'SELECT source.id AS source_id, %s AS target '
+        'FROM entity.%I source '
+        'WHERE source.name = ''%s'''
+        'ON CONFLICT DO NOTHING;',
+        $1.source_entity_type,
+        $1.entity_id,
+        $1.source_entity_type,
         $2
       ));
-      UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
+      SELECT * FROM attribute.minerva_entity_set es WHERE es.entity_id = $1.entity_id;
 
 - function:
     name: remove_entity_from_set
-    schema: entity_set
+    schema: relation_directory
     return_type: void
     language: sql
     volatility: volatile
     arguments:
-    - data_type: directory.entity_set
+    - data_type: attribute.minerva_entity_set
     - data_type: text
       name: entity
     source: |-
+      SELECT relation_directory.update_entity_set_attributes($1);
       SELECT action(FORMAT(
-        'DELETE FROM entity_set.%I es USING entity.%I e '
-        'WHERE es.entity_set_id = %s AND es.id = e.id AND e.name = ''%s'';',
-        entity_set.get_entity_type_name($1),
-        entity_set.get_entity_type_name($1),
-        $1.id,
-        $2
+        'DELETE es FROM relation."%s->entity_set" es '
+        'JOIN entity.%I source ON es.source_id = source.id '
+        'WHERE source.name = ''%s'' AND target_id = %s;',
+        $1.source_entity_type,
+        $1.source_entity_type,
+        $2,
+        $1.entity_id
       ));
-      UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
 
 - function:
     name: add_entities_to_set
-    schema: entity_set
+    schema: relation_directory
     return_type: void
     language: sql
     volatility: volatile
     arguments:
-    - data_type: directory.entity_set
+    - data_type: attribute.minerva_entity_set
     - data_type: text[]
       name: entities
     source: |-
-      SELECT entity_set.add_entity_to_set($1, e) FROM unnest($2) e;
+      SELECT relation_directory.add_entity_to_set($1, e) FROM unnest($2) e;
 
 - function:
     name: change_set_entities
-    schema: entity_set
+    schema: relation_directory
     return_type: void
     language: sql
     volatility: volatile
     arguments:
-    - data_type: directory.entity_set
+    - data_type: attribute.minerva_entity_set
     - data_type: text[]
       name: entities
     description: Set the entities in the set to exactly the specified entities
     source: |-
       SELECT action(FORMAT(
-        'DELETE FROM entity_set.%I WHERE entity_set_id = %s;',
-        entity_set.get_entity_type_name($1),
-        $1.id
+        'DELETE FROM relation."%s->entity_set" '
+        'WHERE target_id = %s;',
+        $1.source_entity_type,
+        $1.entity_id
       ));
-      UPDATE directory.entity_set SET modified = now() WHERE id = $1.id;
-      SELECT entity_set.add_entities_to_set($1, $2);
+      SELECT relation_directory.add_entities_to_set($1, $2);
 
 - function:
     name: change_set_entities_guarded
-    schema: entity_set
+    schema: relation_directory
     return_type: text[]
     language: plpgsql
     volatility: volatile
     arguments:
-    - data_type: directory.entity_set
+    - data_type: attribute.minerva_entity_set
     - data_type: text[]
       name: entities
     description: |-
@@ -13869,20 +13811,43 @@ objects:
         FOREACH entity IN ARRAY $2 LOOP
           EXECUTE FORMAT(
             'SELECT name FROM entity.%I WHERE name = ''%s'';',
-            entity_set.get_entity_type_name($1),
+            $1.source_entity_type,
             entity
           ) INTO real_entity;
           SELECT array_remove(result, real_entity) INTO result;
         END LOOP;
         IF ARRAY_LENGTH(result, 1) IS NULL THEN
-          PERFORM entity_set.change_set_entities($1, $2);
+          PERFORM relation_directory.change_set_entities($1, $2);
         END IF;
         RETURN result;
       END;
 
 - function:
+    name: get_entity_set_members
+    schema: relation_directory
+    return_type: text[]
+    language: plpgsql
+    volatility: stable
+    arguments:
+    - data_type: attribute.minerva_entity_set
+    source: |-
+      DECLARE
+        result text[];
+      BEGIN
+        EXECUTE FORMAT(
+          'SELECT array_agg(e.name) '
+          'FROM relation."%s->entity_set" es JOIN entity.%I e ON es.source_id = e.id '
+          'WHERE es.target_id = %s',
+          $1.source_entity_type,
+          $1.source_entity_type,
+          $1.entity_id
+        ) INTO result;
+        RETURN result;
+      END;
+
+- function:
     name: create_entity_set_guarded
-    schema: entity_set
+    schema: relation_directory
     return_type: text[]
     language: plpgsql
     volatility: volatile
@@ -13917,9 +13882,9 @@ objects:
           SELECT array_remove(result, real_entity) INTO result;
         END LOOP;
         IF ARRAY_LENGTH(result, 1) IS NULL THEN
-          SELECT id FROM entity_set.create_entity_set($1, $2, $3, $4, $5) INTO entityset;
-          PERFORM entity_set.change_set_entities(t, $6) 
-            FROM directory.entity_set t
+          SELECT id FROM relation_directory.create_entity_set($1, $2, $3, $4, $5) INTO entityset;
+          PERFORM relation_directory.change_set_entities(t, $6) 
+            FROM attribute.minerva_entity_set t
             WHERE t.id = entityset;
         END IF;
         RETURN result;
@@ -13927,42 +13892,21 @@ objects:
 
 - function:
     name: get_entity_set_members
-    schema: entity_set
-    return_type: text[]
-    language: plpgsql
-    volatility: stable
-    arguments:
-    - data_type: directory.entity_set
-    source: |-
-      DECLARE
-        result text[];
-      BEGIN
-        EXECUTE FORMAT(
-          'SELECT array_agg(e.name) '
-          'FROM entity_set.%I es JOIN entity.%I e ON es.id = e.id '
-          'WHERE es.entity_set_id = %s',
-          entity_set.get_entity_type_name($1),
-          entity_set.get_entity_type_name($1),
-          $1.id
-        ) INTO result;
-        RETURN result;
-      END;
-
-- function:
-    name: get_entity_set_members
-    schema: entity_set
+    schema: relation_directory
     return_type: text[]
     language: sql
     volatility: stable
     arguments:
-    - name: owner
-      data_type: text
     - name: name
       data_type: text
+    - name: owner
+      data_type: text
     source: |-
-      SELECT entity_set.get_entity_set_members(es) FROM directory.entity_set es WHERE owner = $1 AND name = $2;
+      SELECT relation_directory.get_entity_set_members(es)
+        FROM attribute.minerva_entity_set es 
+        WHERE owner = $2 AND name = $1;
 
-################### Fullas games
+###################
 ###################
 
 - composite_type:
