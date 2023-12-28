@@ -5,6 +5,17 @@ CREATE EXTENSION IF NOT EXISTS citus;
 DO
 $$
 BEGIN
+  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'postgres') THEN
+    CREATE ROLE postgres
+      SUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+  END IF;
+END
+$$;
+
+
+DO
+$$
+BEGIN
   IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva') THEN
     CREATE ROLE minerva
       NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
@@ -39,6 +50,8 @@ $$;
 GRANT minerva TO minerva_admin;
 
 GRANT minerva_writer TO minerva_admin;
+
+GRANT postgres TO minerva_admin;
 
 
 CREATE SCHEMA IF NOT EXISTS "public";
@@ -1584,6 +1597,15 @@ $$ LANGUAGE sql VOLATILE;
 COMMENT ON FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass, "description" jsonb) IS 'Define a materialization that uses a view as source';
 
 
+CREATE FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass)
+    RETURNS trend_directory.view_materialization
+AS $$
+SELECT trend_directory.define_view_materialization($1, $2, $3, $4, $5, '{}'::jsonb);
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."define_view_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_view" regclass) IS 'Define a materialization that uses a view as source';
+
+
 CREATE TABLE "trend_directory"."function_materialization"
 (
   "id" serial NOT NULL,
@@ -1620,6 +1642,15 @@ RETURNING *;
 $$ LANGUAGE sql VOLATILE;
 
 COMMENT ON FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc, "description" jsonb) IS 'Define a materialization that uses a function as source';
+
+
+CREATE FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc)
+    RETURNS trend_directory.function_materialization
+AS $$
+SELECT trend_directory.define_function_materialization($1, $2, $3, $4, $5, '{}'::jsonb)
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "trend_directory"."define_function_materialization"("dst_trend_store_part_id" integer, "processing_delay" interval, "stability_delay" interval, "reprocessing_period" interval, "src_function" regproc) IS 'Define a materialization that uses a function as source';
 
 
 CREATE FUNCTION "trend_directory"."cleanup_for_function_materialization"()
@@ -5195,25 +5226,6 @@ SELECT COALESCE(attribute_directory.update_compacted($1, $2), attribute_director
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "attribute_directory"."update_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
-    RETURNS attribute_directory.attribute_store_modified
-AS $$
-UPDATE attribute_directory.attribute_store_modified
-SET modified = greatest(modified, $2)
-WHERE attribute_store_id = $1
-RETURNING attribute_store_modified;
-$$ LANGUAGE sql VOLATILE;
-
-
-CREATE FUNCTION "attribute_directory"."store_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
-    RETURNS attribute_directory.attribute_store_modified
-AS $$
-INSERT INTO attribute_directory.attribute_store_modified (attribute_store_id, modified)
-VALUES ($1, $2)
-RETURNING attribute_store_modified;
-$$ LANGUAGE sql VOLATILE;
-
-
 CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integer, "modified" timestamp with time zone)
     RETURNS attribute_directory.attribute_store_modified
 AS $$
@@ -5230,6 +5242,17 @@ CREATE FUNCTION "attribute_directory"."mark_modified"("attribute_store_id" integ
 AS $$
 SELECT attribute_directory.mark_modified($1, now())
 $$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "attribute_directory"."drop_hash_function"(attribute_directory.attribute_store)
+    RETURNS attribute_directory.attribute_store
+AS $$
+BEGIN
+    EXECUTE format('DROP FUNCTION attribute_history.values_hash(attribute_history.%I)', attribute_directory.to_table_name($1));
+
+    RETURN $1;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE FUNCTION "attribute_directory"."define_attribute_store"("data_source_id" integer, "entity_type_id" integer)
@@ -5344,6 +5367,8 @@ BEGIN
     );
 
     EXECUTE format('TRUNCATE attribute_staging.%I', table_name);
+
+    PERFORM attribute_directory.mark_modified($1.id);
 
     RETURN row_count;
 END;
@@ -6125,6 +6150,24 @@ SELECT public.action(
 $$ LANGUAGE sql VOLATILE;
 
 
+CREATE FUNCTION "attribute_directory"."add_attribute_columns"(attribute_directory.attribute_store, attribute_directory.attribute[])
+    RETURNS attribute_directory.attribute_store
+AS $$
+SELECT public.action(
+    $1,
+    ARRAY[
+        format('SELECT attribute_directory.drop_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id),
+        format(
+            'ALTER TABLE attribute_base.%I %s',
+            attribute_directory.to_char($1),
+            (SELECT array_to_string(array_agg(format('ADD COLUMN %I %s', attribute.name, attribute.data_type)), ',') FROM unnest($2) AS attribute)
+        ),
+        format('SELECT attribute_directory.create_dependees(attribute_store) FROM attribute_directory.attribute_store WHERE id = %s', $1.id)
+    ]
+);
+$$ LANGUAGE sql VOLATILE;
+
+
 CREATE FUNCTION "attribute_directory"."create_attribute"(attribute_directory.attribute_store, name, text, text)
     RETURNS attribute_directory.attribute
 AS $$
@@ -6220,6 +6263,8 @@ SELECT attribute_directory.drop_dependees($1);
 SELECT attribute_directory.drop_run_length_view($1);
 
 SELECT attribute_directory.drop_changes_view($1);
+
+SELECT attribute_directory.drop_hash_triggers($1);
 
 SELECT attribute_directory.drop_entity_at_func($1);
 SELECT attribute_directory.drop_entity_at_func_ptr($1);
@@ -7550,37 +7595,95 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 
-CREATE FUNCTION "trigger"."create_exception_threshold_table_sql"(trigger.rule, name[])
+CREATE FUNCTION "trigger"."get_exception_threshold_fn_name"(trigger.rule)
+    RETURNS name
+AS $$
+SELECT ($1.name || '_get_exception_threshold')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trigger"."create_exception_threshold_fn_name"(trigger.rule)
+    RETURNS name
+AS $$
+SELECT ($1.name || '_create_exception_threshold')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trigger"."get_or_create_exception_threshold_fn_name"(trigger.rule)
+    RETURNS name
+AS $$
+SELECT ($1.name || '_get_or_create_exception_threshold')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trigger"."change_exception_threshold_fn_name"(trigger.rule)
+    RETURNS name
+AS $$
+SELECT ($1.name || '_add_or_change_threshold_exception')::name;
+$$ LANGUAGE sql IMMUTABLE;
+
+
+CREATE FUNCTION "trigger"."get_exception_threshold_fn_sql"(trigger.rule)
     RETURNS text
 AS $$
 SELECT format(
-    'CREATE TABLE trigger_rule.%I
-    (
-        id serial,
-        entity_id integer,
-        created timestamp with time zone default now(),
-        start timestamp with time zone,
-        expires timestamp with time zone,
-        remark text,
-        %s
-    );',
-    trigger.exception_threshold_table_name($1),
-    array_to_string(array_agg(quote_ident(kpi.name) || ' ' || kpi.data_type), ', ')
-)
-FROM (
-    SELECT (trigger.get_kpi_def($1, kpi_name)).* FROM unnest($2) kpi_name
-) kpi;
+  'CREATE OR REPLACE FUNCTION trigger_rule.%I(entity integer) RETURNS trigger_rule.%I AS $fn$%s$fn$ LANGUAGE sql VOLATILE',
+  trigger.get_exception_threshold_fn_name($1),
+  trigger.exception_threshold_table_name($1),
+  format(
+    'SELECT * FROM trigger_rule.%I WHERE entity_id = entity;',
+    trigger.exception_threshold_table_name($1)
+  )
+);
 $$ LANGUAGE sql STABLE;
 
 
-CREATE FUNCTION "trigger"."create_exception_threshold_table"(trigger.rule, name[])
-    RETURNS trigger.rule
+CREATE FUNCTION "trigger"."create_exception_threshold_fn_sql"(trigger.rule)
+    RETURNS text
 AS $$
-SELECT trigger.action($1, trigger.create_exception_threshold_table_sql($1,$2));
-SELECT trigger.action($1, format(
-  'ALTER TABLE trigger_rule.%I OWNER TO minerva_admin',
-  trigger.exception_threshold_table_name($1)
-));
+SELECT format(
+  'CREATE OR REPLACE FUNCTION trigger_rule.%I(entity integer) RETURNS trigger_rule.%I AS $fn$%s$fn$ LANGUAGE sql VOLATILE',
+  trigger.create_exception_threshold_fn_name($1),
+  trigger.exception_threshold_table_name($1),
+  format(
+    'INSERT INTO trigger_rule.%I(entity_id) VALUES ($1) RETURNING *;',
+    trigger.exception_threshold_table_name($1)
+  )
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."get_or_create_exception_threshold_fn_sql"(trigger.rule)
+    RETURNS text
+AS $$
+SELECT format(
+  'CREATE OR REPLACE FUNCTION trigger_rule.%I(entity integer) RETURNS trigger_rule.%I AS $fn$%s$fn$ LANGUAGE sql VOLATILE',
+  trigger.get_or_create_exception_threshold_fn_name($1),
+  trigger.exception_threshold_table_name($1),
+  format('SELECT COALESCE(trigger_rule.%I($1), trigger_rule.%I($1));',
+     trigger.get_exception_threshold_fn_name($1),
+     trigger.create_exception_threshold_fn_name($1)
+     )
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "trigger"."create_change_exception_threshold_fn_sql"(trigger.rule, trigger.threshold_def[])
+    RETURNS text
+AS $$
+SELECT format(
+  'CREATE OR REPLACE FUNCTION trigger_rule.%I(entity integer, new_start timestamp with time zone, new_expires timestamp with time zone, %s) RETURNS VOID AS $fn$%s$fn$ LANGUAGE sql VOLATILE',
+  trigger.change_exception_threshold_fn_name($1),
+  string_agg(threshold.name || '_new ' || threshold.data_type, ', '),
+  format(
+    'SELECT trigger_rule.%I(entity); '
+    'UPDATE trigger_rule.%I SET (start, expires, %s) = (new_start, new_expires, %s) WHERE entity_id = entity;',
+    trigger.get_or_create_exception_threshold_fn_name($1),
+    trigger.exception_threshold_table_name($1),
+    string_agg(threshold.name, ', '),
+    string_agg(threshold.name || '_new', ', ')
+  )
+) FROM unnest($2) threshold;
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -8054,6 +8157,10 @@ CREATE FUNCTION "trigger"."create_exception_threshold_table"(trigger.rule, trigg
     RETURNS trigger.rule
 AS $$
 SELECT public.action($1, trigger.create_exception_threshold_table_sql($1, $2));
+SELECT public.action($1, trigger.get_exception_threshold_fn_sql($1));
+SELECT public.action($1, trigger.create_exception_threshold_fn_sql($1));
+SELECT public.action($1, trigger.get_or_create_exception_threshold_fn_sql($1));
+SELECT public.action($1, trigger.create_change_exception_threshold_fn_sql($1, $2));
 SELECT public.action($1, format('ALTER TABLE trigger_rule.%I OWNER TO minerva_admin', trigger.exception_threshold_table_name($1)));
 $$ LANGUAGE sql VOLATILE;
 
@@ -8155,10 +8262,10 @@ SELECT trigger.create_details_type($1, $2);
 SELECT CASE WHEN array_length($2, 1) > 0 THEN
     trigger.create_dummy_thresholds($1, $2)
 END;
+SELECT trigger.create_exception_threshold_table($1, $2);
 SELECT CASE WHEN array_length($2, 1) > 0 THEN
     trigger.create_set_thresholds_fn($1)
 END;
-SELECT trigger.create_exception_threshold_table($1, $2);
 SELECT trigger.create_with_threshold_fn($1);
 $$ LANGUAGE sql VOLATILE;
 
@@ -8501,10 +8608,10 @@ SELECT trigger.create_runnable_fn($1);
 $$ LANGUAGE sql VOLATILE;
 
 
-CREATE FUNCTION "trigger"."create_rule"(name, trigger.threshold_def[])
+CREATE FUNCTION "trigger"."create_rule"(text, trigger.threshold_def[])
     RETURNS trigger.rule
 AS $$
-SELECT trigger.setup_rule(trigger.define($1), $2);
+SELECT trigger.setup_rule(trigger.define($1::name), $2);
 $$ LANGUAGE sql VOLATILE;
 
 
@@ -8578,6 +8685,243 @@ SELECT generate_series(
     trigger.truncate(now(), $1.granularity) - $1.default_interval,
     - $1.granularity
 );
+$$ LANGUAGE sql STABLE;
+
+
+SELECT directory.create_entity_type('entity_set');
+
+
+SELECT directory.create_data_source('minerva');
+
+
+SELECT attribute_directory.create_attribute_store(
+  'minerva',
+  'entity_set',
+  ARRAY[
+    ('name', 'text', ''),
+    ('fullname', 'text', ''),
+    ('group', 'text', ''),
+    ('source_entity_type', 'text', ''),
+    ('owner', 'text', ''),
+    ('description', 'text', ''),
+    ('last_update', 'date', '')
+  ]::attribute_directory.attribute_descr[]
+);
+
+
+CREATE FUNCTION "relation_directory"."entity_set_exists"("owner" text, "name" text)
+    RETURNS boolean
+AS $$
+SELECT CASE COUNT(*)
+  WHEN 0 THEN false
+  ELSE true
+END
+FROM attribute.minerva_entity_set WHERE owner = $1 AND name = $2;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "relation_directory"."create_entity_set"("name" text, "group" text, "entity_type_name" text, "owner" text, "description" text)
+    RETURNS attribute.minerva_entity_set
+AS $$
+DECLARE
+  entity_id integer;
+BEGIN
+  EXECUTE FORMAT(
+    'CREATE TABLE IF NOT EXISTS relation."%s->entity_set"('
+    'source_id integer, '
+    'target_id integer, '
+    'PRIMARY KEY (source_id, target_id));',
+    entity_type_name
+  );
+  PERFORM relation_directory.name_to_type(entity_type_name || '->entity_set');
+  SELECT id FROM entity.to_entity_set(name || '_' || "group" || '_' || owner) INTO entity_id;
+  INSERT INTO attribute_staging.minerva_entity_set(
+      entity_id, timestamp, name, fullname, "group", source_entity_type, owner, description, last_update
+    ) VALUES (
+      entity_id,
+      now(),
+      name,
+      name || '_' || "group" || '_' || owner,
+      "group",
+      entity_type_name,
+      owner,
+      description,
+      CURRENT_DATE
+    );
+  PERFORM attribute_directory.transfer_staged(attribute_directory.get_attribute_store('minerva', 'entity_set'));
+  PERFORM attribute_directory.materialize_curr_ptr(attribute_directory.get_attribute_store('minerva', 'entity_set'));
+  RETURN es FROM attribute.minerva_entity_set es WHERE es.name = $1 AND es.owner = $4;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "relation_directory"."update_entity_set_attributes"(attribute.minerva_entity_set)
+    RETURNS void
+AS $$
+INSERT INTO attribute_staging.minerva_entity_set(
+  entity_id, timestamp, name, fullname, "group", source_entity_type, owner, description, last_update
+) VALUES (
+  $1.entity_id,
+  now(),
+  $1.name,
+  $1.fullname,
+  $1."group",
+  $1.source_entity_type,
+  $1.owner,
+  $1.description,
+  CURRENT_DATE
+);
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "relation_directory"."get_entity_set_data"("name" text, "owner" text)
+    RETURNS attribute.minerva_entity_set
+AS $$
+SELECT * FROM attribute.minerva_entity_set WHERE name = $1 AND owner = $2;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "relation_directory"."add_entity_to_set"(attribute.minerva_entity_set, "entity" text)
+    RETURNS attribute.minerva_entity_set
+AS $$
+SELECT relation_directory.update_entity_set_attributes($1);
+SELECT action(FORMAT(
+  'INSERT INTO relation."%s->entity_set" (source_id, target_id) '
+  'SELECT source.id AS source_id, %s AS target '
+  'FROM entity.%I source '
+  'WHERE source.name = ''%s'''
+  'ON CONFLICT DO NOTHING;',
+  $1.source_entity_type,
+  $1.entity_id,
+  $1.source_entity_type,
+  $2
+));
+SELECT * FROM attribute.minerva_entity_set es WHERE es.entity_id = $1.entity_id;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "relation_directory"."remove_entity_from_set"(attribute.minerva_entity_set, "entity" text)
+    RETURNS void
+AS $$
+SELECT relation_directory.update_entity_set_attributes($1);
+SELECT action(FORMAT(
+  'DELETE es FROM relation."%s->entity_set" es '
+  'JOIN entity.%I source ON es.source_id = source.id '
+  'WHERE source.name = ''%s'' AND target_id = %s;',
+  $1.source_entity_type,
+  $1.source_entity_type,
+  $2,
+  $1.entity_id
+));
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "relation_directory"."add_entities_to_set"(attribute.minerva_entity_set, "entities" text[])
+    RETURNS void
+AS $$
+SELECT relation_directory.add_entity_to_set($1, e) FROM unnest($2) e;
+$$ LANGUAGE sql VOLATILE;
+
+
+CREATE FUNCTION "relation_directory"."change_set_entities"(attribute.minerva_entity_set, "entities" text[])
+    RETURNS void
+AS $$
+SELECT action(FORMAT(
+  'DELETE FROM relation."%s->entity_set" '
+  'WHERE target_id = %s;',
+  $1.source_entity_type,
+  $1.entity_id
+));
+SELECT relation_directory.add_entities_to_set($1, $2);
+$$ LANGUAGE sql VOLATILE;
+
+COMMENT ON FUNCTION "relation_directory"."change_set_entities"(attribute.minerva_entity_set, "entities" text[]) IS 'Set the entities in the set to exactly the specified entities';
+
+
+CREATE FUNCTION "relation_directory"."change_set_entities_guarded"(attribute.minerva_entity_set, "entities" text[])
+    RETURNS text[]
+AS $$
+DECLARE
+  entity text;
+  real_entity text;
+  result text[];
+  newresult text[];
+BEGIN
+  SELECT $2 INTO result;
+  FOREACH entity IN ARRAY $2 LOOP
+    EXECUTE FORMAT(
+      'SELECT name FROM entity.%I WHERE name = ''%s'';',
+      $1.source_entity_type,
+      entity
+    ) INTO real_entity;
+    SELECT array_remove(result, real_entity) INTO result;
+  END LOOP;
+  IF ARRAY_LENGTH(result, 1) IS NULL THEN
+    PERFORM relation_directory.change_set_entities($1, $2);
+  END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+COMMENT ON FUNCTION "relation_directory"."change_set_entities_guarded"(attribute.minerva_entity_set, "entities" text[]) IS 'Only sets the entities if all specified entities are actually valid.
+Returns those entities that were invalid.';
+
+
+CREATE FUNCTION "relation_directory"."get_entity_set_members"(attribute.minerva_entity_set)
+    RETURNS text[]
+AS $$
+DECLARE
+  result text[];
+BEGIN
+  EXECUTE FORMAT(
+    'SELECT array_agg(e.name) '
+    'FROM relation."%s->entity_set" es JOIN entity.%I e ON es.source_id = e.id '
+    'WHERE es.target_id = %s',
+    $1.source_entity_type,
+    $1.source_entity_type,
+    $1.entity_id
+  ) INTO result;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+
+CREATE FUNCTION "relation_directory"."create_entity_set_guarded"("name" text, "group" text, "entity_type_name" text, "owner" text, "description" text, "entities" text[])
+    RETURNS text[]
+AS $$
+DECLARE
+  entity text;
+  real_entity text;
+  result text[];
+  newresult text[];
+  entityset integer;
+BEGIN
+  SELECT $6 INTO result;
+  FOREACH entity IN ARRAY $6 LOOP
+    EXECUTE FORMAT(
+      'SELECT name FROM entity.%I WHERE name = ''%s'';',
+      $3,
+      entity
+    ) INTO real_entity;
+    SELECT array_remove(result, real_entity) INTO result;
+  END LOOP;
+  IF ARRAY_LENGTH(result, 1) IS NULL THEN
+    SELECT id FROM relation_directory.create_entity_set($1, $2, $3, $4, $5) INTO entityset;
+    PERFORM relation_directory.change_set_entities(t, $6)
+      FROM attribute.minerva_entity_set t
+      WHERE t.id = entityset;
+  END IF;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "relation_directory"."get_entity_set_members"("name" text, "owner" text)
+    RETURNS text[]
+AS $$
+SELECT relation_directory.get_entity_set_members(es)
+  FROM attribute.minerva_entity_set es
+  WHERE owner = $2 AND name = $1;
 $$ LANGUAGE sql STABLE;
 
 
