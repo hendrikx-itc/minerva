@@ -3143,12 +3143,13 @@ objects:
     source: |-
       DECLARE
         materialization trend_directory.materialization;
+        fingerprint trend_directory.fingerprint := trend_directory.source_fingerprint($1, $2);
       BEGIN
         SELECT * FROM trend_directory.materialization WHERE id = $1 INTO materialization;
         IF action_count(format('SELECT * FROM trend_directory.materialization_state WHERE materialization_id = %s AND timestamp = ''%s''', $1, $2)) = 0
           THEN INSERT INTO trend_directory.materialization_state(materialization_id, timestamp, source_fingerprint, max_modified, processed_fingerprint, job_id)
-            VALUES ($1, $2, (trend_directory.source_fingerprint($1, $2)).body, trend_directory.max_modified(materialization.dst_trend_store_part_id, $2), null, null);
-          ELSE UPDATE trend_directory.materialization_state ms SET source_fingerprint = (trend_directory.source_fingerprint($1, $2)).body, max_modified = trend_directory.max_modified(materialization.dst_trend_store_part_id, $2) WHERE ms.materialization_id = $1 AND ms.timestamp = $2;
+            VALUES ($1, $2, fingerprint.body, fingerprint.modified, null, null);
+          ELSE UPDATE trend_directory.materialization_state ms SET source_fingerprint = fingerprint.body, max_modified = fingerprint.modified WHERE ms.materialization_id = $1 AND ms.timestamp = $2;
         END IF;
       END;
 
