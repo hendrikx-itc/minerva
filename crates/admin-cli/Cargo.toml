@@ -12,7 +12,7 @@ name = "minerva-admin"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-clap_complete = "4.4"
+clap_complete = "4.5"
 minerva = { version = "0.2.0", path = "../minerva" }
 tokio = { version = "1.36", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
