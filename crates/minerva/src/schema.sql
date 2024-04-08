@@ -8433,11 +8433,6 @@ SELECT public.action(
             'ALTER FUNCTION trigger_rule.%I(trigger_rule.%I) OWNER TO minerva_admin',
             trigger.notification_data_fn_name($1),
             trigger.details_type_name($1)
-        ),
-        format(
-            'GRANT EXECUTE ON FUNCTION trigger_rule.%I(trigger_rule.%I) TO minerva',
-            trigger.notification_data_fn_name($1),
-            trigger.details_type_name($1)
         )
     ]
 );
