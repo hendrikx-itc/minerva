@@ -1,6 +1,11 @@
-# Minerva Admin Tools
+# Minerva ETL Platform
 
-This project provides the command line Minerva administration tools.
+This project provides the Minerva ETL platform components:
+
+1. Database schema definition.
+2. Command line administration tools.
+3. Library for interacting with Minerva instances.
+4. Web service for Minerva instance administration.
 
 # Installation
 
