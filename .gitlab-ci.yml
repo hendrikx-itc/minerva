@@ -55,7 +55,7 @@ publish-minerva-admin-deb:
       --cacert "/ca.crt" \
       -u "${REPO_USERNAME}:${REPO_PASSWORD}" \
       -H "Content-Type: multipart/form-data" \
-      --data-binary "@./target/x86_64-unknown-linux-musl/debian/minerva-admin_${CI_COMMIT_TAG}_amd64.deb" \
+      --data-binary "@./target/x86_64-unknown-linux-musl/debian/minerva-admin_${CI_COMMIT_TAG}-1_amd64.deb" \
       "$REPO_URL"
   rules:
     - if: $CI_COMMIT_TAG
