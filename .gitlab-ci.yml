@@ -42,16 +42,20 @@ integration-test:cargo:
 
 publish-minerva-admin-deb:
   stage: build
+  artifacts:
+    paths:
+      - "target/**/*.deb"
   before_script:
     - echo "$CACERT" > /ca.crt
   script:
     - cargo deb -p minerva-admin --target=x86_64-unknown-linux-musl
     - |
       curl \
+      --fail \
       --cacert "/ca.crt" \
       -u "${REPO_USERNAME}:${REPO_PASSWORD}" \
       -H "Content-Type: multipart/form-data" \
-      --data-binary "@./target/x86_64-unknown-linux-musl/debian/minerva-admin/minerva-admin_${CI_COMMIT_TAG}_amd64.deb" \
+      --data-binary "@./target/x86_64-unknown-linux-musl/debian/minerva-admin_${CI_COMMIT_TAG}_amd64.deb" \
       "$REPO_URL"
   rules:
     - if: $CI_COMMIT_TAG
