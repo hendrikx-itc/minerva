@@ -18,7 +18,7 @@ use crate::commands::update::UpdateOpt;
 use crate::commands::relation::RelationOpt;
 
 #[derive(Parser, Debug, PartialEq)]
-#[command(name = "minerva")]
+#[command(version, about, name = "minerva", arg_required_else_help = true)]
 struct Cli {
     #[arg(long = "generate", value_enum)]
     generator: Option<Shell>,
