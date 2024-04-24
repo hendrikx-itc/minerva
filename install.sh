@@ -42,7 +42,7 @@ get_tmpfile() {
     printf "%s.%s" "$(mktemp)" "${suffix}"
   else
     # No really good options here--let's pick a default + hope
-    printf "/tmp/minerva-admin.%s" "${suffix}"
+    printf "/tmp/minerva-cli.%s" "${suffix}"
   fi
 }
 
@@ -113,7 +113,7 @@ usage() {
   printf "%s\n" \
     "install.sh [option]" \
     "" \
-    "Fetch and install the latest version of Minerva admin, if Minerva admin is already" \
+    "Fetch and install the latest version of Minerva CLI, if Minerva CLI is already" \
     "installed it will be updated to the latest version."
 
   printf "\n%s\n" "Options"
@@ -146,12 +146,12 @@ install() {
 
   if test_writeable "${BIN_DIR}"; then
     sudo=""
-    msg="Installing Minerva admin, please wait…"
+    msg="Installing Minerva CLI, please wait…"
   else
     warn "Escalated permissions are required to install to ${BIN_DIR}"
     elevate_priv
     sudo="sudo"
-    msg="Installing Minerva admin as root, please wait…"
+    msg="Installing Minerva CLI as root, please wait…"
   fi
   info "$msg"
 
@@ -259,7 +259,7 @@ is_build_available() {
   )
 
   if [ "${good}" != "1" ]; then
-    error "${arch} builds for ${platform} are not yet available for Minerva admin"
+    error "${arch} builds for ${platform} are not yet available for Minerva CLI"
     printf "\n" >&2
     info "If you would like to see a build for your configuration,"
     info "please create an issue requesting a build for ${MAGENTA}${target}${NO_COLOR}:"
@@ -379,6 +379,6 @@ confirm "Install Minerva admin ${GREEN}latest${NO_COLOR} to ${BOLD}${GREEN}${BIN
 check_bin_dir "${BIN_DIR}"
 
 install "${EXT}"
-completed "Minerva admin installed"
+completed "Minerva CLI installed"
 
 printf '\n'
