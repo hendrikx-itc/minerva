@@ -10,7 +10,7 @@ name = "minerva-service"
 path = "main.rs"
 
 [dependencies]
-actix-web = "4.4"
+actix-web = "4.5"
 actix-cors = "0.7"
 utoipa = "4.2"
 lazy_static = "1.4.0"
