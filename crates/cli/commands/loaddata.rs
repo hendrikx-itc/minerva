@@ -45,7 +45,7 @@ impl Cmd for LoadDataOpt {
         };
 
         let data_source = match &self.data_source {
-            None => "minerva-admin".to_string(),
+            None => "minerva-cli".to_string(),
             Some(d) => d.to_string(),
         };
 

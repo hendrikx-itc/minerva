@@ -11,13 +11,13 @@ stages:
   - deploy
 
 # Use cargo to test the project
-test-minerva-admin:cargo:
+test-minerva-cli:cargo:
   stage: test
   before_script:
     - rustup default nightly
   script:
     - rustc --version && cargo --version  # Print version info for debugging
-    - cargo test --package minerva-admin --verbose -- --format=json  -Z unstable-options --report-time | cargo2junit > results.xml
+    - cargo test --package minerva-cli --verbose -- --format=json  -Z unstable-options --report-time | cargo2junit > results.xml
   artifacts:
     when: always
     reports:
@@ -32,7 +32,7 @@ integration-test:cargo:
       alias: database
   script:
     - rustc --version && cargo --version  # Print version info for debugging
-    - cargo build --package minerva-admin
+    - cargo build --package minerva-cli
     - cargo build --package minerva-service
     - PGHOST=database PGUSER=postgres PGSSLMODE=disable cargo test --package integration-tests --verbose -- --format=json  -Z unstable-options --report-time --test-threads=1 --nocapture | cargo2junit > results.xml
   artifacts:
@@ -40,7 +40,7 @@ integration-test:cargo:
     reports:
       junit: results.xml
 
-publish-minerva-admin-deb:
+publish-minerva-cli-deb:
   stage: build
   artifacts:
     paths:
@@ -48,14 +48,14 @@ publish-minerva-admin-deb:
   before_script:
     - echo "$CACERT" > /ca.crt
   script:
-    - cargo deb -p minerva-admin --target=x86_64-unknown-linux-musl
+    - cargo deb -p minerva-cli --target=x86_64-unknown-linux-musl
     - |
       curl \
       --fail \
       --cacert "/ca.crt" \
       -u "${REPO_USERNAME}:${REPO_PASSWORD}" \
       -H "Content-Type: multipart/form-data" \
-      --data-binary "@./target/x86_64-unknown-linux-musl/debian/minerva-admin_${CI_COMMIT_TAG}-1_amd64.deb" \
+      --data-binary "@./target/x86_64-unknown-linux-musl/debian/minerva-cli_${CI_COMMIT_TAG}-1_amd64.deb" \
       "$REPO_URL"
   rules:
     - if: $CI_COMMIT_TAG

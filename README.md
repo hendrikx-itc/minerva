@@ -39,6 +39,6 @@ PGSSLMODE=disable PGHOST=127.0.0.1 PGUSER=postgres cargo test -p integration-tes
 To load a provided test instance into the empty Minerva database, use the following command:
 
 ```
-PGSSLMODE=disable PGUSER=postgres PGHOST=127.0.0.1 cargo run --bin=minerva-admin -- initialize --create-schema --with-definition examples/tiny_instance_v1
+PGSSLMODE=disable PGUSER=postgres PGHOST=127.0.0.1 cargo run --bin=minerva -- initialize --create-schema --with-definition examples/tiny_instance_v1
 ```
 

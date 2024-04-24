@@ -1,14 +1,14 @@
 [package]
-name = "minerva-admin"
+name = "minerva-cli"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Minerva administration toolset"
+description = "Minerva command line tools"
 
 [[bin]]
 path = "main.rs"
-name = "minerva-admin"
+name = "minerva"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }

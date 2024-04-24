@@ -87,7 +87,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             create_partitions_for_timestamp(&mut client, timestamp.into()).await?;
         }
 
-        let mut cmd = Command::cargo_bin("minerva-admin")?;
+        let mut cmd = Command::cargo_bin("minerva")?;
         cmd.env("PGDATABASE", &database_name);
 
         let mut csv_file = tempfile::tempfile().unwrap();
@@ -147,7 +147,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             create_partitions_for_timestamp(&mut client, timestamp.into()).await?;
         }
 
-        let mut cmd = Command::cargo_bin("minerva-admin")?;
+        let mut cmd = Command::cargo_bin("minerva")?;
         cmd.env("PGDATABASE", &database_name);
 
         let mut csv_file = tempfile::NamedTempFile::new().unwrap();
@@ -162,7 +162,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
         println!("{}", String::from_utf8(output.stdout).unwrap());
 
-        let mut cmd = Command::cargo_bin("minerva-admin")?;
+        let mut cmd = Command::cargo_bin("minerva")?;
         cmd.env("PGDATABASE", &database_name);
 
         let mut csv_file = tempfile::NamedTempFile::new().unwrap();

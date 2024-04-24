@@ -20,7 +20,7 @@ mod tests {
         create_database(&mut client, &database_name).await?;
 
         println!("Dropped database");
-        let mut cmd = Command::cargo_bin("minerva-admin")?;
+        let mut cmd = Command::cargo_bin("minerva")?;
         cmd.env("PGDATABASE", &database_name);
 
         let instance_root_path = std::fs::canonicalize("../../examples/tiny_instance_v1").unwrap();
