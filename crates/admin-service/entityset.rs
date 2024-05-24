@@ -186,7 +186,9 @@ pub(super) async fn create_entity_set(
     post: String,
 ) -> impl Responder {
     let result = create_entity_set_fn(pool, post).await;
-    match result {reating
+    match result {
+        Ok(res) => res,
+        Err(e) => {
             let err = Error{
                 code: e.code,
                 message: e.message
