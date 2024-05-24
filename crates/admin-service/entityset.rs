@@ -169,7 +169,11 @@ async fn create_entity_set_fn(
         message: "Entity set created".to_string(),
     }))   
 }
-reating
+
+#[utoipa::path(
+    post,
+    path="/entitysets",
+    responses(
     (status = 200, description = "Creating entity set succeeded", body = Success),
     (status = 400, description = "Request could not be parsed", body = Error),
     (status = 409, description = "Creating entity set failed", body = Error),
