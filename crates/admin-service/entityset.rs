@@ -57,7 +57,7 @@ impl EntitySetData {
     get,
     path="/entitysets",
     responses(
-    (status = 200, description = "List of existing triggers", body = [EntitySet]),
+    (status = 200, description = "List of existing entity sets", body = [EntitySet]),
     (status = 500, description = "Database unreachable", body = Error),
     )
 )]
@@ -111,9 +111,9 @@ async fn change_entity_set_fn(
     put,
     path="/entitysets",
     responses(
-    (status = 200, description = "Changing trigger set succeeded", body = Success),
+    (status = 200, description = "Changing entity set succeeded", body = Success),
     (status = 400, description = "Request could not be parsed", body = Error),
-    (status = 409, description = "Changing trigger set failed", body = Error),
+    (status = 409, description = "Changing entity set failed", body = Error),
     (status = 500, description = "Database unreachable", body = Error),
     )
 )]
@@ -169,14 +169,10 @@ async fn create_entity_set_fn(
         message: "Entity set created".to_string(),
     }))   
 }
-
-#[utoipa::path(
-    post,
-    path="/entitysets",
-    responses(
-    (status = 200, description = "Changing trigger set succeeded", body = Success),
+reating
+    (status = 200, description = "Creating entity set succeeded", body = Success),
     (status = 400, description = "Request could not be parsed", body = Error),
-    (status = 409, description = "Changing trigger set failed", body = Error),
+    (status = 409, description = "Creating entity set failed", body = Error),
     (status = 500, description = "Database unreachable", body = Error),
     )
 )]
@@ -186,9 +182,7 @@ pub(super) async fn create_entity_set(
     post: String,
 ) -> impl Responder {
     let result = create_entity_set_fn(pool, post).await;
-    match result {
-        Ok(res) => res,
-        Err(e) => {
+    match result {reating
             let err = Error{
                 code: e.code,
                 message: e.message
