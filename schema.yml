@@ -1971,6 +1971,10 @@ objects:
     - name: partition_size
       data_type: interval
       nullable: false
+    - name: columnar_period
+      data_type: interval
+      nullable: false
+      default: '''1d''::interval'
     - name: retention_period
       data_type: interval
       nullable: false
@@ -2070,6 +2074,10 @@ objects:
     - name: to
       data_type: timestamp with time zone
       nullable: false
+    - name: is_columnar
+      data_type: boolean
+      nullable: false
+      default: 'false'
     primary_key:
       name: partition_pkey
       columns:
@@ -3709,6 +3717,33 @@ objects:
         SELECT * FROM trend_directory.trend_store_part WHERE id = $1 INTO tsp;
         RETURN trend_directory.create_partition(tsp, $2);
       END;
+
+- function:
+    name: needs_columnar_store
+    schema: trend_directory
+    return_type: boolean
+    language: sql
+    volatility: stable
+    arguments:
+    - data_type: trend_directory.partition
+    source: |-
+      SELECT not p.is_columnar and p.from + ts.columnar_period < now()
+      FROM trend_directory.partition p
+        JOIN trend_directory.trend_store_part tsp ON p.trend_store_part_id = tsp.id
+        JOIN trend_directory.trend_store ts ON tsp.trend_store_id = ts.id
+      WHERE p.id = $1.id;
+
+- function:
+    name: convert_to_columnar
+    schema: trend_directory
+    return_type: void
+    language: sql
+    volatility: volatile
+    arguments:
+    - data_type: trend_directory.partition
+    source: |-
+      SELECT alter_table_set_access_method(format('%I.%I', trend_directory.partition_schema(), $1.name)::regclass, 'columnar');
+      UPDATE trend_directory.partition SET is_columnar = 'true' WHERE id = $1.id;
 
 - function:
     name: column_spec

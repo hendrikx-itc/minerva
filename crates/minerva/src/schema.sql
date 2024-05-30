@@ -1230,6 +1230,7 @@ CREATE TABLE "trend_directory"."trend_store"
   "data_source_id" integer,
   "granularity" interval NOT NULL,
   "partition_size" interval NOT NULL,
+  "columnar_period" interval NOT NULL DEFAULT '1d'::interval,
   "retention_period" interval NOT NULL DEFAULT '1 mon'::interval,
   PRIMARY KEY (id)
 );
@@ -1269,6 +1270,7 @@ CREATE TABLE "trend_directory"."partition"
   "index" integer NOT NULL,
   "from" timestamp with time zone NOT NULL,
   "to" timestamp with time zone NOT NULL,
+  "is_columnar" boolean NOT NULL DEFAULT false,
   PRIMARY KEY (id)
 );
 
@@ -2155,6 +2157,25 @@ BEGIN
   RETURN trend_directory.create_partition(tsp, $2);
 END;
 $$ LANGUAGE plpgsql VOLATILE;
+
+
+CREATE FUNCTION "trend_directory"."needs_columnar_store"(trend_directory.partition)
+    RETURNS boolean
+AS $$
+SELECT not p.is_columnar and p.from + ts.columnar_period < now()
+FROM trend_directory.partition p
+  JOIN trend_directory.trend_store_part tsp ON p.trend_store_part_id = tsp.id
+  JOIN trend_directory.trend_store ts ON tsp.trend_store_id = ts.id
+WHERE p.id = $1.id;
+$$ LANGUAGE sql STABLE;
+
+
+CREATE FUNCTION "trend_directory"."convert_to_columnar"(trend_directory.partition)
+    RETURNS void
+AS $$
+SELECT alter_table_set_access_method(format('%I.%I', trend_directory.partition_schema(), $1.name)::regclass, 'columnar');
+UPDATE trend_directory.partition SET is_columnar = 'true' WHERE id = $1.id;
+$$ LANGUAGE sql VOLATILE;
 
 
 CREATE FUNCTION "trend_directory"."column_spec"(trend_directory.table_trend)
