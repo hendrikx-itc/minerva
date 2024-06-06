@@ -1,4 +1,4 @@
-swagger: '3.0.3'
+openapi: '3.0.3'
 info:
   title: Minerva API
   description: API for Minerva system management
@@ -524,7 +524,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'      
+                $ref: '#/components/schemas/Error'
     put:
       summary: Create a new KPI
       requestBody:
@@ -875,7 +875,7 @@ components:
         trend_store_parts:
           type: array
           items:
-            $ref: '#/definitions/TrendStorePart'          
+            $ref: '#/definitions/TrendStorePart'
     DataSource:
       type: object
       properties:
@@ -985,4 +985,4 @@ components:
           format: int32
         message:
           type: string
-      
+
