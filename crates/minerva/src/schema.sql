@@ -7758,7 +7758,6 @@ $$ LANGUAGE sql IMMUTABLE;
 
 CREATE FUNCTION "trigger"."set_thresholds"(trigger.rule, "exprs" text)
     RETURNS trigger.rule
-    SECURITY DEFINER
 AS $$
 SELECT trigger.action($1, format(
     'DROP VIEW IF EXISTS  trigger_rule.%I',
