@@ -7783,7 +7783,7 @@ CREATE FUNCTION "trigger"."create_set_thresholds_fn_sql"(trigger.rule)
 AS $$
 SELECT format(
     $def$CREATE OR REPLACE FUNCTION trigger_rule.%I(%s)
-    RETURNS integer AS
+    RETURNS integer SECURITY DEFINER AS
     $function$
     BEGIN
         EXECUTE format('CREATE OR REPLACE VIEW trigger_rule.%I AS SELECT %s', %s);
