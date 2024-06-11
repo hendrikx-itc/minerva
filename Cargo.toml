@@ -3,12 +3,13 @@ members = [
     "crates/minerva",
     "crates/cli",
     "crates/admin-service",
-    "crates/integration-tests"
+    "crates/integration-tests",
+    "crates/event-service"
 ]
 resolver = "2"
 
 [workspace.package]
-version = "6.2.1"
-authors = ["Alfred Blokland <alfred.blokland@hendrikx-itc.nl>"]
+version = "7.0.0"
+authors = ["1Optic <alfred.blokland@1optic.io>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
