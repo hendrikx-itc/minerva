@@ -1,16 +1,16 @@
-swagger: '3.0.3'
+openapi: '3.0.0'
 info:
   title: Minerva API
   description: API for Minerva system management
   version: "1.0.0"
-host: localhost
-schemes:
-  - https
-  - http
-# will be prefixed to all paths
-basePath: /v1
-produces:
-  - application/json
+# host: localhost
+# schemes:
+#   - https
+#   - http
+## will be prefixed to all paths
+# basePath: /v1
+# produces:
+#   - application/json
 paths:
   /trend-view-materializations:
     get:
@@ -22,10 +22,12 @@ paths:
       responses:
         200:
           description: An array of trend view materializations
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/TrendViewMaterialization'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrendViewMaterialization'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -72,11 +74,19 @@ paths:
   /trend-view-materializations/{materializationId}:
     get:
       summary: Get a specific trend view materialization
+      parameters:
+        - name: materializationId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: The trend view materialization with the specified Id
-          schema:
-            $ref: '#/components/schemas/TrendViewMaterialization'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendViewMaterialization'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -97,6 +107,12 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Update a specific trend view materialization
+      parameters:
+        - name: materializationId
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           'application/json':
@@ -105,8 +121,10 @@ paths:
       responses:
         200:
           description: The updated trend view materialization with the specified Id
-          schema:
-            $ref: '#/components/schemas/TrendViewMaterialization'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendViewMaterialization'
         401:
           description: User is not allowed to perform this operation on this trend view materialization
           content:
@@ -127,6 +145,12 @@ paths:
                 $ref: '#/components/schemas/Error'
     delete:
       summary: Delete a specific trend view materialization
+      parameters:
+        - name: materializationId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: The trend view materialization was successfully deleted
@@ -162,10 +186,12 @@ paths:
       responses:
         200:
           description: An array of trend function materializations
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/TrendFunctionMaterialization'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrendFunctionMaterialization'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -206,11 +232,19 @@ paths:
   /trend-function-materializations/{materializationId}:
     get:
       summary: Get a specific trend function materialization
+      parameters:
+        - name: materializationId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: The trend function materialization with the specified Id
-          schema:
-            $ref: '#/components/schemas/TrendFunctionMaterialization'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendFunctionMaterialization'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -231,6 +265,12 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Update a specific trend function materialization
+      parameters:
+        - name: materializationId
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           'application/json':
@@ -239,8 +279,10 @@ paths:
       responses:
         200:
           description: The updated trend function materialization with the specified Id
-          schema:
-            $ref: '#/components/schemas/TrendFunctionMaterialization'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendFunctionMaterialization'
         401:
           description: User is not allowed to perform this operation on this trend function materialization
           content:
@@ -261,6 +303,12 @@ paths:
                 $ref: '#/components/schemas/Error'
     delete:
       summary: Delete a specific trend function materialization
+      parameters:
+        - name: materializationId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: The trend function materialization was successfully deleted
@@ -290,10 +338,12 @@ paths:
       responses:
         200:
           description: An array of trend stores
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/TrendStore'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrendStore'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -309,11 +359,19 @@ paths:
   /trend-store/{trendStoreId}:
     get:
       summary: Get a specific trend store
+      parameters:
+        - name: trendStoreId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: The trend store with the specified Id
-          schema:
-            $ref: '#/components/schemas/TrendStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendStore'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -340,10 +398,12 @@ paths:
       responses:
         200:
           description: An array of trend store parts
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/TrendStorePart'
+          content:
+             application/json:
+               schema:
+                 type: array
+                 items:
+                   $ref: '#/components/schemas/TrendStorePart'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -359,11 +419,19 @@ paths:
   /trend-store-part/{trendStorePartId}:
     get:
       summary: Get a specific trend store part
+      parameters:
+        - name: trendStorePartId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: The trend store part with the specified Id
-          schema:
-            $ref: '#/components/schemas/TrendStorePart'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendStorePart'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -392,10 +460,12 @@ paths:
       responses:
         200:
           description: An array of data sources
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/DataSource'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataSource'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -411,11 +481,19 @@ paths:
   /data-source/{dataSourceId}:
     get:
       summary: Get a specific data source
+      parameters:
+        - name: dataSourceId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: The data source with the specified Id
-          schema:
-            $ref: '#/components/schemas/DataSource'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSource'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -444,10 +522,12 @@ paths:
       responses:
         200:
           description: An array of entity types
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/EntityType'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EntityType'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -463,11 +543,19 @@ paths:
   /entity-type/{entityTypeId}:
     get:
       summary: Get a specific entity type
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: The entity type with the specified Id
-          schema:
-            $ref: '#/components/schemas/EntityType'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityType'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -493,7 +581,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/Kpi'
+              $ref: '#/components/schemas/KPI'
       responses:
         200:
           description: KPI successfully created
@@ -531,7 +619,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/Kpi'
+              $ref: '#/components/schemas/KPI'
       responses:
         200:
           description: KPI successfully created
@@ -574,10 +662,12 @@ paths:
       responses:
         200:
           description: An array of KPIs
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/KPI'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KPI'
         401:
           description: User is not allowed to perform this operation
           content:
@@ -596,10 +686,12 @@ paths:
       responses:
         200:
           description: An array of triggers
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Trigger'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trigger'
         default:
           description: Database unreachable or unexpected error
           content:
@@ -656,10 +748,12 @@ paths:
       responses:
         200:
           description: An array of entity sets
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/EntitySet'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EntitySet'
         default:
           description: Database unreachable or unexpected error
           content:
@@ -743,7 +837,7 @@ components:
         sources:
           type: array
           items:
-            $ref: '#/definitions/TrendMaterializationSource'
+            $ref: '#/components/schemas/TrendMaterializationSource'
         view:
           type: string
         fingerprint_function:
@@ -769,9 +863,9 @@ components:
         sources:
           type: array
           items:
-            $ref: '#/definitions/TrendMaterializationSource'
+            $ref: '#/components/schemas/TrendMaterializationSource'
         function:
-          $ref: '#/definitions/TrendMaterializationFunction'
+          $ref: '#/components/schemas/TrendMaterializationFunction'
     TrendMaterializationSource:
       type: object
       properties:
@@ -809,7 +903,7 @@ components:
           type: string
         extra_data:
           type: object
-          additioncreatedalProperties: true
+          additionalProperties: true
           description: additional JSON data
         description:
           type: string
@@ -849,11 +943,11 @@ components:
         trends:
           type: array
           items:
-            $ref: '#/definition/Trend'
+            $ref: '#/components/schemas/Trend'
         generated_trends:
           type: array
           items:
-            $ref: '#/definition/GeneratedTrend'
+            $ref: '#/components/schemas/GeneratedTrend'
     TrendStore:
       type: object
       properties:
@@ -875,7 +969,7 @@ components:
         trend_store_parts:
           type: array
           items:
-            $ref: '#/definitions/TrendStorePart'          
+            $ref: '#/components/schemas/TrendStorePart'          
     DataSource:
       type: object
       properties:
@@ -908,7 +1002,7 @@ components:
           type: string
           description: data type of the KPI
         enabled:
-          type: bool
+          type: boolean
         source_trends:
           type: array
           items:
@@ -933,7 +1027,7 @@ components:
           type: string
           description: name of the trigger
         enabled:
-          type: bool
+          type: boolean
         description:
           type: string
         thresholds:
@@ -943,7 +1037,11 @@ components:
     ShortTrigger:
       type: object
       properties:
-        nacreatedtype: array
+        name:
+          type: string
+          description: name of the trigger
+        thresholds:
+          type: array
           items:
             $ref: '#/components/schemas/Threshold'
     EntitySet:
