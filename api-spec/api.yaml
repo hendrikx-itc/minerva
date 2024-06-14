@@ -1,20 +1,20 @@
-openapi: '3.0.3'
+openapi: '3.1.0'
 info:
   title: Minerva API
   description: API for Minerva system management
   version: "1.0.0"
-# host: localhost
-# schemes:
-#   - https
-#   - http
-## will be prefixed to all paths
-# basePath: /v1
-# produces:
-#   - application/json
+  license:
+    name: GNU Affero General Public License v3.0 or later
+    identifier: AGPL-3.0-or-later
+    url: https://www.gnu.org/licenses/agpl.txt
+servers:
+  - url: https://demo.1optic.io/gis-api/v1
+security: []
 paths:
   /trend-view-materializations:
     get:
-      summary: Trend View Materializations
+      summary: Return the list of view-based materializations
+      operationId: getTrendViewMaterializations
       description: |
         This endpoint returns the full list of trend view materializations.
       tags:
@@ -41,6 +41,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     post:
+      summary: Create a new view-based materialization
+      operationId: createTrendViewMaterialization
       requestBody:
         content:
           'application/json':
@@ -64,7 +66,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '$/components/schemas/Error'
+                $ref: '#/components/schemas/Error'
         default:
           description: Database unreachable or unexpected error
           content:
@@ -74,6 +76,7 @@ paths:
   /trend-view-materializations/{materializationId}:
     get:
       summary: Get a specific trend view materialization
+      operationId: getTrendViewMaterializationById
       parameters:
         - name: materializationId
           in: path
@@ -107,6 +110,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Update a specific trend view materialization
+      operationId: updateTrendViewMaterializationById
       parameters:
         - name: materializationId
           in: path
@@ -145,6 +149,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     delete:
       summary: Delete a specific trend view materialization
+      operationId: deleteTrendViewMaterializationById
       parameters:
         - name: materializationId
           in: path
@@ -179,6 +184,7 @@ paths:
   /trend-function-materializations:
     get:
       summary: Trend Function Materializations
+      operationId: getTrendFunctionMaterializations
       description: |
         This endpoint returns the full list of trend function materializations.
       tags:
@@ -205,6 +211,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     post:
+      summary: Create a new function-based materialization
+      operationId: createTrendFunctionMaterialization
       requestBody:
         content:
           'application/json':
@@ -232,6 +240,7 @@ paths:
   /trend-function-materializations/{materializationId}:
     get:
       summary: Get a specific trend function materialization
+      operationId: getTrendFunctionMaterializationById
       parameters:
         - name: materializationId
           in: path
@@ -265,6 +274,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Update a specific trend function materialization
+      operationId: updateTrendFunctionMaterializationById
       parameters:
         - name: materializationId
           in: path
@@ -303,6 +313,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     delete:
       summary: Delete a specific trend function materialization
+      operationId: deleteTrendFunctionMaterializationById
       parameters:
         - name: materializationId
           in: path
@@ -333,6 +344,7 @@ paths:
   /trend-store:
     get:
       summary: Trend Stores
+      operationId: getTrendStores
       description: |
         This endpoint returns the full list of trend stores.
       responses:
@@ -359,6 +371,7 @@ paths:
   /trend-store/{trendStoreId}:
     get:
       summary: Get a specific trend store
+      operationId: getTrendStoreById
       parameters:
         - name: trendStoreId
           in: path
@@ -393,6 +406,7 @@ paths:
   /trend-store-part:
     get:
       summary: Trend Store Parts
+      operationId: getTrendStoreParts
       description: |
         This endpoint returns the full list of trend store parts.
       responses:
@@ -419,6 +433,7 @@ paths:
   /trend-store-part/{trendStorePartId}:
     get:
       summary: Get a specific trend store part
+      operationId: getTrendStorePartById
       parameters:
         - name: trendStorePartId
           in: path
@@ -453,6 +468,7 @@ paths:
   /data-source:
     get:
       summary: Data Sources
+      operationId: getDataSources
       description: |
         This endpoint returns the full list of data sources.
       tags:
@@ -481,6 +497,7 @@ paths:
   /data-source/{dataSourceId}:
     get:
       summary: Get a specific data source
+      operationId: getDataSourceById
       parameters:
         - name: dataSourceId
           in: path
@@ -515,6 +532,7 @@ paths:
   /entity-type:
     get:
       summary: Entity Types
+      operationId: getEntityTypes
       description: |
         This endpoint returns the full list of entity types.
       tags:
@@ -543,6 +561,7 @@ paths:
   /entity-type/{entityTypeId}:
     get:
       summary: Get a specific entity type
+      operationId: getEntityTypeById
       parameters:
         - name: entityTypeId
           in: path
@@ -577,6 +596,7 @@ paths:
   /kpis:
     post:
       summary: Create a new KPI
+      operationId: createKPI
       requestBody:
         content:
           'application/json':
@@ -615,6 +635,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Create a new KPI
+      operationId: updateKPI
       requestBody:
         content:
           'application/json':
@@ -659,6 +680,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     get:
       summary: KPIs
+      operationId: getKPIs
       responses:
         200:
           description: An array of KPIs
@@ -683,6 +705,7 @@ paths:
   /triggers:
     get:
       summary: List of existing triggers
+      operationId: getTriggers
       responses:
         200:
           description: An array of triggers
@@ -692,6 +715,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Trigger'
+        401:
+          description: User is not allowed to perform this operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         default:
           description: Database unreachable or unexpected error
           content:
@@ -700,6 +729,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Change the thresholds for a trigger
+      operationId: updateTrigger
       requestBody:
         content:
           'application/json':
@@ -745,6 +775,7 @@ paths:
   /entitysets:
     get:
       summary: List of existing entity sets
+      operationId: getEntitySets
       responses:
         200:
           description: An array of entity sets
@@ -754,6 +785,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EntitySet'
+        401:
+          description: User is not allowed to perform this operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         default:
           description: Database unreachable or unexpected error
           content:
@@ -762,6 +799,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     post:
       summary: Create a new entity set
+      operationId: createEntitySet
       responses:
         200:
           description: Creating entity set succeeded
@@ -789,6 +827,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Changing an entity set
+      operationId: updateEntitySet
       responses:
         200:
           description: Changing entity set succeeded
