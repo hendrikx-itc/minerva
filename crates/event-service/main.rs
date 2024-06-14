@@ -6,7 +6,7 @@ use log::info;
 use reqwest::{Client, Method, header::{ACCEPT, CONTENT_TYPE}};
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, from_str};
+use serde_json::Value;
 use chrono::{DateTime, Utc, Local};
 
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};

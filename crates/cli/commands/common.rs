@@ -73,11 +73,10 @@ pub async fn connect_to_db(config: &Config) -> Result<Client, Error> {
 
         for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs")
         {
-            roots.add(&rustls::Certificate(cert.0)).unwrap();
+            roots.add(cert).unwrap();
         }
 
         let tls_config = RustlsClientConfig::builder()
-            .with_safe_defaults()
             .with_root_certificates(roots)
             .with_no_client_auth();
         let tls = MakeRustlsConnect::new(tls_config);
