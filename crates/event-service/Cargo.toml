@@ -22,6 +22,6 @@ rustls = "0.20"
 tokio-postgres-rustls = "0.9"
 rustls-native-certs = "0.6"
 log = "0.4"
-deadpool-postgres = "0.10"
+deadpool-postgres = "0.14"
 derive_more = "0.99.17"
 reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
