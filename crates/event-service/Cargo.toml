@@ -14,14 +14,14 @@ serde = "1.0"
 serde_json = "1.0"
 chrono = "0.4"
 humantime-serde = "1.1"
-utoipa = "2.4"
+utoipa = "4.2"
 postgres = { version = "0.19", features = ["with-serde_json-1"] }
-tokio = { version = "1.21", features = ["full"] }
+tokio = { version = "1.38", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
 rustls = "0.23"
 tokio-postgres-rustls = "0.12"
 rustls-native-certs = "0.7"
 log = "0.4"
-deadpool-postgres = "0.10"
+deadpool-postgres = "0.14"
 derive_more = "0.99.17"
-reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
