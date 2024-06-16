@@ -173,11 +173,10 @@ async fn make_db_pool(config: &TokioConfig) -> Result<Pool, String> {
     let mut roots = rustls::RootCertStore::empty();
 
     for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
-        roots.add(&rustls::Certificate(cert.0)).unwrap();
+        roots.add(cert).unwrap();
     }
 
     let tls_config = RustlsClientConfig::builder()
-        .with_safe_defaults()
         .with_root_certificates(roots)
         .with_no_client_auth();
     let tls = MakeRustlsConnect::new(tls_config);
