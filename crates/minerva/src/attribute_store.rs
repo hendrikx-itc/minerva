@@ -41,9 +41,10 @@ impl fmt::Display for AddAttributes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "AddAttributes({}, {})",
+            "AddAttributes({}, {}):\n{}",
             &self.attribute_store,
-            &self.attributes.len()
+            &self.attributes.len(),
+            self.attributes.iter().map(|att| format!(" - {}: {}\n", att.name, att.data_type)).collect::<Vec<String>>().join(""),
         )
     }
 }
@@ -62,26 +63,30 @@ impl fmt::Debug for AddAttributes {
 impl Change for AddAttributes {
     async fn apply(&self, client: &mut Client) -> ChangeResult {
         let query = concat!(
-            "SELECT attribute_directory.add_attributes(attribute_store, $1) ",
+            "SELECT attribute_directory.create_attribute(attribute_store, $1::name, $2::text, $3::text) ",
             "FROM attribute_directory.attribute_store ",
             "JOIN directory.data_source ON data_source.id = attribute_store.data_source_id ",
             "JOIN directory.entity_type ON entity_type.id = attribute_store.entity_type_id ",
-            "WHERE data_source.name = $2 AND entity_type.name = $3",
+            "WHERE data_source.name = $4 AND entity_type.name = $5",
         );
 
-        client
-            .query_one(
-                query,
-                &[
-                    &self.attributes,
-                    &self.attribute_store.data_source,
-                    &self.attribute_store.entity_type,
-                ],
-            )
-            .await
-            .map_err(|e| {
-                DatabaseError::from_msg(format!("Error adding trends to trend store part: {e}"))
-            })?;
+        for attribute in &self.attributes {
+            client
+                .query_one(
+                    query,
+                    &[
+                        &attribute.name,
+                        &attribute.data_type,
+                        &attribute.description,
+                        &self.attribute_store.data_source,
+                        &self.attribute_store.entity_type,
+                    ],
+                )
+                .await
+                .map_err(|e| {
+                    DatabaseError::from_msg(format!("Error adding attributes to attribute store: {e}"))
+                })?;
+        }
 
         Ok(format!(
             "Added attributes to attribute store '{}'",
@@ -89,6 +94,71 @@ impl Change for AddAttributes {
         ))
     }
 }
+
+pub struct RemoveAttributes {
+    pub attribute_store: AttributeStore,
+    pub attributes: Vec<String>,
+}
+
+impl fmt::Display for RemoveAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "RemoveAttributes({}, {})\n{}",
+            &self.attribute_store,
+            &self.attributes.len(),
+            self.attributes.iter().map(|att| format!(" - {att}\n")).collect::<Vec<String>>().join(""),
+        )
+    }
+}
+
+impl fmt::Debug for RemoveAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "RemoveAttributes({}, {:?})",
+            &self.attribute_store, &self.attributes
+        )
+    }
+}
+
+#[async_trait]
+impl Change for RemoveAttributes {
+    async fn apply(&self, client: &mut Client) -> ChangeResult {
+        let query = concat!(
+            "SELECT attribute_directory.drop_attribute(attribute_store, $1) ",
+            "FROM attribute_directory.attribute_store ",
+            "JOIN directory.data_source ON data_source.id = attribute_store.data_source_id ",
+            "JOIN directory.entity_type ON entity_type.id = attribute_store.entity_type_id ",
+            "WHERE data_source.name = $2 AND entity_type.name = $3",
+        );
+
+        for attribute in &self.attributes {
+            client
+                .query(
+                    query,
+                    &[
+                        &attribute,
+                        &self.attribute_store.data_source,
+                        &self.attribute_store.entity_type,
+                    ],
+                )
+                .await
+                .map_err(|e| {
+                    DatabaseError::from_msg(format!("Error removing attribute '{attribute}' from attribute store: {e}"))
+                })?;
+        }
+
+        Ok(format!(
+            "Removed {} attributes from attribute store '{}'",
+            &self.attributes.len(),
+            &self.attribute_store
+        ))
+    }
+}
+
+
+
 
 pub struct ChangeAttribute {
     pub attribute_store: AttributeStore,
@@ -186,6 +256,32 @@ impl AttributeStore {
                 attribute_store: self.clone(),
                 attributes: new_attributes,
             }));
+        }
+
+        let mut removed_attributes: Vec<String> = Vec::new();
+
+        for my_attribute in &self.attributes {
+            match other
+                .attributes
+                .iter()
+                .find(|other_attribute| other_attribute.name == my_attribute.name)
+            {
+                Some(_) => {
+                    //println!("Still exists: '{}' - '{}' - '{}'", self.data_source, self.entity_type, my_attribute.name);
+                    // Ok, the attribute still exists
+                }
+                None => {
+                    //println!("No longer exists: '{}' - '{}' - '{}'", self.data_source, self.entity_type, my_attribute.name);
+                    removed_attributes.push(my_attribute.name.clone());
+                }
+            }
+        }
+
+        if !removed_attributes.is_empty() {
+            changes.push(Box::new(RemoveAttributes {
+                attribute_store: self.clone(),
+                attributes: removed_attributes,
+            }))
         }
 
         changes
@@ -342,4 +438,67 @@ pub fn load_attribute_store_from_file(path: &PathBuf) -> Result<AttributeStore, 
     })?;
 
     Ok(trend_store)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_diff_added_attributes() {
+        let my_attribute_store = AttributeStore {
+            data_source: "test".to_string(),
+            entity_type: "node".to_string(),
+            attributes: vec![
+            ]
+        };
+
+        let other_attribute_store = AttributeStore {
+            data_source: "test".to_string(),
+            entity_type: "node".to_string(),
+            attributes: vec![
+                Attribute {
+                    name: "equipment_type".to_string(),
+                    data_type: DataType::Text,
+                    description: "Type name from vendor".to_string(),
+                }
+            ]
+        };
+
+        let changes = my_attribute_store.diff(&other_attribute_store);
+
+        assert_eq!(changes.len(), 1);
+        let first_change = changes.first().expect("Should have a change");
+
+        assert_eq!(first_change.to_string(), "AddAttributes(AttributeStore(test, node), 1)");
+    }
+
+    #[test]
+    fn test_diff_removed_attributes() {
+        let my_attribute_store = AttributeStore {
+            data_source: "test".to_string(),
+            entity_type: "node".to_string(),
+            attributes: vec![
+                Attribute {
+                    name: "equipment_type".to_string(),
+                    data_type: DataType::Text,
+                    description: "Type name from vendor".to_string(),
+                }
+            ]
+        };
+
+        let other_attribute_store = AttributeStore {
+            data_source: "test".to_string(),
+            entity_type: "node".to_string(),
+            attributes: vec![
+            ]
+        };
+
+        let changes = my_attribute_store.diff(&other_attribute_store);
+
+        assert_eq!(changes.len(), 1);
+        let first_change = changes.first().expect("Should have a change");
+
+        assert_eq!(first_change.to_string(), "RemoveAttributes(AttributeStore(test, node), 1)");
+    }
 }

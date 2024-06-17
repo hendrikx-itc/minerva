@@ -11,6 +11,7 @@ use tokio_postgres::Client;
 
 use minerva::error::{ConfigurationError, Error, RuntimeError};
 use minerva::instance::MinervaInstance;
+use tokio_postgres::GenericClient;
 
 use super::common::{connect_db, Cmd, CmdResult, ENV_MINERVA_INSTANCE_ROOT};
 
@@ -83,7 +84,7 @@ async fn update(
     println!("Applying changes:");
 
     for change in changes {
-        println!("* {change}");
+        println!("\n\n* {change}");
 
         if (!interactive)
             || Confirm::new()
@@ -95,7 +96,9 @@ async fn update(
                     })
                 })?
         {
-            match change.apply(client).await {
+            let tx = client.transaction().await;
+
+            match change.apply(tx).await {
                 Ok(message) => println!("> {}", &message),
                 Err(err) => println!("! Error applying change: {}", &err),
             }
