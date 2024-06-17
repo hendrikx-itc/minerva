@@ -2,19 +2,20 @@ use glob::glob;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_yaml;
+use tokio_postgres::Transaction;
 use std::fmt;
 use std::marker::{Send, Sync};
 use std::path::Path;
 use std::time::Duration;
 
 use postgres_protocol::escape::escape_identifier;
-use tokio_postgres::{types::ToSql, types::Type, Client, GenericClient};
+use tokio_postgres::{types::ToSql, types::Type, GenericClient};
 
 use humantime::format_duration;
 
 use async_trait::async_trait;
 
-use super::change::{Change, ChangeResult, GenericChange};
+use super::change::{Change, ChangeResult};
 use super::error::{DatabaseError, Error, RuntimeError};
 use super::interval::parse_interval;
 
@@ -305,20 +306,13 @@ pub struct UpdateTrendViewMaterializationAttributes {
 }
 
 #[async_trait]
-impl GenericChange for UpdateTrendViewMaterializationAttributes {
-    async fn generic_apply<T: GenericClient + Send + Sync>(&self, client: &mut T) -> ChangeResult {
+impl Change for UpdateTrendViewMaterializationAttributes {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         self.trend_view_materialization
             .update_attributes(client)
             .await?;
 
         Ok("Updated attributes of view materialization".into())
-    }
-}
-
-#[async_trait]
-impl Change for UpdateTrendViewMaterializationAttributes {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
     }
 }
 
@@ -337,8 +331,8 @@ pub struct UpdateView {
 }
 
 #[async_trait]
-impl GenericChange for UpdateView {
-    async fn generic_apply<T: GenericClient + Send + Sync>(&self, client: &mut T) -> ChangeResult {
+impl Change for UpdateView {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         self.trend_view_materialization
             .drop_view(client)
             .await
@@ -352,13 +346,6 @@ impl GenericChange for UpdateView {
             "Updated view {}",
             self.trend_view_materialization.view_name()
         ))
-    }
-}
-
-#[async_trait]
-impl Change for UpdateView {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
     }
 }
 
@@ -1107,8 +1094,8 @@ impl fmt::Display for AddTrendMaterialization {
 }
 
 #[async_trait]
-impl GenericChange for AddTrendMaterialization {
-    async fn generic_apply<T: GenericClient + Send + Sync>(&self, client: &mut T) -> ChangeResult {
+impl Change for AddTrendMaterialization {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         match self.trend_materialization.create(client).await {
             Ok(_) => Ok(format!(
                 "Added trend materialization '{}'",
@@ -1121,13 +1108,6 @@ impl GenericChange for AddTrendMaterialization {
                 ),
             })),
         }
-    }
-}
-
-#[async_trait]
-impl Change for AddTrendMaterialization {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
     }
 }
 
@@ -1154,8 +1134,8 @@ impl fmt::Display for UpdateTrendMaterialization {
 }
 
 #[async_trait]
-impl GenericChange for UpdateTrendMaterialization {
-    async fn generic_apply<T: GenericClient + Send + Sync>(&self, client: &mut T) -> ChangeResult {
+impl Change for UpdateTrendMaterialization {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         match self.trend_materialization.update(client).await {
             Ok(_) => Ok(format!(
                 "Updated trend materialization '{}'",
@@ -1168,13 +1148,6 @@ impl GenericChange for UpdateTrendMaterialization {
                 ),
             })),
         }
-    }
-}
-
-#[async_trait]
-impl Change for UpdateTrendMaterialization {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
     }
 }
 

@@ -50,7 +50,11 @@ impl Cmd for TrendStoreCreate {
 
         let change = AddTrendStore { trend_store };
 
-        change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("Created trend store");
 
@@ -142,13 +146,17 @@ impl Cmd for TrendStoreUpdate {
                                     })
                                 })?
                         {
-                            let apply_result = change.apply(&mut client).await;
+                            let mut tx = client.transaction().await?;
+
+                            let apply_result = change.apply(&mut tx).await;
 
                             match apply_result {
                                 Ok(_) => {
+                                    tx.commit().await?;
                                     println!("{}", &change);
                                 }
                                 Err(e) => {
+                                    tx.rollback().await?;
                                     println!("Error applying update: {e}");
                                 }
                             }

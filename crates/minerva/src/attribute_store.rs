@@ -3,7 +3,7 @@ use std::boxed::Box;
 use std::fmt;
 use std::path::PathBuf;
 use tokio_postgres::types::ToSql;
-use tokio_postgres::Client;
+use tokio_postgres::{GenericClient, Transaction};
 
 use async_trait::async_trait;
 
@@ -61,7 +61,7 @@ impl fmt::Debug for AddAttributes {
 
 #[async_trait]
 impl Change for AddAttributes {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let query = concat!(
             "SELECT attribute_directory.create_attribute(attribute_store, $1::name, $2::text, $3::text) ",
             "FROM attribute_directory.attribute_store ",
@@ -76,7 +76,7 @@ impl Change for AddAttributes {
                     query,
                     &[
                         &attribute.name,
-                        &attribute.data_type,
+                        &attribute.data_type.to_string(),
                         &attribute.description,
                         &self.attribute_store.data_source,
                         &self.attribute_store.entity_type,
@@ -124,7 +124,7 @@ impl fmt::Debug for RemoveAttributes {
 
 #[async_trait]
 impl Change for RemoveAttributes {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let query = concat!(
             "SELECT attribute_directory.drop_attribute(attribute_store, $1) ",
             "FROM attribute_directory.attribute_store ",
@@ -187,7 +187,7 @@ impl fmt::Debug for ChangeAttribute {
 
 #[async_trait]
 impl Change for ChangeAttribute {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let query = concat!(
             "UPDATE attribute_directory.attribute ",
             "SET data_type = $1 ",
@@ -310,7 +310,7 @@ impl fmt::Display for AddAttributeStore {
 
 #[async_trait]
 impl Change for AddAttributeStore {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let query = concat!(
             "CALL attribute_directory.create_attribute_store(",
             "$1::text, $2::text, ",
@@ -337,7 +337,7 @@ impl Change for AddAttributeStore {
     }
 }
 
-pub async fn load_attribute_stores(conn: &mut Client) -> Result<Vec<AttributeStore>, Error> {
+pub async fn load_attribute_stores<T: GenericClient + Send + Sync>(conn: &mut T) -> Result<Vec<AttributeStore>, Error> {
     let mut attribute_stores: Vec<AttributeStore> = Vec::new();
 
     let query = concat!(
@@ -369,8 +369,8 @@ pub async fn load_attribute_stores(conn: &mut Client) -> Result<Vec<AttributeSto
     Ok(attribute_stores)
 }
 
-pub async fn load_attribute_store(
-    conn: &mut Client,
+pub async fn load_attribute_store<T: GenericClient + Send + Sync>(
+    conn: &mut T,
     data_source: &str,
     entity_type: &str,
 ) -> Result<AttributeStore, Error> {
@@ -396,7 +396,7 @@ pub async fn load_attribute_store(
     })
 }
 
-async fn load_attributes(conn: &mut Client, attribute_store_id: i32) -> Vec<Attribute> {
+async fn load_attributes<T: GenericClient + Send + Sync>(conn: &mut T, attribute_store_id: i32) -> Vec<Attribute> {
     let attribute_query = "SELECT name, data_type, description FROM attribute_directory.attribute WHERE attribute_store_id = $1";
     let attribute_result = conn
         .query(attribute_query, &[&attribute_store_id])

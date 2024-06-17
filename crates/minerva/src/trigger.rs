@@ -8,13 +8,13 @@ use serde::{Deserialize, Serialize};
 
 use chrono::{DateTime, TimeZone, Timelike};
 use postgres_protocol::escape::{escape_identifier, escape_literal};
-use tokio_postgres::{Client, GenericClient, Row};
+use tokio_postgres::{Client, GenericClient, Row, Transaction};
 
 use async_trait::async_trait;
 
 use crate::interval::parse_interval;
 
-use super::change::{Change, ChangeResult, GenericChange};
+use super::change::{Change, ChangeResult};
 use super::error::{ConfigurationError, DatabaseError, Error, RuntimeError};
 use super::notification_store::notification_store_exists;
 
@@ -134,8 +134,8 @@ impl fmt::Display for AddTrigger {
 const MAX_TRIGGER_NAME_LENGTH: usize = 45;
 
 #[async_trait]
-impl GenericChange for AddTrigger {
-    async fn generic_apply<T: GenericClient + Sync + Send>(&self, client: &mut T) -> ChangeResult {
+impl Change for AddTrigger {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         if self.trigger.name.len() > MAX_TRIGGER_NAME_LENGTH {
             return Err(Error::Configuration(ConfigurationError::from_msg(format!(
                 "Trigger name too long ({} > {})",
@@ -724,13 +724,6 @@ async fn unlink_trend_stores<T: GenericClient + Sync + Send>(
     ))
 }
 
-#[async_trait]
-impl Change for AddTrigger {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
-    }
-}
-
 pub struct DeleteTrigger {
     pub trigger_name: String,
 }
@@ -742,8 +735,8 @@ impl fmt::Display for DeleteTrigger {
 }
 
 #[async_trait]
-impl GenericChange for DeleteTrigger {
-    async fn generic_apply<T: GenericClient + Sync + Send>(&self, client: &mut T) -> ChangeResult {
+impl Change for DeleteTrigger {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let row = client
             .query_one(
                 "SELECT count(*) FROM trigger.rule WHERE name = $1",
@@ -769,13 +762,6 @@ impl GenericChange for DeleteTrigger {
             .map_err(|e| DatabaseError::from_msg(format!("Error deleting rule: {e}")))?;
 
         Ok(format!("Removed trigger '{}'", &self.trigger_name))
-    }
-}
-
-#[async_trait]
-impl Change for DeleteTrigger {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
     }
 }
 
@@ -829,8 +815,8 @@ impl fmt::Display for UpdateTrigger {
 }
 
 #[async_trait]
-impl GenericChange for UpdateTrigger {
-    async fn generic_apply<T: GenericClient + Sync + Send>(&self, client: &mut T) -> ChangeResult {
+impl Change for UpdateTrigger {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let mut transaction = client.transaction().await?;
 
         // Tear down
@@ -881,13 +867,6 @@ impl GenericChange for UpdateTrigger {
     }
 }
 
-#[async_trait]
-impl Change for UpdateTrigger {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
-    }
-}
-
 pub struct RenameTrigger {
     pub trigger: Trigger,
     pub verify: bool,
@@ -901,8 +880,8 @@ impl fmt::Display for RenameTrigger {
 }
 
 #[async_trait]
-impl GenericChange for RenameTrigger {
-    async fn generic_apply<T: GenericClient + Sync + Send>(&self, client: &mut T) -> ChangeResult {
+impl Change for RenameTrigger {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         if self.trigger.name.len() > MAX_TRIGGER_NAME_LENGTH {
             return Err(Error::Configuration(ConfigurationError::from_msg(format!(
                 "Trigger name too long ({} > {})",
@@ -980,13 +959,6 @@ impl GenericChange for RenameTrigger {
     }
 }
 
-#[async_trait]
-impl Change for RenameTrigger {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
-    }
-}
-
 pub struct VerifyTrigger {
     pub trigger_name: String,
 }
@@ -998,8 +970,8 @@ impl fmt::Display for VerifyTrigger {
 }
 
 #[async_trait]
-impl GenericChange for VerifyTrigger {
-    async fn generic_apply<T: GenericClient + Sync + Send>(&self, client: &mut T) -> ChangeResult {
+impl Change for VerifyTrigger {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let mut transaction = client.transaction().await?;
 
         let message = run_checks(&self.trigger_name, &mut transaction).await?;
@@ -1008,12 +980,6 @@ impl GenericChange for VerifyTrigger {
     }
 }
 
-#[async_trait]
-impl Change for VerifyTrigger {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
-    }
-}
 
 pub struct EnableTrigger {
     pub trigger_name: String,
@@ -1026,8 +992,8 @@ impl fmt::Display for EnableTrigger {
 }
 
 #[async_trait]
-impl GenericChange for EnableTrigger {
-    async fn generic_apply<T: GenericClient + Sync + Send>(&self, client: &mut T) -> ChangeResult {
+impl Change for EnableTrigger {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let mut transaction = client.transaction().await?;
 
         let message = set_enabled(&mut transaction, &self.trigger_name, true).await?;
@@ -1035,13 +1001,6 @@ impl GenericChange for EnableTrigger {
         transaction.commit().await?;
 
         Ok(message)
-    }
-}
-
-#[async_trait]
-impl Change for EnableTrigger {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
     }
 }
 
@@ -1056,8 +1015,8 @@ impl fmt::Display for DisableTrigger {
 }
 
 #[async_trait]
-impl GenericChange for DisableTrigger {
-    async fn generic_apply<T: GenericClient + Sync + Send>(&self, client: &mut T) -> ChangeResult {
+impl Change for DisableTrigger {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let mut transaction = client.transaction().await?;
 
         let message = set_enabled(&mut transaction, &self.trigger_name, false).await?;
@@ -1065,13 +1024,6 @@ impl GenericChange for DisableTrigger {
         transaction.commit().await?;
 
         Ok(message)
-    }
-}
-
-#[async_trait]
-impl Change for DisableTrigger {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
     }
 }
 
@@ -1267,13 +1219,13 @@ impl<Tz: TimeZone> fmt::Display for CreateNotifications<Tz> {
 }
 
 #[async_trait]
-impl<Tz> GenericChange for CreateNotifications<Tz>
+impl<Tz> Change for CreateNotifications<Tz>
 where
     Tz: TimeZone,
     <Tz as TimeZone>::Offset: Sync + Send,
     DateTime<Tz>: ToSql,
 {
-    async fn generic_apply<T: GenericClient + Sync + Send>(&self, client: &mut T) -> ChangeResult {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let mut transaction = client.transaction().await?;
 
         let message =
@@ -1283,18 +1235,6 @@ where
         transaction.commit().await?;
 
         Ok(message)
-    }
-}
-
-#[async_trait]
-impl<Tz> Change for CreateNotifications<Tz>
-where
-    Tz: TimeZone + Sync + Send,
-    <Tz as TimeZone>::Offset: Sync + Send,
-    DateTime<Tz>: ToSql,
-{
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
-        self.generic_apply(client).await
     }
 }
 

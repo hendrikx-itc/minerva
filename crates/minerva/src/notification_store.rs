@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::PathBuf;
 use tokio_postgres::types::ToSql;
-use tokio_postgres::{Client, GenericClient};
+use tokio_postgres::{Client, GenericClient, Transaction};
 
 use async_trait::async_trait;
 
@@ -41,7 +41,7 @@ impl fmt::Display for AddAttributes {
 
 #[async_trait]
 impl Change for AddAttributes {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let query = concat!(
             "with a as (",
             "insert into notification_directory.attribute(notification_store_id, name, data_type, description) ",
@@ -133,7 +133,7 @@ impl fmt::Display for AddNotificationStore {
 
 #[async_trait]
 impl Change for AddNotificationStore {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let query = format!(
             "SELECT notification_directory.create_notification_store($1::text, ARRAY[{}]::notification_directory.attr_def[])",
             self.notification_store.attributes.iter().map(|att| format!("('{}', '{}', '')", &att.name, &att.data_type)).collect::<Vec<String>>().join(",")

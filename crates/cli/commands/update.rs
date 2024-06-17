@@ -11,7 +11,6 @@ use tokio_postgres::Client;
 
 use minerva::error::{ConfigurationError, Error, RuntimeError};
 use minerva::instance::MinervaInstance;
-use tokio_postgres::GenericClient;
 
 use super::common::{connect_db, Cmd, CmdResult, ENV_MINERVA_INSTANCE_ROOT};
 
@@ -96,11 +95,19 @@ async fn update(
                     })
                 })?
         {
-            let tx = client.transaction().await;
+            let mut tx = client.transaction().await?;
 
-            match change.apply(tx).await {
-                Ok(message) => println!("> {}", &message),
-                Err(err) => println!("! Error applying change: {}", &err),
+            tx.execute("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'", &[]).await?;
+
+            match change.apply(&mut tx).await {
+                Ok(message) => {
+                    tx.commit().await?;
+                    println!("> {}", &message)
+                },
+                Err(err) => {
+                    tx.rollback().await?;
+                    println!("! Error applying change: {}", &err)
+                },
             }
         }
     }
