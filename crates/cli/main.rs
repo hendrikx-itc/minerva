@@ -1,21 +1,22 @@
-use std::io;
-use clap::{Parser, CommandFactory, Command, Subcommand};
+use clap::{Command, CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Generator, Shell};
+use std::io;
 
 pub mod commands;
 
 use crate::commands::attributestore::AttributeStoreOpt;
 use crate::commands::common::Cmd;
 use crate::commands::diff::DiffOpt;
-use crate::commands::schema::SchemaOpt;
 use crate::commands::dump::DumpOpt;
 use crate::commands::initialize::InitializeOpt;
 use crate::commands::loaddata::LoadDataOpt;
+use crate::commands::relation::RelationOpt;
+use crate::commands::schema::SchemaOpt;
+use crate::commands::start::StartOpt;
 use crate::commands::trendmaterialization::TrendMaterializationOpt;
 use crate::commands::trendstore::TrendStoreOpt;
 use crate::commands::trigger::TriggerOpt;
 use crate::commands::update::UpdateOpt;
-use crate::commands::relation::RelationOpt;
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(version, about, name = "minerva", arg_required_else_help = true)]
@@ -23,7 +24,7 @@ struct Cli {
     #[arg(long = "generate", value_enum)]
     generator: Option<Shell>,
     #[command(subcommand)]
-    command: Option<Commands>
+    command: Option<Commands>,
 }
 
 #[derive(Debug, Subcommand, PartialEq)]
@@ -50,6 +51,8 @@ enum Commands {
     LoadData(LoadDataOpt),
     #[command(about = "Manage relations")]
     Relation(RelationOpt),
+    #[command(about = "Start Minerva instance")]
+    Start(StartOpt),
 }
 
 fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
@@ -66,7 +69,6 @@ async fn main() {
         print_completions(generator, &mut cmd)
     }
 
-
     let result = match cli.command {
         Some(Commands::Schema(schema)) => schema.run().await,
         Some(Commands::Dump(dump)) => dump.run().await,
@@ -76,10 +78,13 @@ async fn main() {
         Some(Commands::TrendStore(trend_store)) => trend_store.run().await,
         Some(Commands::Trigger(trigger)) => trigger.run().await,
         Some(Commands::AttributeStore(attribute_store)) => attribute_store.run().await,
-        Some(Commands::TrendMaterialization(trend_materialization)) => trend_materialization.run().await,
+        Some(Commands::TrendMaterialization(trend_materialization)) => {
+            trend_materialization.run().await
+        }
         Some(Commands::LoadData(load_data)) => load_data.run().await,
         Some(Commands::Relation(relation)) => relation.run().await,
-        None => return
+        Some(Commands::Start(start)) => start.run().await,
+        None => return,
     };
 
     if let Err(e) = result {
