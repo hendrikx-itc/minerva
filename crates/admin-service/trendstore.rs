@@ -4,14 +4,14 @@ use std::ops::DerefMut;
 use std::time::Duration;
 
 use deadpool_postgres::Pool;
-use tokio_postgres::GenericClient;
+use tokio_postgres::{GenericClient, Transaction};
 
 use actix_web::{get, post, web::Data, web::Path, web::Query, HttpResponse};
 
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use minerva::change::GenericChange;
+use minerva::change::Change;
 use minerva::changes::trend_store::{AddTrendStore, AddTrendStorePart, AddTrends};
 use minerva::interval::parse_interval;
 use minerva::trend_store::{load_trend_store, GeneratedTrend, Trend, TrendStore, TrendStorePart};
@@ -183,12 +183,12 @@ pub struct TrendStoreBasicData {
 }
 
 impl TrendStoreBasicData {
-    async fn as_minerva<T: GenericClient + Send + Sync>(
+    async fn as_minerva(
         &self,
-        client: &mut T,
+        transaction: &mut Transaction<'_>,
     ) -> Result<TrendStore, String> {
         let result = load_trend_store(
-            client,
+            transaction,
             &self.data_source,
             &self.entity_type,
             &self.granularity,
@@ -208,7 +208,7 @@ impl TrendStoreBasicData {
                 let result = AddTrendStore {
                     trend_store: new_trend_store.clone(),
                 }
-                .generic_apply(client)
+                .apply(transaction)
                 .await;
                 match result {
                     Ok(_) => Ok(new_trend_store),
@@ -253,15 +253,20 @@ impl TrendStorePartCompleteData {
         &self,
         client: &mut T,
     ) -> Result<TrendStorePartFull, Error> {
+        let mut tx = client.transaction().await.map_err(|_| Error {
+            code: 500,
+            message: format!("Could not create trend store"),
+        })?;
+
         // first ensure the data source exists
-        _ = client.execute(
+        _ = tx.execute(
             "SELECT directory.name_to_data_source($1)",
             &[&self.data_source]
         );
 
         let trendstore = self
             .trend_store()
-            .as_minerva(client)
+            .as_minerva(&mut tx)
             .await
             .map_err(|e| Error {
                 code: 409,
@@ -273,7 +278,7 @@ impl TrendStorePartCompleteData {
             trend_store_part: self.trend_store_part().as_minerva(),
         };
 
-        action.generic_apply(client).await.map_err(|e| Error {
+        action.apply(&mut tx).await.map_err(|e| Error {
             code: 409,
             message: format!("Creation of trendstorepart failed: {e}"),
         })?;
@@ -283,14 +288,14 @@ impl TrendStorePartCompleteData {
             trends: self.trend_store_part().as_minerva().trends,
         };
 
-        action.generic_apply(client).await.map_err(|e| Error {
+        action.apply(&mut tx).await.map_err(|e| Error {
             code: 409,
             message: format!(
                 "Creation of trendstorepart succeeded, but inserting trends failed: {e}"
             ),
         })?;
 
-        let (trend_store_part_id, trend_store_id): (i32, i32) = client
+        let (trend_store_part_id, trend_store_id): (i32, i32) = tx 
             .query_one(
                 "SELECT id, trend_store_id FROM trend_directory.trend_store_part WHERE name = $1",
                 &[&self.name],
@@ -303,7 +308,7 @@ impl TrendStorePartCompleteData {
             })
             .map(|row| (row.get(0), row.get(1)))?;
 
-        let trends: Vec<TrendFull> = client
+        let trends: Vec<TrendFull> = tx
             .query(
                 concat!(
                     "SELECT id, trend_store_part_id, name, data_type, time_aggregation, entity_aggregation, extra_data, description ",
@@ -328,7 +333,7 @@ impl TrendStorePartCompleteData {
                 .collect()
             )?;
 
-        let generated_trends: Vec<GeneratedTrendFull> = client
+        let generated_trends: Vec<GeneratedTrendFull> = tx
             .query(
                 concat!(
                     "SELECT id, trend_store_part_id, name, data_type, expression, extra_data, description ",
@@ -351,6 +356,8 @@ impl TrendStorePartCompleteData {
                 })
                 .collect()
             )?;
+
+        tx.commit().await.map_err(|e| Error { code: 500, message: e.to_string() })?;
 
         let trendstorepart = TrendStorePartFull {
             id: trend_store_part_id,

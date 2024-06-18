@@ -139,7 +139,7 @@ impl Cmd for StartOpt {
             );
 
             let minerva_instance = MinervaInstance::load_from(&minerva_instance_root);
-            minerva_instance.initialize(&mut client).await;
+            minerva_instance.initialize(&mut client).await?;
 
             if self.create_partitions {
                 create_partitions(&mut client, None).await?;
@@ -152,6 +152,10 @@ impl Cmd for StartOpt {
         println!("Connect to the cluster on port {}", controller_port);
         println!("");
         println!("  psql -h localhost -p {controller_port} -U postgres");
+        println!("");
+        println!("or:");
+        println!("");
+        println!("  PGHOST=localhost PGPORT={controller_port} PGUSER=postgres PGSSLMODE=disable minerva");
 
         signal::ctrl_c().await.map_err(|e| {
             Error::Runtime(format!("Could not start waiting for Ctrl-C: {e}").into())

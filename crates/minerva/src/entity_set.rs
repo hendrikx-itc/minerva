@@ -3,11 +3,11 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use chrono::{DateTime, Utc};
-use tokio_postgres::{Client, GenericClient};
+use tokio_postgres::{Client, Transaction};
 
 use async_trait::async_trait;
 
-use super::change::{ChangeResult, GenericChange};
+use super::change::{ChangeResult, Change};
 use super::error::{Error, DatabaseError, RuntimeError, DatabaseErrorKind};
 
 type PostgresName = String;
@@ -118,8 +118,8 @@ impl fmt::Display for ChangeEntitySet {
 }
 
 #[async_trait]
-impl GenericChange for ChangeEntitySet {
-    async fn generic_apply<T: GenericClient + Send + Sync>(&self, client: &mut T) -> ChangeResult {
+impl Change for ChangeEntitySet {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let entitieslist = self.entities.join("', '");
         let prequery = "SELECT id FROM attribute.minerva_entity_set es WHERE es.owner = $1 AND es.name = $2".to_string();
         let prerow = client.query_one(
@@ -182,14 +182,10 @@ impl fmt::Display for CreateEntitySet {
 }
 
 #[async_trait]
-impl GenericChange for CreateEntitySet {
-    async fn generic_apply<T: GenericClient + Send + Sync>(&self, client: &mut T) -> ChangeResult {
-        let query = format!(
-            "SELECT relation_directory.entity_set_exists($1, $2)"
-        );
-
+impl Change for CreateEntitySet {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let row = client.query_one(
-            &query,
+            "SELECT relation_directory.entity_set_exists($1, $2)",
             &[&self.entity_set.owner, &self.entity_set.name]
         )
         .await
@@ -243,7 +239,7 @@ impl GenericChange for CreateEntitySet {
         
                 let missing_entities:Vec<String> = row.get(0);
         
-                if missing_entities.len() == 0 {
+                if missing_entities.is_empty() {
                     Ok("Entity set created".to_string())
                 } else {
                     let missing_entities_list = missing_entities.join(", ");

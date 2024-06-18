@@ -7,7 +7,7 @@ use actix_web::{get, put, post, web::Data, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
 
 use minerva::entity_set::{EntitySet, load_entity_sets, ChangeEntitySet, CreateEntitySet};
-use minerva::change::GenericChange;
+use minerva::change::Change;
 
 use super::serviceerror::{ServiceError, ServiceErrorKind};
 use crate::error::{Error, Success};
@@ -89,16 +89,24 @@ async fn change_entity_set_fn(
         message: e.to_string(),
     })?;
 
-    let client: &mut tokio_postgres::Client = manager.deref_mut().deref_mut();
-
     let action = ChangeEntitySet {
         entity_set: data.entity_set(),
         entities: data.entities
     };
 
-    action.generic_apply(client).await.map_err(|e| Error {
+    let mut tx = manager.transaction().await.map_err(|e| Error {
+        code: 500,
+        message: e.to_string(),
+    })?;
+
+    action.apply(&mut tx).await.map_err(|e| Error {
         code: 409,
         message: format!("Change of entity set failed: {e}"),
+    })?;
+
+    tx.commit().await.map_err(|e| Error {
+        code: 500,
+        message: e.to_string(),
     })?;
 
     Ok(HttpResponse::Ok().json(Success {
@@ -153,15 +161,23 @@ async fn create_entity_set_fn(
         message: e.to_string(),
     })?;
 
-    let client: &mut tokio_postgres::Client = manager.deref_mut().deref_mut();
-
     let action = CreateEntitySet {
         entity_set: data.entity_set()
     };
 
-    action.generic_apply(client).await.map_err(|e| Error {
+    let mut tx = manager.transaction().await.map_err(|e| Error {
+        code: 500,
+        message: e.to_string(),
+    })?;
+
+    action.apply(&mut tx).await.map_err(|e| Error {
         code: 409,
         message: format!("Creation of entity set failed: {e}"),
+    })?;
+
+    tx.commit().await.map_err(|e| Error {
+        code: 500,
+        message: e.to_string(),
     })?;
 
     Ok(HttpResponse::Ok().json(Success {

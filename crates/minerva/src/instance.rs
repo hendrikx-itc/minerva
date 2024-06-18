@@ -5,7 +5,7 @@ use std::process::Command;
 
 use glob::glob;
 
-use tokio_postgres::Client;
+use tokio_postgres::{Client, GenericClient};
 
 use super::attribute_store::{load_attribute_stores, AddAttributeStore, AttributeStore};
 use super::change::Change;
@@ -94,7 +94,7 @@ impl MinervaInstance {
         }
     }
 
-    pub async fn initialize(&self, client: &mut Client) {
+    pub async fn initialize(&self, client: &mut Client) -> Result<(), Error> {
         if let Some(instance_root) = &self.instance_root {
             initialize_custom(
                 client,
@@ -103,15 +103,15 @@ impl MinervaInstance {
             .await
         }
 
-        initialize_attribute_stores(client, &self.attribute_stores).await;
+        initialize_attribute_stores(client, &self.attribute_stores).await?;
 
-        initialize_trend_stores(client, &self.trend_stores).await;
+        initialize_trend_stores(client, &self.trend_stores).await?;
 
-        initialize_notification_stores(client, &self.notification_stores).await;
+        initialize_notification_stores(client, &self.notification_stores).await?;
 
-        initialize_virtual_entities(client, &self.virtual_entities).await;
+        initialize_virtual_entities(client, &self.virtual_entities).await?;
 
-        initialize_relations(client, &self.relations).await;
+        initialize_relations(client, &self.relations).await?;
 
         if let Some(instance_root) = &self.instance_root {
             initialize_custom(
@@ -124,7 +124,7 @@ impl MinervaInstance {
             .await
         }
 
-        initialize_trend_materializations(client, &self.trend_materializations).await;
+        initialize_trend_materializations(client, &self.trend_materializations).await?;
 
         if let Some(instance_root) = &self.instance_root {
             initialize_custom(
@@ -137,7 +137,7 @@ impl MinervaInstance {
             .await
         }
 
-        initialize_triggers(client, &self.triggers).await;
+        initialize_triggers(client, &self.triggers).await?;
 
         if let Some(instance_root) = &self.instance_root {
             initialize_custom(
@@ -146,6 +146,8 @@ impl MinervaInstance {
             )
             .await
         }
+
+        Ok(())
     }
 
     pub fn diff(&self, other: &MinervaInstance) -> Vec<Box<dyn Change + Send>> {
@@ -222,7 +224,7 @@ impl MinervaInstance {
         changes
     }
 
-    pub async fn update(&self, client: &mut Client, other: &MinervaInstance) -> Result<(), Error> {
+    pub async fn update<T: GenericClient + Send + Sync>(&self, client: &mut T, other: &MinervaInstance) -> Result<(), Error> {
         let changes = self.diff(other);
 
         println!("Applying changes:");
@@ -230,7 +232,9 @@ impl MinervaInstance {
         for change in changes {
             println!("* {change}");
 
-            match change.apply(client).await {
+            let mut tx = client.transaction().await?;
+
+            match change.apply(&mut tx).await {
                 Ok(message) => println!("> {}", &message),
                 Err(err) => println!("! Error applying change: {}", &err),
             }
@@ -288,23 +292,29 @@ fn load_attribute_stores_from(
         })
 }
 
-async fn initialize_attribute_stores(client: &mut Client, attribute_stores: &Vec<AttributeStore>) {
+async fn initialize_attribute_stores(client: &mut Client, attribute_stores: &Vec<AttributeStore>) -> Result<(), Error> {
     for attribute_store in attribute_stores {
         let change = AddAttributeStore {
             attribute_store: attribute_store.clone(),
         };
 
-        let result = change.apply(client).await;
+        let mut tx = client.transaction().await?;
 
-        match result {
+        tx.execute("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'", &[]).await?;
+
+        match change.apply(&mut tx).await {
             Ok(message) => {
+                tx.commit().await?;
                 println!("{message}");
             }
             Err(e) => {
+                tx.rollback().await?;
                 println!("Error creating attribute store: {e}");
             }
         }
     }
+
+    Ok(())
 }
 
 fn load_notification_stores_from(
@@ -331,21 +341,27 @@ fn load_notification_stores_from(
 async fn initialize_notification_stores(
     client: &mut Client,
     notification_stores: &Vec<NotificationStore>,
-) {
+) -> Result<(), Error> {
     for notification_store in notification_stores {
         let change = AddNotificationStore {
             notification_store: notification_store.clone(),
         };
 
-        match change.apply(client).await {
+        let mut tx = client.transaction().await?;
+
+        match change.apply(&mut tx).await {
             Ok(message) => {
+                tx.commit().await?;
                 println!("{message}");
             }
             Err(e) => {
+                tx.rollback().await?;
                 println!("Error creating notification store: {e}");
             }
         }
     }
+
+    Ok(())
 }
 
 fn load_trend_stores_from(minerva_instance_root: &Path) -> impl Iterator<Item = TrendStore> {
@@ -375,21 +391,29 @@ fn load_trend_stores_from(minerva_instance_root: &Path) -> impl Iterator<Item = 
         })
 }
 
-async fn initialize_trend_stores(client: &mut Client, trend_stores: &Vec<TrendStore>) {
+async fn initialize_trend_stores(client: &mut Client, trend_stores: &Vec<TrendStore>) -> Result<(), Error> {
     for trend_store in trend_stores {
         let change = AddTrendStore {
             trend_store: trend_store.clone(),
         };
 
-        match change.apply(client).await {
+        let mut tx = client.transaction().await?;
+
+        tx.execute("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'", &[]).await?;
+
+        match change.apply(&mut tx).await {
             Ok(message) => {
+                tx.commit().await?;
                 println!("{change}: {message}");
             }
             Err(e) => {
+                tx.rollback().await?;
                 println!("Error creating trend store: {e}");
             }
         }
     }
+
+    Ok(())
 }
 
 fn load_triggers_from(minerva_instance_root: &Path) -> impl Iterator<Item = Trigger> {
@@ -465,43 +489,73 @@ fn load_relations_from(minerva_instance_root: &Path) -> impl Iterator<Item = Rel
         })
 }
 
-async fn initialize_virtual_entities(client: &mut Client, virtual_entities: &Vec<VirtualEntity>) {
+async fn initialize_virtual_entities(client: &mut Client, virtual_entities: &Vec<VirtualEntity>) -> Result<(), Error> {
     for virtual_entity in virtual_entities {
         let change: AddVirtualEntity = AddVirtualEntity::from(virtual_entity.clone());
 
-        match change.apply(client).await {
-            Ok(message) => println!("{message}"),
-            Err(e) => print!("Error creating virtual entity: {e}"),
+        let mut tx = client.transaction().await?;
+
+        match change.apply(&mut tx).await {
+            Ok(message) => {
+                tx.commit().await?;
+                println!("{message}")
+            },
+            Err(e) => {
+                tx.rollback().await?;
+                print!("Error creating virtual entity: {e}")
+            },
         }
     }
+
+    Ok(())
 }
 
-async fn initialize_relations(client: &mut Client, relations: &Vec<Relation>) {
+async fn initialize_relations(client: &mut Client, relations: &Vec<Relation>) -> Result<(), Error> {
     for relation in relations {
         let change: AddRelation = AddRelation::from(relation.clone());
 
-        match change.apply(client).await {
-            Ok(message) => println!("{message}"),
-            Err(e) => print!("Error creating relation: {e}"),
+        let mut tx = client.transaction().await?;
+
+        match change.apply(&mut tx).await {
+            Ok(message) => {
+                tx.commit().await?;
+                println!("{message}")
+            },
+            Err(e) => {
+                tx.rollback().await?;
+                print!("Error creating relation: {e}")
+            },
         }
     }
+    
+    Ok(())
 }
 
 async fn initialize_trend_materializations(
     client: &mut Client,
     trend_materializations: &Vec<TrendMaterialization>,
-) {
+) -> Result<(), Error> {
     for materialization in trend_materializations {
         let change = AddTrendMaterialization::from(materialization.clone());
 
-        match change.apply(client).await {
-            Ok(message) => println!("{message}"),
-            Err(e) => println!("Error creating trend materialization: {e}"),
+        let mut tx = client.transaction().await?;
+
+        match change.apply(&mut tx).await {
+            Ok(message) => {
+                tx.commit().await?;
+                println!("{message}")
+            },
+            Err(e) => {
+                tx.rollback().await?;
+                println!("Error creating trend materialization: {e}")
+            },
         }
     }
+
+    Ok(())
 }
 
-async fn initialize_triggers(client: &mut Client, triggers: &Vec<Trigger>) {
+async fn initialize_triggers(client: &mut Client, triggers: &Vec<Trigger>) -> Result<(), Error> {
     for trigger in triggers {
         let change = AddTrigger {
             trigger: trigger.clone(),
@@ -509,11 +563,21 @@ async fn initialize_triggers(client: &mut Client, triggers: &Vec<Trigger>) {
             enable: true,
         };
 
-        match change.apply(client).await {
-            Ok(message) => println!("{message}"),
-            Err(e) => println!("Error creating trigger '{}': {}", trigger.name, e),
+        let mut tx = client.transaction().await?;
+
+        match change.apply(&mut tx).await {
+            Ok(message) => {
+                tx.commit().await?;
+                println!("{message}")
+            },
+            Err(e) => {
+                tx.rollback().await?;
+                println!("Error creating trigger '{}': {}", trigger.name, e)
+            },
         }
     }
+
+    Ok(())
 }
 
 async fn load_sql<'a>(client: &'a mut Client, path: &PathBuf) -> Result<(), String> {

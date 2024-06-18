@@ -54,17 +54,23 @@ async fn run_attribute_store_create_cmd(args: &AttributeStoreCreate) -> CmdResul
 
     let change = AddAttributeStore { attribute_store };
 
-    let result = change.apply(&mut client).await;
+    let mut tx = client.transaction().await?;
+
+    let result = change.apply(&mut tx).await;
 
     match result {
         Ok(_) => {
+            tx.commit().await?;
             println!("Created attribute store");
 
             Ok(())
         }
-        Err(e) => Err(Error::Runtime(RuntimeError {
-            msg: format!("Error creating attribute store: {e}"),
-        })),
+        Err(e) => {
+            tx.rollback().await?;
+            Err(Error::Runtime(RuntimeError {
+                msg: format!("Error creating attribute store: {e}"),
+            }))
+        },
     }
 }
 
@@ -88,10 +94,13 @@ async fn run_attribute_store_update_cmd(args: &AttributeStoreUpdate) -> CmdResul
         println!("Updating attribute store");
 
         for change in changes {
-            let apply_result = change.apply(&mut client).await;
+            let mut tx = client.transaction().await?;
+
+            let apply_result = change.apply(&mut tx).await;
 
             match apply_result {
                 Ok(_) => {
+                    tx.commit().await?;
                     println!("{}", &change);
                 }
                 Err(e) => {

@@ -11,7 +11,7 @@ use deadpool_postgres::Pool;
 use actix_web::{delete, get, post, put, web::Data, web::Path, HttpResponse};
 
 use serde_json::json;
-use tokio_postgres::{types::Type, GenericClient};
+use tokio_postgres::{types::Type, GenericClient, Transaction};
 
 use minerva::interval::parse_interval;
 use minerva::trend_materialization::map_sql_to_plpgsql;
@@ -222,34 +222,34 @@ impl KpiRawData {
         })
     }
 
-    async fn get_kpi<T: GenericClient + Send + Sync>(
+    async fn get_kpi(
         &self,
         granularity: String,
-        client: &mut T,
+        transaction: &mut Transaction<'_>,
     ) -> Result<Kpi, String> {
-        let implementedkpi = self.get_implemented_data(client).await?;
+        let implementedkpi = self.get_implemented_data(transaction).await?;
 
-        let kpi = implementedkpi.get_kpi(client, granularity).await.map_err(|e| format!("Could not define KPI: {e:?}"))?;
+        let kpi = implementedkpi.get_kpi(transaction, granularity).await.map_err(|e| format!("Could not define KPI: {e:?}"))?;
         
         kpi.ok_or("So such KPI found".into())
     }
 
-    async fn create<T: GenericClient + Send + Sync>(
+    async fn create(
         &self,
-        client: &mut T,
+        transaction: &mut Transaction<'_>,
     ) -> Result<String, Error> {
-        let implementedkpi = self.get_implemented_data(client).await.map_err(|e| Error {
+        let implementedkpi = self.get_implemented_data(transaction).await.map_err(|e| Error {
             code: 404,
             message: e,
         })?;
 
-        implementedkpi.create(client).await
+        implementedkpi.create(transaction).await
     }
 }
 
 /// Find the source trend store parts for a trend view
-async fn get_view_sources<T: GenericClient + Send + Sync>(
-    client: &mut T,
+async fn get_view_sources(
+    transaction: &mut Transaction<'_>,
     view_name: &str,
 ) -> Result<Vec<String>, tokio_postgres::Error> {
     let query = concat!(
@@ -264,7 +264,7 @@ async fn get_view_sources<T: GenericClient + Send + Sync>(
         "GROUP BY c.relname"
     );
 
-    let view_sources: Vec<String> = client
+    let view_sources: Vec<String> = transaction
         .query(query, &[&view_name])
         .await
         .map(|rows| rows.iter().map(|row| row.get(0)).collect())?;
@@ -272,11 +272,11 @@ async fn get_view_sources<T: GenericClient + Send + Sync>(
     Ok(view_sources)
 }
 
-async fn map_view_sources<T: GenericClient + Send + Sync>(
-    client: &mut T,
+async fn map_view_sources(
+    transaction: &mut Transaction<'_>,
     source_name: &str,
 ) -> Result<Vec<String>, tokio_postgres::Error> {
-    let view_sources = get_view_sources(client, source_name).await?;
+    let view_sources = get_view_sources(transaction, source_name).await?;
 
     if view_sources.len() > 0 {
         Ok(view_sources)
@@ -313,9 +313,9 @@ impl KpiImplementedData {
         )
     }
 
-    async fn get_kpi<T: GenericClient + Send + Sync>(
+    async fn get_kpi(
         &self,
-        client: &mut T,
+        transaction: &mut Transaction<'_>,
         granularity: String,
     ) -> Result<Option<Kpi>, Error> {
         let mut sources: Vec<TrendMaterializationSourceData> = vec![];
@@ -332,14 +332,14 @@ impl KpiImplementedData {
                 .replace(&DEFAULT_GRANULARITY.to_string(), &granularity.to_string());
 
             // Check if the source exists
-            if !source_exists(client, &source_name).await.map_err(|e| Error { code: 500, message: format!("Could not check source existence: {e}") } )? {
+            if !source_exists(transaction, &source_name).await.map_err(|e| Error { code: 500, message: format!("Could not check source existence: {e}") } )? {
                 return Ok(None);
             }
 
             query_sources.push(source_name.clone());
 
             // Check if the source is a view, and if so, find it's sources
-            let source_trend_store_parts = map_view_sources(client, &source_name)
+            let source_trend_store_parts = map_view_sources(transaction, &source_name)
                 .await
                 .map_err(|e| Error {
                     code: 500,
@@ -453,14 +453,14 @@ impl KpiImplementedData {
         Ok(Some(kpi))
     }
 
-    async fn create<T: GenericClient + Send + Sync>(
+    async fn create(
         &self,
-        client: &mut T,
+        transaction: &mut Transaction<'_>,
     ) -> Result<String, Error> {
         for granularity in GRANULARITIES.iter() {
-            if let Some(kpi) = self.get_kpi(client, granularity.to_string()).await? {
+            if let Some(kpi) = self.get_kpi(transaction, granularity.to_string()).await? {
                 kpi.trend_store_part
-                    .create(client)
+                    .create(transaction)
                     .await
                     .map_err(|e| Error {
                         code: e.code,
@@ -468,7 +468,7 @@ impl KpiImplementedData {
                     })?;
 
                 kpi.materialization
-                    .create(client)
+                    .create(transaction)
                     .await
                     .map_err(|e| Error {
                         code: e.code,

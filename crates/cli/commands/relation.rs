@@ -30,7 +30,11 @@ impl Cmd for RelationCreate {
             relation
         };
 
-        let message = change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        let message = change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("{message}");
 

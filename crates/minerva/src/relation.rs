@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use tokio_postgres::Client;
+use tokio_postgres::Transaction;
 
 use async_trait::async_trait;
 
@@ -73,7 +73,7 @@ impl fmt::Display for AddRelation {
 
 #[async_trait]
 impl Change for AddRelation {
-    async fn apply(&self, client: &mut Client) -> ChangeResult {
+    async fn apply(&self, client: &mut Transaction) -> ChangeResult {
         let query = format!(
             "CREATE TABLE relation.\"{}\"(source_id integer, target_id integer)",
             self.relation.name

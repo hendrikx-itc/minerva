@@ -83,7 +83,11 @@ impl Cmd for TriggerCreate {
             enable: self.enable,
         };
 
-        let message = change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        let message = change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("{message}");
 
@@ -106,7 +110,11 @@ impl Cmd for TriggerDelete {
             trigger_name: self.name.clone(),
         };
 
-        change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("Deleted trigger '{}'", &self.name);
 
@@ -138,7 +146,11 @@ impl Cmd for TriggerUpdate {
             verify: self.verify,
         };
 
-        let message = change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        let message = change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("{message}");
 
@@ -180,7 +192,11 @@ impl Cmd for TriggerRename {
             old_name: self.old_name.clone(),
         };
 
-        let message = change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        let message = change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("{message}");
 
@@ -203,7 +219,11 @@ impl Cmd for TriggerVerify {
             trigger_name: self.name.clone(),
         };
 
-        let message = change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        let message = change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("{message}");
 
@@ -226,7 +246,11 @@ impl Cmd for TriggerEnable {
             trigger_name: self.name.clone(),
         };
 
-        let message = change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        let message = change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("{message}");
 
@@ -249,7 +273,11 @@ impl Cmd for TriggerDisable {
             trigger_name: self.name.clone(),
         };
 
-        let message = change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        let message = change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("{message}");
 
@@ -312,7 +340,11 @@ impl Cmd for TriggerCreateNotifications {
             timestamp: self.timestamp,
         };
 
-        let message = change.apply(&mut client).await?;
+        let mut tx = client.transaction().await?;
+
+        let message = change.apply(&mut tx).await?;
+
+        tx.commit().await?;
 
         println!("{message}");
 

@@ -1,4 +1,3 @@
-use std::env;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -25,23 +24,14 @@ pub struct InitializeOpt {
     #[arg(long = "create-partitions", help = "create partitions")]
     create_partitions: bool,
     #[arg(
-        long = "with-definition",
         help = "Minerva instance definition root directory"
     )]
-    instance_root: Option<PathBuf>,
+    instance_root: PathBuf,
 }
 
 #[async_trait]
 impl Cmd for InitializeOpt {
     async fn run(&self) -> CmdResult {
-        let minerva_instance_root: Option<PathBuf> = match &self.instance_root {
-            Some(root) => Some(root.clone()),
-            None => match env::var(ENV_MINERVA_INSTANCE_ROOT) {
-                Ok(v) => Some(PathBuf::from(v)),
-                Err(_) => None,
-            },
-        };
-
         let mut client = connect_db().await?;
 
         if let Some(database_name) = &self.database_name {
@@ -72,7 +62,8 @@ impl Cmd for InitializeOpt {
             })?;
         }
 
-        let mut cluster_config_path = PathBuf::from(minerva_instance_root.clone().unwrap());
+        let mut cluster_config_path = self.instance_root.clone();
+
         cluster_config_path.push("cluster_config.yaml");
         let cluster_config = match File::open(&cluster_config_path) {
             Ok(cluster_config_file) => {
@@ -101,27 +92,25 @@ impl Cmd for InitializeOpt {
             }
         }
 
-        if let Some(root) = minerva_instance_root {
-            if !root.is_dir() {
-                return Err(Error::Configuration(ConfigurationError::from_msg(format!(
-                    "Not a valid directory: '{}'",
-                    &root.to_string_lossy()
-                ))));
-            }
-
-            println!(
-                "Initializing Minerva instance from {}",
-                root.to_string_lossy()
-            );
-
-            // We need to set the environment variable for any child processes that might be
-            // started during initialization.
-            std::env::set_var(&ENV_MINERVA_INSTANCE_ROOT, &root);
-
-            MinervaInstance::load_from(&root)
-                .initialize(&mut client)
-                .await;
+        if !self.instance_root.is_dir() {
+            return Err(Error::Configuration(ConfigurationError::from_msg(format!(
+                "Not a valid directory: '{}'",
+                &self.instance_root.to_string_lossy()
+            ))));
         }
+
+        println!(
+            "Initializing Minerva instance from {}",
+            self.instance_root.to_string_lossy()
+        );
+
+        // We need to set the environment variable for any child processes that might be
+        // started during initialization.
+        std::env::set_var(ENV_MINERVA_INSTANCE_ROOT, &self.instance_root);
+
+        MinervaInstance::load_from(&self.instance_root)
+            .initialize(&mut client)
+            .await?;
 
         if self.create_partitions {
             create_partitions(&mut client, None).await?;

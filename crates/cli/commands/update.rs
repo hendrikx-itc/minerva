@@ -83,7 +83,7 @@ async fn update(
     println!("Applying changes:");
 
     for change in changes {
-        println!("* {change}");
+        println!("\n\n* {change}");
 
         if (!interactive)
             || Confirm::new()
@@ -95,9 +95,19 @@ async fn update(
                     })
                 })?
         {
-            match change.apply(client).await {
-                Ok(message) => println!("> {}", &message),
-                Err(err) => println!("! Error applying change: {}", &err),
+            let mut tx = client.transaction().await?;
+
+            tx.execute("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'", &[]).await?;
+
+            match change.apply(&mut tx).await {
+                Ok(message) => {
+                    tx.commit().await?;
+                    println!("> {}", &message)
+                },
+                Err(err) => {
+                    tx.rollback().await?;
+                    println!("! Error applying change: {}", &err)
+                },
             }
         }
     }
