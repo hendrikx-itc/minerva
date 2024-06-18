@@ -62,7 +62,12 @@ mod tests {
 
             let add_trend_store = AddTrendStore { trend_store };
 
-            add_trend_store.apply(&mut client).await?;
+            let mut tx = client.transaction().await?;
+
+            add_trend_store.apply(&mut tx).await?;
+
+            tx.commit().await?;
+
             let timestamp =
                 chrono::DateTime::parse_from_rfc3339("2023-03-25T14:00:00+00:00").unwrap();
             create_partitions_for_timestamp(&mut client, timestamp.into()).await?;

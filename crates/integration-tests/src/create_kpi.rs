@@ -77,14 +77,18 @@ mod tests {
 
             let add_trend_store = AddTrendStore { trend_store };
 
-            add_trend_store.apply(&mut client).await?;
+            let mut tx = client.transaction().await?;
+
+            add_trend_store.apply(&mut tx).await?;
 
             let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION_1D)
                 .map_err(|e| format!("Could not read trend store definition: {}", e))?;
 
             let add_trend_store = AddTrendStore { trend_store };
 
-            add_trend_store.apply(&mut client).await?;
+            add_trend_store.apply(&mut tx).await?;
+
+            tx.commit().await?;
         }
 
         let service_address = Ipv4Addr::new(127, 0, 0, 1);
