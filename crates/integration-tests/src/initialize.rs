@@ -27,7 +27,6 @@ mod tests {
 
         cmd.arg("initialize")
             .arg("--create-schema")
-            .arg("--with-definition")
             .arg(&instance_root_path);
         cmd.assert()
             .success()
