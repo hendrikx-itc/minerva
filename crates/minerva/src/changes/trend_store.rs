@@ -326,7 +326,7 @@ impl Change for ModifyTrendExtraData {
 
 
         Ok(format!(
-            "Altered trend data types for trend '{}'.'{}'",
+            "Altered extra_data for trend '{}'.'{}'",
             &self.trend_store_part_name, &self.trend_name,
         ))
     }
