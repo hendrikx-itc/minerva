@@ -575,7 +575,7 @@ async fn set_description<T: GenericClient + Sync + Send>(
     ))
 }
 
-async fn set_enabled<T: GenericClient + Sync + Send>(
+pub async fn set_enabled<T: GenericClient + Sync + Send>(
     client: &mut T,
     trigger_name: &str,
     enabled: bool,

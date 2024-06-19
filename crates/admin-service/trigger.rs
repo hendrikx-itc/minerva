@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use minerva::trigger::{
-    list_triggers, load_thresholds_with_client, load_trigger, set_thresholds, Threshold,
+    list_triggers, load_thresholds_with_client, load_trigger, set_thresholds, set_enabled, Threshold,
 };
 
 use super::serviceerror::{ServiceError, ServiceErrorKind};
@@ -63,7 +63,7 @@ pub(super) async fn get_triggers(pool: Data<Pool>) -> Result<HttpResponse, Servi
     Ok(HttpResponse::Ok().json(result))
 }
 
-// curl -H "Content-Type: application/json" -X PUT -d '{"name":"average-output","entity_type":"Cell","data_type":"numeric","enabled":true,"source_trends":["L.Thrp.bits.UL.NsaDc"],"definition":"public.safe_division(SUM(\"L.Thrp.bits.UL.NsaDc\"),1000::numeric)","description":{"type": "ratio", "numerator": [{"type": "trend", "value": "L.Thrp.bits.UL.NsaDC"}], "denominator": [{"type": "constant", "value": "1000"}]}}' localhost:8000/kpis
+// curl -H "Content-Type: application/json" -X PUT -d '{"name":"average-output","entity_type":"Cell","data_type":"numeric","enabled":true,"source_trends":["L.Thrp.bits.UL.NsaDc"],"definition":"public.safe_division(SUM(\"L.Thrp.bits.UL.NsaDc\"),1000::numeric)","description":{"type": "ratio", "numerator": [{"type": "trend", "value": "L.Thrp.bits.UL.NsaDC"}], "denominator": [{"type": "constant", "value": "1000"}]}}' localhost:8000/triggers
 #[utoipa::path(
     put,
     path="/triggers",
@@ -115,6 +115,13 @@ pub(super) async fn change_thresholds(
             message: e.to_string(),
         })?;
 
+    set_enabled(&mut transaction, &trigger.name, data.enabled)
+        .await
+        .map_err(|e| Error {
+            code: 409,
+            message: e.to_string(),
+        })?;
+
     transaction.commit().await.map_err(|e| Error {
         code: 409,
         message: e.to_string(),
@@ -122,6 +129,6 @@ pub(super) async fn change_thresholds(
 
     Ok(HttpResponse::Ok().json(Success {
         code: 200,
-        message: "thresholds updated".to_string(),
+        message: "trigger updated".to_string(),
     }))
 }
