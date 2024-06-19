@@ -21,12 +21,6 @@ pub struct TriggerData {
     thresholds: Vec<Threshold>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct TriggerBasicData {
-    name: String,
-    thresholds: Vec<Threshold>,
-}
-
 #[utoipa::path(
     get,
     path="/triggers",
@@ -86,7 +80,7 @@ pub(super) async fn change_thresholds(
     pool: Data<Pool>,
     post: String,
 ) -> Result<HttpResponse, ServiceError> {
-    let data: TriggerBasicData = serde_json::from_str(&post).map_err(|e| Error {
+    let data: TriggerData = serde_json::from_str(&post).map_err(|e| Error {
         code: 400,
         message: e.to_string(),
     })?;
@@ -111,6 +105,8 @@ pub(super) async fn change_thresholds(
         })?;
 
     trigger.thresholds = data.thresholds;
+    trigger.enabled = data.enabled;
+    trigger.description = data.description;
 
     set_thresholds(&trigger, &mut transaction)
         .await

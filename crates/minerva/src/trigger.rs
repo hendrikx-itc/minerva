@@ -63,6 +63,7 @@ pub struct Trigger {
     pub description: String,
     #[serde(with = "humantime_serde")]
     pub granularity: Duration,
+    pub enabled: bool,
 }
 
 impl fmt::Display for Trigger {
@@ -122,7 +123,6 @@ pub async fn list_triggers(
 pub struct AddTrigger {
     pub trigger: Trigger,
     pub verify: bool,
-    pub enable: bool,
 }
 
 impl fmt::Display for AddTrigger {
@@ -168,7 +168,7 @@ impl Change for AddTrigger {
 
         set_description(&self.trigger, &mut transaction).await?;
 
-        set_enabled(&mut transaction, &self.trigger.name, self.enable).await?;
+        set_enabled(&mut transaction, &self.trigger.name, self.trigger.enabled).await?;
 
         let mut check_result: String = "No check has run".to_string();
 
@@ -850,6 +850,8 @@ impl Change for UpdateTrigger {
 
         set_description(&self.trigger, &mut transaction).await?;
 
+        set_enabled(&mut transaction, &self.trigger.name, self.trigger.enabled).await?;
+
         let mut check_result: String = "No check has run".to_string();
 
         if self.verify {
@@ -1077,7 +1079,7 @@ pub async fn load_trigger<T: GenericClient + Send + Sync>(
     name: &str,
 ) -> Result<Trigger, Error> {
     let query = concat!(
-        "SELECT name, granularity::text, ns::text, rule.description ",
+        "SELECT name, granularity::text, ns::text, rule.description, enabled ",
         "FROM trigger.rule ",
         "LEFT JOIN notification_directory.notification_store ns ON ns.id = notification_store_id ",
         "WHERE name = $1"
@@ -1099,6 +1101,8 @@ pub async fn load_trigger<T: GenericClient + Send + Sync>(
     let notification_store: Option<String> = row.try_get(2)?;
 
     let description: Option<String> = row.try_get(3)?;
+
+    let enabled: bool = row.get(4);
 
     let kpi_data_columns = load_kpi_data_columns(conn, name).await?;
 
@@ -1151,6 +1155,7 @@ pub async fn load_trigger<T: GenericClient + Send + Sync>(
         trend_store_links,
         weight: weight_function_source,
         description: description.unwrap_or("".to_string()),
+        enabled: enabled,
     })
 }
 

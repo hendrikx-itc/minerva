@@ -43,7 +43,7 @@ mod kpi;
 use kpi::{delete_kpi, get_kpi, get_kpis, post_kpi, update_kpi, KpiImplementedData, KpiRawData};
 
 mod trigger;
-use trigger::{change_thresholds, get_triggers, TriggerBasicData, TriggerData};
+use trigger::{change_thresholds, get_triggers, TriggerData};
 
 mod entityset;
 use entityset::{get_entity_sets, change_entity_set, create_entity_set, EntitySetData};
@@ -107,7 +107,7 @@ async fn main() -> std::io::Result<()> {
                 TrendViewMaterializationData, TrendFunctionMaterializationData,
                 TrendFull, GeneratedTrendFull, TrendStorePartFull, TrendStoreFull,
                 DataSource, EntityType, KpiRawData, KpiImplementedData,
-                TriggerData, TriggerBasicData, EntitySetData,
+                TriggerData, EntitySetData,
             )
         ),
         tags(

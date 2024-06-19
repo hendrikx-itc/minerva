@@ -560,7 +560,6 @@ async fn initialize_triggers(client: &mut Client, triggers: &Vec<Trigger>) -> Re
         let change = AddTrigger {
             trigger: trigger.clone(),
             verify: false,
-            enable: true,
         };
 
         let mut tx = client.transaction().await?;
