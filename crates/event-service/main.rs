@@ -14,7 +14,6 @@ use tokio_postgres::{config::SslMode, Config as TokioConfig, Row};
 use tokio_postgres_rustls::MakeRustlsConnect;
 use rustls::ClientConfig as RustlsClientConfig;
 
-
 static ENV_DB_CONN: &str = "MINERVA_DB_CONN";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -214,6 +213,7 @@ async fn post_message(client: &Client, data: &Notification) -> Result<String, St
 
 #[tokio::main]
 async fn main() {
+    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     let config = get_config();
     let pool = connect_db().await.unwrap();
     let mut client = pool.get().await.unwrap();

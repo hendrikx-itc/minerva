@@ -7,6 +7,7 @@ use actix_web::{middleware::Logger, web, App, HttpServer};
 
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use rustls::ClientConfig as RustlsClientConfig;
+use rustls::crypto::CryptoProvider;
 use tokio_postgres::{config::SslMode, Config};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
@@ -60,6 +61,7 @@ static ENV_ADDRESS: &str = "SERVICE_ADDRESS";
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     #[derive(OpenApi)]
