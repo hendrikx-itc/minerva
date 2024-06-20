@@ -1,3 +1,7 @@
+CREATE EXTENSION IF NOT EXISTS citus;
+
+
+
 DO
 $$
 BEGIN
@@ -571,8 +575,6 @@ CREATE OR REPLACE FUNCTION create_reference_table(text) RETURNS VOID AS $$ SELEC
 CREATE OR REPLACE FUNCTION create_distributed_function(text) RETURNS VOID AS $$ SELECT 42; $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION run_command_on_workers(text) RETURNS VOID AS $$ SELECT 42; $$ LANGUAGE sql STABLE;
 $function$ LANGUAGE sql VOLATILE;
-
-SELECT switch_off_citus();
 
 CREATE AGGREGATE first (anyelement) (
     sfunc = fst,
