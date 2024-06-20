@@ -7,7 +7,6 @@ use actix_web::{middleware::Logger, web, App, HttpServer};
 
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use rustls::ClientConfig as RustlsClientConfig;
-use rustls::crypto::CryptoProvider;
 use tokio_postgres::{config::SslMode, Config};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
