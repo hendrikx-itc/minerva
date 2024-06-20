@@ -80,7 +80,6 @@ impl Cmd for TriggerCreate {
         let change = AddTrigger {
             trigger,
             verify: self.verify,
-            enable: self.enable,
         };
 
         let mut tx = client.transaction().await?;
