@@ -43,7 +43,7 @@ mod kpi;
 use kpi::{delete_kpi, get_kpi, get_kpis, post_kpi, update_kpi, KpiImplementedData, KpiRawData};
 
 mod trigger;
-use trigger::{change_thresholds, get_triggers, TriggerBasicData, TriggerData};
+use trigger::{change_thresholds, get_triggers, TriggerData};
 
 mod entityset;
 use entityset::{get_entity_sets, change_entity_set, create_entity_set, EntitySetData};
@@ -60,6 +60,7 @@ static ENV_ADDRESS: &str = "SERVICE_ADDRESS";
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     #[derive(OpenApi)]
@@ -107,7 +108,7 @@ async fn main() -> std::io::Result<()> {
                 TrendViewMaterializationData, TrendFunctionMaterializationData,
                 TrendFull, GeneratedTrendFull, TrendStorePartFull, TrendStoreFull,
                 DataSource, EntityType, KpiRawData, KpiImplementedData,
-                TriggerData, TriggerBasicData, EntitySetData,
+                TriggerData, EntitySetData,
             )
         ),
         tags(

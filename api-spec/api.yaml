@@ -634,7 +634,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     put:
-      summary: Create a new KPI
+      summary: Update a KPI
       operationId: updateKPI
       requestBody:
         content:
@@ -734,7 +734,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/ShortTrigger'
+              $ref: '#/components/schemas/Trigger'
       responses:
         200:
           description: Trigger successfully changed
@@ -1069,16 +1069,6 @@ components:
           type: boolean
         description:
           type: string
-        thresholds:
-          type: array
-          items:
-            $ref: '#/components/schemas/Threshold'
-    ShortTrigger:
-      type: object
-      properties:
-        name:
-          type: string
-          description: name of the trigger
         thresholds:
           type: array
           items:
