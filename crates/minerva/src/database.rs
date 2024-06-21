@@ -71,12 +71,13 @@ pub async fn connect_db() -> Result<Client, Error> {
 
 pub async fn connect_to_db(config: &Config) -> Result<Client, Error> {
     let client = if config.get_ssl_mode() != SslMode::Disable {
-        let mut roots = rustls::RootCertStore::empty();
+        let roots = rustls::RootCertStore::empty();
 
-        for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs")
-        {
-            roots.add(cert).unwrap();
-        }
+	// Todo: Add certificate loading (the below gives errors)
+        //for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs")
+        //{
+        //    roots.add(cert).unwrap();
+        //}
 
         let tls_config = RustlsClientConfig::builder()
             .with_root_certificates(roots)
