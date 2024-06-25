@@ -9,6 +9,7 @@ mod tests {
 
     use crate::common::MinervaCluster;
 
+    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn initialize() -> Result<(), Box<dyn std::error::Error>> {
         env_logger::init();
@@ -38,13 +39,15 @@ mod tests {
             .success()
             .stdout(predicate::str::contains("Created trigger"));
 
-        let row = test_database.client.query_one("SELECT count(*) FROM trend_directory.trend_store", &[]).await?;
+        let client = test_database.connect().await?;
+
+        let row = client.query_one("SELECT count(*) FROM trend_directory.trend_store", &[]).await?;
 
         let trend_store_count: i64 = row.get(0);
 
         assert_eq!(trend_store_count, 6);
 
-        let row = test_database.client.query_one("SELECT count(*) FROM trigger.rule", &[]).await?;
+        let row = client.query_one("SELECT count(*) FROM trigger.rule", &[]).await?;
 
         let trigger_count: i64 = row.get(0);
 

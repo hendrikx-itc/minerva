@@ -40,3 +40,4 @@ testcontainers = "0.18"
 testcontainers-modules = { version = "0.6", features = ["postgres", "rabbitmq"] }
 url = "2.5"
 log = "0.4"
+rstest = "0.21"

@@ -14,6 +14,7 @@ mod tests {
     use crate::common::{get_available_port, MinervaCluster};
 
     #[cfg(test)]
+    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn get_entity_sets() -> Result<(), Box<dyn std::error::Error>> {
         env_logger::init();
@@ -22,9 +23,12 @@ mod tests {
 
         debug!("Containers started");
 
-        let mut test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await;
 
-        create_schema(&mut test_database.client).await?;
+        {
+            let mut client = test_database.connect().await?;
+            create_schema(&mut client).await?;
+        }
 
         let service_address = Ipv4Addr::new(127, 0, 0, 1);
         let service_port = get_available_port(service_address).unwrap();

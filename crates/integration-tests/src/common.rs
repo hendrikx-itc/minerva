@@ -13,7 +13,7 @@ use tokio_postgres::{Client, NoTls};
 use tokio::io::AsyncBufReadExt;
 use tokio::time::{sleep, Duration};
 
-use testcontainers::core::{ContainerPort, ContainerRequest, WaitFor, Mount};
+use testcontainers::core::{ContainerPort, ContainerRequest, Mount, WaitFor};
 use testcontainers::{GenericImage, ImageExt, ContainerAsync};
 use testcontainers_modules::testcontainers::runners::AsyncRunner;
 
@@ -52,10 +52,7 @@ pub fn get_available_port(ip_addr: Ipv4Addr) -> Option<u16> {
 }
 
 fn port_available(addr: SocketAddr) -> bool {
-    match TcpListener::bind(addr) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    TcpListener::bind(addr).is_ok()
 }
 
 pub async fn add_worker(client: &mut Client, host: IpAddr, port: u16) -> Result<(), String> {
@@ -122,12 +119,16 @@ pub async fn connect_db(host: url::Host, port: u16) -> Client {
 
 pub struct TestDatabase {
     pub name: String,
-    pub client: Client,
+    connect_config: Config,
 }
 
 impl TestDatabase {
     pub async fn drop_database(&self, client: &mut Client) {
         drop_database(client, &self.name).await.unwrap()
+    }
+
+    pub async fn connect(&self) -> Result<Client, minerva::error::Error> {
+        connect_to_db(&self.connect_config).await
     }
 }
 
@@ -189,7 +190,7 @@ impl MinervaCluster {
                 .await
                 .unwrap();
 
-            print_stdout(name, container.stdout(true));
+            //print_stdout(name, container.stdout(true));
 
             let container_address = container.get_bridge_ip_address().await.unwrap();
 
@@ -234,16 +235,20 @@ impl MinervaCluster {
     }
 
     pub async fn connect_to_db(&self, database_name: &str) -> Result<Client, minerva::error::Error> {
+        connect_to_db(&self.connect_config(database_name)).await
+    }
+
+    pub fn connect_config(&self, database_name: &str) -> Config {
         let mut config = Config::new();
 
-        let config = config
+        config
             .host(&self.controller_host.to_string())
             .port(self.controller_port)
             .user("postgres")
             .dbname(database_name)
             .ssl_mode(tokio_postgres::config::SslMode::Disable);
 
-        connect_to_db(config).await
+        config
     }
 
     pub async fn create_db(&self) -> TestDatabase {
@@ -253,7 +258,7 @@ impl MinervaCluster {
 
         TestDatabase {
             name: database_name.clone(),
-            client: self.connect_to_db(&database_name).await.unwrap(),
+            connect_config: self.connect_config(&database_name),
         } 
     }
 }

@@ -53,7 +53,7 @@ mod tests {
             data_type: numeric
     "###;
 
-    #[cfg(test)]
+    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn create_kpi() -> Result<(), Box<dyn std::error::Error>> {
         use minerva::trend_materialization::get_function_def;
@@ -62,29 +62,32 @@ mod tests {
 
         let cluster = MinervaCluster::start(3).await;
 
-        let mut test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await;
 
         debug!("Created database '{}'", test_database.name);
 
-        create_schema(&mut test_database.client).await?;
+        {
+            let mut client = test_database.connect().await?;
+            create_schema(&mut client).await?;
 
-        let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION_15M)
-            .map_err(|e| format!("Could not read trend store definition: {}", e))?;
+            let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION_15M)
+                .map_err(|e| format!("Could not read trend store definition: {}", e))?;
 
-        let add_trend_store = AddTrendStore { trend_store };
+            let add_trend_store = AddTrendStore { trend_store };
 
-        let mut tx = test_database.client.transaction().await?;
+            let mut tx = client.transaction().await?;
 
-        add_trend_store.apply(&mut tx).await?;
+            add_trend_store.apply(&mut tx).await?;
 
-        let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION_1D)
-            .map_err(|e| format!("Could not read trend store definition: {}", e))?;
+            let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION_1D)
+                .map_err(|e| format!("Could not read trend store definition: {}", e))?;
 
-        let add_trend_store = AddTrendStore { trend_store };
+            let add_trend_store = AddTrendStore { trend_store };
 
-        add_trend_store.apply(&mut tx).await?;
+            add_trend_store.apply(&mut tx).await?;
 
-        tx.commit().await?;
+            tx.commit().await?;
+        }
 
         let service_address = Ipv4Addr::new(127, 0, 0, 1);
         let service_port = get_available_port(service_address).unwrap();
@@ -161,7 +164,9 @@ mod tests {
         }
 
         let (language, src): (String, String) = {
-            get_function_def(&mut test_database.client, "kpi-test-kpi_node_15m").await.unwrap()
+            let mut client = test_database.connect().await?;
+
+            get_function_def(&mut client, "kpi-test-kpi_node_15m").await.unwrap()
         };
 
         assert_eq!(body, "{\"code\":200,\"message\":\"Successfully created KPI\"}");

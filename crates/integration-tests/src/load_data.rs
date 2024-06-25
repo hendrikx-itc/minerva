@@ -2,21 +2,23 @@
 mod tests {
     use assert_cmd::prelude::*;
     use predicates::prelude::*;
+    use tokio::sync::OnceCell;
     use std::env;
     use std::io::Write;
     use std::path::PathBuf;
     use std::process::Command;
 
-    use rand::distributions::{Alphanumeric, DistString};
+    use log::info;
 
     use minerva::change::Change;
-    use minerva::database::{connect_to_db, create_database, drop_database, get_db_config};
 
     use minerva::changes::trend_store::AddTrendStore;
     use minerva::schema::create_schema;
     use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
+
+    use crate::common::MinervaCluster;
 
     const TEST_CSV_DATA: &str = r###"
 node,timestamp,outside_temp,inside_temp,power_kwh,freq_power
@@ -54,26 +56,31 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
     "###;
 
-    fn generate_name() -> String {
-        Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
+    static CLUSTER: OnceCell<MinervaCluster> = OnceCell::const_new();
+
+    async fn init_cluster() -> MinervaCluster {
+        MinervaCluster::start(3).await
     }
 
-    #[cfg(test)]
+    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn load_data() -> Result<(), Box<dyn std::error::Error>> {
+        crate::setup();
+
         let keep_database = env::var("DROP_DATABASE")
             .unwrap_or(String::from("1"))
             .eq("0");
-        let data_source_name = "hub";
-        let database_name = generate_name();
-        let db_config = get_db_config()?;
-        let mut client = connect_to_db(&db_config).await?;
 
-        create_database(&mut client, &database_name).await?;
-        println!("Created database '{database_name}'");
+        let cluster = CLUSTER.get_or_init(init_cluster).await;
+
+        let data_source_name = "hub";
+
+        let test_database = cluster.create_db().await;
+
+        info!("Created database '{}'", test_database.name);
 
         {
-            let mut client = connect_to_db(&db_config.clone().dbname(&database_name)).await?;
+            let mut client = test_database.connect().await?;
             create_schema(&mut client).await?;
 
             let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION)
@@ -93,7 +100,12 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
         }
 
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd.env("PGDATABASE", &database_name);
+        cmd
+            .env("PGUSER", "postgres")
+            .env("PGHOST", cluster.controller_host.to_string())
+            .env("PGPORT", cluster.controller_port.to_string())
+            .env("PGSSLMODE", "disable")
+            .env("PGDATABASE", &test_database.name);
 
         let mut csv_file = tempfile::tempfile().unwrap();
 
@@ -106,39 +118,42 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
         cmd.arg("load-data")
             .arg("--data-source")
-            .arg(&data_source_name)
+            .arg(data_source_name)
             .arg(&file_path);
         cmd.assert()
             .success()
             .stdout(predicate::str::contains("Job ID"));
 
         if !keep_database {
-            let mut client = connect_to_db(&db_config).await?;
+            let mut client = cluster.connect_to_coordinator().await;
 
-            drop_database(&mut client, &database_name).await?;
+            test_database.drop_database(&mut client).await;
 
-            println!("Dropped database '{database_name}'");
+            println!("Dropped database '{}'", test_database.name);
         }
 
         Ok(())
     }
 
-    #[cfg(test)]
+    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn load_data_twice() -> Result<(), Box<dyn std::error::Error>> {
+        crate::setup();
+
         let keep_database = env::var("DROP_DATABASE")
             .unwrap_or(String::from("1"))
             .eq("0");
         let data_source_name = "hub";
-        let database_name = generate_name();
-        let db_config = get_db_config()?;
-        let mut client = connect_to_db(&db_config).await?;
 
-        create_database(&mut client, &database_name).await?;
-        println!("Created database '{database_name}'");
+        let cluster = CLUSTER.get_or_init(init_cluster).await;
+
+        let test_database = cluster.create_db().await;
+
+        info!("Created database '{}'", test_database.name);
 
         {
-            let mut client = connect_to_db(&db_config.clone().dbname(&database_name)).await?;
+            let mut client = test_database.connect().await?;
+
             create_schema(&mut client).await?;
 
             let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION)
@@ -158,22 +173,32 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
         }
 
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd.env("PGDATABASE", &database_name);
+        cmd
+            .env("PGUSER", "postgres")
+            .env("PGHOST", cluster.controller_host.to_string())
+            .env("PGPORT", cluster.controller_port.to_string())
+            .env("PGSSLMODE", "disable")
+            .env("PGDATABASE", &test_database.name);
 
         let mut csv_file = tempfile::NamedTempFile::new().unwrap();
         csv_file.write_all(TEST_CSV_DATA.as_bytes()).unwrap();
 
         cmd.arg("load-data")
             .arg("--data-source")
-            .arg(&data_source_name)
-            .arg(&csv_file.path());
+            .arg(data_source_name)
+            .arg(csv_file.path());
 
         let output = cmd.output().unwrap();
 
         println!("{}", String::from_utf8(output.stdout).unwrap());
 
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd.env("PGDATABASE", &database_name);
+        cmd
+            .env("PGUSER", "postgres")
+            .env("PGHOST", cluster.controller_host.to_string())
+            .env("PGPORT", cluster.controller_port.to_string())
+            .env("PGSSLMODE", "disable")
+            .env("PGDATABASE", &test_database.name);
 
         let mut csv_file = tempfile::NamedTempFile::new().unwrap();
         csv_file
@@ -182,18 +207,15 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
         cmd.arg("load-data")
             .arg("--data-source")
-            .arg(&data_source_name)
-            .arg(&csv_file.path());
+            .arg(data_source_name)
+            .arg(csv_file.path());
 
         let output = cmd.output().unwrap();
 
         println!("{}", String::from_utf8(output.stdout).unwrap());
 
-        let mut db_config_minerva = db_config.clone();
-        db_config_minerva.dbname(&database_name);
-
         {
-            let client = connect_to_db(&db_config_minerva).await?;
+            let client = test_database.connect().await?;
 
             let query = concat!(
                 "SELECT freq_power ",
@@ -222,11 +244,11 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
         }
 
         if !keep_database {
-            let mut client = connect_to_db(&db_config).await?;
+            let mut client = cluster.connect_to_coordinator().await;
 
-            drop_database(&mut client, &database_name).await?;
+            test_database.drop_database(&mut client).await;
 
-            println!("Dropped database '{database_name}'");
+            info!("Dropped database '{}'", test_database.name);
         }
 
         Ok(())

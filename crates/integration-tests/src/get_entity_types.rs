@@ -41,6 +41,7 @@ mod tests {
     "###;
 
     #[cfg(test)]
+    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn get_entity_types() -> Result<(), Box<dyn std::error::Error>> {
         env_logger::init();
@@ -49,26 +50,30 @@ mod tests {
 
         debug!("Containers started");
 
-        let mut test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await;
 
         debug!("Created database '{}'", test_database.name);
 
-        create_schema(&mut test_database.client).await?;
+        {
+            let mut client = test_database.connect().await?;
 
-        let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION)
-            .map_err(|e| format!("Could not read trend store definition: {}", e))?;
+            create_schema(&mut client).await?;
 
-        let add_trend_store = AddTrendStore { trend_store };
+            let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION)
+                .map_err(|e| format!("Could not read trend store definition: {}", e))?;
 
-        let mut tx = test_database.client.transaction().await?;
+            let add_trend_store = AddTrendStore { trend_store };
 
-        add_trend_store.apply(&mut tx).await?;
+            let mut tx = client.transaction().await?;
 
-        tx.commit().await?;
+            add_trend_store.apply(&mut tx).await?;
 
-        let timestamp =
-            chrono::DateTime::parse_from_rfc3339("2023-03-25T14:00:00+00:00").unwrap();
-        create_partitions_for_timestamp(&mut test_database.client, timestamp.into()).await?;
+            tx.commit().await?;
+
+            let timestamp =
+                chrono::DateTime::parse_from_rfc3339("2023-03-25T14:00:00+00:00").unwrap();
+            create_partitions_for_timestamp(&mut client, timestamp.into()).await?;
+        }
 
         let service_address = Ipv4Addr::new(127, 0, 0, 1);
         let service_port = get_available_port(service_address).unwrap();
