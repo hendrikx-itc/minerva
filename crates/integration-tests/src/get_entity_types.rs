@@ -1,18 +1,19 @@
 #[cfg(test)]
 mod tests {
     use assert_cmd::prelude::*;
-    use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream};
+    use std::net::{Ipv4Addr, SocketAddr, TcpStream};
     use std::process::Command;
-    use std::time::Duration;
 
-    use rand::distributions::{Alphanumeric, DistString};
+    use log::debug;
+
+    use tokio::time::Duration;
 
     use minerva::change::Change;
-    use minerva::database::{connect_to_db, create_database, drop_database, get_db_config};
-
     use minerva::changes::trend_store::AddTrendStore;
     use minerva::schema::create_schema;
     use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
+
+    use crate::common::{MinervaCluster, get_available_port};
 
     const TREND_STORE_DEFINITION: &str = r###"
     title: Raw node data
@@ -39,22 +40,23 @@ mod tests {
 
     "###;
 
-    fn generate_name() -> String {
-        Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
-    }
-
     #[cfg(test)]
+    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn get_entity_types() -> Result<(), Box<dyn std::error::Error>> {
-        let database_name = generate_name();
-        let db_config = get_db_config()?;
-        let mut client = connect_to_db(&db_config).await?;
+        env_logger::init();
 
-        create_database(&mut client, &database_name).await?;
-        println!("Created database '{database_name}'");
+        let cluster = MinervaCluster::start(3).await;
+
+        debug!("Containers started");
+
+        let test_database = cluster.create_db().await;
+
+        debug!("Created database '{}'", test_database.name);
 
         {
-            let mut client = connect_to_db(&db_config.clone().dbname(&database_name)).await?;
+            let mut client = test_database.connect().await?;
+
             create_schema(&mut client).await?;
 
             let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION)
@@ -77,7 +79,11 @@ mod tests {
         let service_port = get_available_port(service_address).unwrap();
 
         let mut cmd = Command::cargo_bin("minerva-service")?;
-        cmd.env("PGDATABASE", &database_name)
+        cmd
+            .env("PGHOST", cluster.controller_host.to_string())
+            .env("PGPORT", cluster.controller_port.to_string())
+            .env("PGSSLMODE", "disable")
+            .env("PGDATABASE", &test_database.name)
             .env("SERVICE_ADDRESS", service_address.to_string())
             .env("SERVICE_PORT", service_port.to_string());
 
@@ -95,6 +101,8 @@ mod tests {
         loop {
             let result = TcpStream::connect_timeout(&ipv4_addr, timeout);
 
+            debug!("Trying to connect to service at {}", ipv4_addr);
+
             match result {
                 Ok(_) => break,
                 Err(_) => tokio::time::sleep(timeout).await,
@@ -109,25 +117,14 @@ mod tests {
             Ok(_) => println!("Stopped web service"),
         }
 
-        let mut client = connect_to_db(&db_config).await?;
+        let mut admin_client = cluster.connect_to_coordinator().await;
 
-        drop_database(&mut client, &database_name).await?;
+        test_database.drop_database(&mut admin_client).await;
 
-        println!("Dropped database '{database_name}'");
+        println!("Dropped database '{}'", test_database.name);
 
         assert_eq!(body, "[{\"id\":1,\"name\":\"entity_set\",\"description\":\"\"},{\"id\":2,\"name\":\"node\",\"description\":\"\"}]");
 
         Ok(())
-    }
-
-    fn get_available_port(ip_addr: Ipv4Addr) -> Option<u16> {
-        (1000..50000).find(|port| port_available(SocketAddr::V4(SocketAddrV4::new(ip_addr, *port))))
-    }
-
-    fn port_available(addr: SocketAddr) -> bool {
-        match TcpListener::bind(addr) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
     }
 }

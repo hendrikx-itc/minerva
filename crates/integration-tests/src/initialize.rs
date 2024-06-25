@@ -2,26 +2,33 @@
 mod tests {
     use std::process::Command;
 
+    use log::debug;
+
     use assert_cmd::prelude::*;
     use predicates::prelude::*;
-    use rand::distributions::{Alphanumeric, DistString};
 
-    use minerva::database::{connect_db, create_database, drop_database};
+    use crate::common::MinervaCluster;
 
-    fn generate_name() -> String {
-        Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
-    }
-
+    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn initialize() -> Result<(), Box<dyn std::error::Error>> {
-        let database_name = generate_name();
-        let mut client = connect_db().await?;
+        env_logger::init();
 
-        create_database(&mut client, &database_name).await?;
+        let cluster = MinervaCluster::start(3).await;
 
-        println!("Dropped database");
+        debug!("Containers started");
+
+        let test_database = cluster.create_db().await;
+
+        debug!("Created database '{}'", test_database.name);
+
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd.env("PGDATABASE", &database_name);
+        cmd
+            .env("PGUSER", "postgres")
+            .env("PGHOST", cluster.controller_host.to_string())
+            .env("PGPORT", cluster.controller_port.to_string())
+            .env("PGSSLMODE", "disable")
+            .env("PGDATABASE", &test_database.name);
 
         let instance_root_path = std::fs::canonicalize("../../examples/tiny_instance_v1").unwrap();
 
@@ -32,11 +39,19 @@ mod tests {
             .success()
             .stdout(predicate::str::contains("Created trigger"));
 
-        let mut client = connect_db().await?;
+        let client = test_database.connect().await?;
 
-        drop_database(&mut client, &database_name).await?;
+        let row = client.query_one("SELECT count(*) FROM trend_directory.trend_store", &[]).await?;
 
-        println!("Dropped database");
+        let trend_store_count: i64 = row.get(0);
+
+        assert_eq!(trend_store_count, 6);
+
+        let row = client.query_one("SELECT count(*) FROM trigger.rule", &[]).await?;
+
+        let trigger_count: i64 = row.get(0);
+
+        assert_eq!(trigger_count, 4);
 
         Ok(())
     }
