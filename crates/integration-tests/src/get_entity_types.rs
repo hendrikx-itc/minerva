@@ -9,6 +9,7 @@ mod tests {
     use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream};
     use std::process::Command;
 
+    use log::debug;
     use rand::distributions::{Alphanumeric, DistString};
 
     use tokio_postgres::config::Config;
@@ -21,7 +22,7 @@ mod tests {
     use testcontainers_modules::testcontainers::runners::AsyncRunner;
 
     use minerva::change::Change;
-    use minerva::database::{create_database, drop_database};
+    use minerva::database::{create_database, drop_database, connect_to_db};
     use minerva::changes::trend_store::AddTrendStore;
     use minerva::schema::create_schema;
     use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
@@ -229,6 +230,16 @@ mod tests {
         println!("Created database '{database_name}'");
 
         {
+            let mut config = Config::new();
+
+            let config = config
+                .host(&controller_host.to_string())
+                .port(controller_port)
+                .user("postgres")
+                .dbname(&database_name)
+                .ssl_mode(tokio_postgres::config::SslMode::Disable);
+
+            let mut client = connect_to_db(config).await?;
             create_schema(&mut client).await?;
 
             let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION)
@@ -251,7 +262,11 @@ mod tests {
         let service_port = get_available_port(service_address).unwrap();
 
         let mut cmd = Command::cargo_bin("minerva-service")?;
-        cmd.env("PGDATABASE", &database_name)
+        cmd
+            .env("PGHOST", controller_host.to_string())
+            .env("PGPORT", controller_port.to_string())
+            .env("PGSSLMODE", "disable")
+            .env("PGDATABASE", &database_name)
             .env("SERVICE_ADDRESS", service_address.to_string())
             .env("SERVICE_PORT", service_port.to_string());
 
@@ -269,6 +284,8 @@ mod tests {
         loop {
             let result = TcpStream::connect_timeout(&ipv4_addr, timeout);
 
+            debug!("Trying to connect to service at {}", ipv4_addr);
+
             match result {
                 Ok(_) => break,
                 Err(_) => tokio::time::sleep(timeout).await,
@@ -282,8 +299,6 @@ mod tests {
             Err(e) => println!("Could not stop web service: {e}"),
             Ok(_) => println!("Stopped web service"),
         }
-
-        //let mut client = connect_to_db(&db_config).await?;
 
         drop_database(&mut client, &database_name).await?;
 
