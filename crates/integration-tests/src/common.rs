@@ -15,6 +15,8 @@ use testcontainers::core::{ContainerPort, ContainerRequest, WaitFor, Mount};
 use testcontainers::{GenericImage, ImageExt, ContainerAsync};
 use testcontainers_modules::testcontainers::runners::AsyncRunner;
 
+use minerva::database::connect_to_db;
+
 
 pub fn generate_name() -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
@@ -199,5 +201,35 @@ impl MinervaCluster {
             controller_host,
             controller_port,
         }
+    }
+
+    pub fn size(&self) -> usize {
+        self.worker_containers.len()
+    }
+
+    pub async fn connect_to_coordinator(&self) -> Client {
+        let controller_host = self.controller_container
+            .get_host()
+            .await
+            .expect("Controller host");
+        let controller_port = self.controller_container
+            .get_host_port_ipv4(5432)
+            .await
+            .expect("Controller port");
+
+        connect_db(controller_host, controller_port).await
+    }
+
+    pub async fn connect_to_db(&self, database_name: &str) -> Result<Client, minerva::error::Error> {
+        let mut config = Config::new();
+
+        let config = config
+            .host(&self.controller_host.to_string())
+            .port(self.controller_port)
+            .user("postgres")
+            .dbname(database_name)
+            .ssl_mode(tokio_postgres::config::SslMode::Disable);
+
+        connect_to_db(config).await
     }
 }

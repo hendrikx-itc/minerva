@@ -7,13 +7,13 @@ mod tests {
     use log::debug;
     use serde_json::json;
 
-    use tokio_postgres::config::Config;
     use tokio::time::Duration;
+    use tokio_postgres::config::Config;
 
-    use minerva::database::{create_database, drop_database, connect_to_db};
+    use minerva::database::{connect_to_db, create_database, drop_database};
     use minerva::schema::create_schema;
 
-    use crate::common::{MinervaCluster, generate_name, get_available_port, connect_db};
+    use crate::common::{generate_name, get_available_port, MinervaCluster};
 
     #[cfg(test)]
     #[tokio::test]
@@ -22,14 +22,13 @@ mod tests {
 
         let cluster = MinervaCluster::start(3).await;
 
-        println!("Containers started");
+        debug!("Containers started");
+
+        let mut client = cluster.connect_to_coordinator().await;
 
         let database_name = generate_name();
-
-        let mut client = connect_db(cluster.controller_host.clone(), cluster.controller_port).await;
-
         create_database(&mut client, &database_name).await?;
-        println!("Created database '{database_name}'");
+        debug!("Created database '{database_name}'");
 
         {
             let mut config = Config::new();
@@ -49,8 +48,7 @@ mod tests {
         let service_port = get_available_port(service_address).unwrap();
 
         let mut cmd = Command::cargo_bin("minerva-service")?;
-        cmd
-            .env("PGHOST", cluster.controller_host.to_string())
+        cmd.env("PGHOST", cluster.controller_host.to_string())
             .env("PGPORT", cluster.controller_port.to_string())
             .env("PGSSLMODE", "disable")
             .env("PGDATABASE", &database_name)
@@ -59,13 +57,13 @@ mod tests {
 
         let mut proc_handle = cmd.spawn().expect("Process started");
 
-        println!("Started service");
+        debug!("Started service");
 
-        let address = format!("{service_address}:{service_port}");
+        let service_address = format!("{service_address}:{service_port}");
 
         let timeout = Duration::from_millis(1000);
 
-        let ipv4_addr: SocketAddr = address.parse().unwrap();
+        let ipv4_addr: SocketAddr = service_address.parse().unwrap();
 
         loop {
             let result = TcpStream::connect_timeout(&ipv4_addr, timeout);
@@ -78,19 +76,25 @@ mod tests {
             }
         }
 
-        let url = format!("http://{address}/entitysets");
-        let response = reqwest::get(url.clone()).await?;
+        let http_client = reqwest::Client::new();
+        let url = format!("http://{service_address}/entitysets");
+        let response = http_client.get(url.clone()).send().await?;
         let body = response.text().await?;
 
         assert_eq!(body, "[]");
 
-        let http_client = reqwest::Client::new();
         let create_entity_set_data = json!({
             "name": "TinySet",
             "owner": "John Doe",
             "entities": [],
         });
-        let response = http_client.post(url.clone()).json(&create_entity_set_data).send().await.unwrap();
+
+        let response = http_client
+            .post(url.clone())
+            .json(&create_entity_set_data)
+            .send()
+            .await?;
+
         let body = response.text().await?;
 
         assert_eq!(body, "{}");
@@ -102,7 +106,7 @@ mod tests {
 
         drop_database(&mut client, &database_name).await?;
 
-        println!("Dropped database '{database_name}'");
+        debug!("Dropped database '{database_name}'");
 
         Ok(())
     }

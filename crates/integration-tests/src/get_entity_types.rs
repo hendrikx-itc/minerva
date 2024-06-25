@@ -163,15 +163,6 @@ mod tests {
         println!("Connecting to controller");
         let mut client = connect_db(controller_host.clone(), controller_port).await;
         println!("Creating Minerva schema");
-        //create_schema(&mut client).await.unwrap();
-        println!("Initializing");
-        let instance_path = Path::new(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/dev-stack/minerva-instance"
-        ));
-        //let minerva_instance = MinervaInstance::load_from(instance_path);
-        //minerva_instance.initialize(&mut client).await;
-        println!("Initialized");
 
         let coordinator_host = controller_container
             .get_bridge_ip_address()
