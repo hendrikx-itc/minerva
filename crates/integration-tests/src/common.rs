@@ -4,6 +4,8 @@ const CITUS_TAG: &str = "12.0";
 use std::net::IpAddr;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener};
 
+use log::{error, debug};
+
 use rand::distributions::{Alphanumeric, DistString};
 
 use tokio_postgres::config::Config;
@@ -18,8 +20,8 @@ use testcontainers_modules::testcontainers::runners::AsyncRunner;
 use minerva::database::{connect_to_db, create_database, drop_database};
 
 
-pub fn generate_name() -> String {
-    Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
+pub fn generate_name(len: usize) -> String {
+    Alphanumeric.sample_string(&mut rand::thread_rng(), len)
 }
 
 
@@ -92,7 +94,7 @@ pub async fn connect_db(host: url::Host, port: u16) -> Client {
         .user("postgres")
         .password("password");
 
-    println!("Connecting to database host '{}' port '{}'", host, port);
+    debug!("Connecting to database host '{}' port '{}'", host, port);
 
     let (client, connection) = loop {
         let conn_result = config.connect(NoTls).await;
@@ -100,7 +102,7 @@ pub async fn connect_db(host: url::Host, port: u16) -> Client {
         match conn_result {
             Ok(ok_result) => break ok_result,
             Err(e) => {
-                println!("Error connecting: {e}, retrying");
+                debug!("Error connecting: {e}, retrying");
             }
         }
 
@@ -109,11 +111,11 @@ pub async fn connect_db(host: url::Host, port: u16) -> Client {
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
-            println!("Connection error {e}");
+            error!("Connection error {e}");
         }
     });
 
-    println!("Connected to database host '{}' port '{}'", host, port);
+    debug!("Connected to database host '{}' port '{}'", host, port);
 
     client
 }
@@ -138,10 +140,10 @@ pub struct MinervaCluster {
 
 impl MinervaCluster {
     pub async fn start(worker_count: u8) -> MinervaCluster {
-        let network = generate_name();
+        let network_name = generate_name(6);
 
-        let controller_container = create_citus_container("coordinator", Some(5432))
-            .with_network(network.clone())
+        let controller_container = create_citus_container(&format!("{}_coordinator", network_name), Some(5432))
+            .with_network(network_name.clone())
             .start()
             .await
             .expect("Controller container");
@@ -155,16 +157,16 @@ impl MinervaCluster {
             .await
             .expect("Controller port");
 
-        println!("Connecting to controller");
+        debug!("Connecting to controller");
         let mut client = connect_db(controller_host.clone(), controller_port).await;
-        println!("Creating Minerva schema");
+        debug!("Creating Minerva schema");
 
         let coordinator_host = controller_container
             .get_bridge_ip_address()
             .await
             .expect("Controller IP address");
         let coordinator_port: i32 = 5432;
-        println!(
+        debug!(
             "Setting Citus coordinator host address: {}:{}",
             &coordinator_host, &coordinator_port
         );
@@ -180,9 +182,9 @@ impl MinervaCluster {
         let mut node_containers = Vec::new();
 
         for i in 1..(worker_count + 1) {
-            let name = format!("node{i}");
+            let name = format!("{}_node{i}", network_name);
             let container = create_citus_container(&name, None)
-                .with_network(network.clone())
+                .with_network(network_name.clone())
                 .start()
                 .await
                 .unwrap();
@@ -191,7 +193,7 @@ impl MinervaCluster {
 
             let container_address = container.get_bridge_ip_address().await.unwrap();
 
-            println!("Adding worker {container_address}");
+            debug!("Adding worker {container_address}");
 
             sleep(Duration::from_secs(1)).await;
 
@@ -245,7 +247,7 @@ impl MinervaCluster {
     }
 
     pub async fn create_db(&self) -> TestDatabase {
-        let database_name = generate_name();
+        let database_name = generate_name(16);
         let mut client = self.connect_to_coordinator().await;
         create_database(&mut client, &database_name).await.unwrap();
 
