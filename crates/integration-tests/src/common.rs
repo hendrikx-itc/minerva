@@ -15,7 +15,7 @@ use testcontainers::core::{ContainerPort, ContainerRequest, WaitFor, Mount};
 use testcontainers::{GenericImage, ImageExt, ContainerAsync};
 use testcontainers_modules::testcontainers::runners::AsyncRunner;
 
-use minerva::database::connect_to_db;
+use minerva::database::{connect_to_db, create_database, drop_database};
 
 
 pub fn generate_name() -> String {
@@ -116,6 +116,17 @@ pub async fn connect_db(host: url::Host, port: u16) -> Client {
     println!("Connected to database host '{}' port '{}'", host, port);
 
     client
+}
+
+pub struct TestDatabase {
+    pub name: String,
+    pub client: Client,
+}
+
+impl TestDatabase {
+    pub async fn drop_database(&self, client: &mut Client) {
+        drop_database(client, &self.name).await.unwrap()
+    }
 }
 
 pub struct MinervaCluster {
@@ -231,5 +242,16 @@ impl MinervaCluster {
             .ssl_mode(tokio_postgres::config::SslMode::Disable);
 
         connect_to_db(config).await
+    }
+
+    pub async fn create_db(&self) -> TestDatabase {
+        let database_name = generate_name();
+        let mut client = self.connect_to_coordinator().await;
+        create_database(&mut client, &database_name).await.unwrap();
+
+        TestDatabase {
+            name: database_name.clone(),
+            client: self.connect_to_db(&database_name).await.unwrap(),
+        } 
     }
 }

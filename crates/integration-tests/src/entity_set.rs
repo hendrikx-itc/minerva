@@ -8,12 +8,10 @@ mod tests {
     use serde_json::json;
 
     use tokio::time::Duration;
-    use tokio_postgres::config::Config;
 
-    use minerva::database::{connect_to_db, create_database, drop_database};
     use minerva::schema::create_schema;
 
-    use crate::common::{generate_name, get_available_port, MinervaCluster};
+    use crate::common::{get_available_port, MinervaCluster};
 
     #[cfg(test)]
     #[tokio::test]
@@ -24,25 +22,9 @@ mod tests {
 
         debug!("Containers started");
 
-        let mut client = cluster.connect_to_coordinator().await;
+        let mut test_database = cluster.create_db().await;
 
-        let database_name = generate_name();
-        create_database(&mut client, &database_name).await?;
-        debug!("Created database '{database_name}'");
-
-        {
-            let mut config = Config::new();
-
-            let config = config
-                .host(&cluster.controller_host.to_string())
-                .port(cluster.controller_port)
-                .user("postgres")
-                .dbname(&database_name)
-                .ssl_mode(tokio_postgres::config::SslMode::Disable);
-
-            let mut client = connect_to_db(config).await?;
-            create_schema(&mut client).await?;
-        }
+        create_schema(&mut test_database.client).await?;
 
         let service_address = Ipv4Addr::new(127, 0, 0, 1);
         let service_port = get_available_port(service_address).unwrap();
@@ -51,7 +33,7 @@ mod tests {
         cmd.env("PGHOST", cluster.controller_host.to_string())
             .env("PGPORT", cluster.controller_port.to_string())
             .env("PGSSLMODE", "disable")
-            .env("PGDATABASE", &database_name)
+            .env("PGDATABASE", &test_database.name)
             .env("SERVICE_ADDRESS", service_address.to_string())
             .env("SERVICE_PORT", service_port.to_string());
 
@@ -104,9 +86,9 @@ mod tests {
             Ok(_) => println!("Stopped web service"),
         }
 
-        drop_database(&mut client, &database_name).await?;
+        let mut admin_client = cluster.connect_to_coordinator().await;
 
-        debug!("Dropped database '{database_name}'");
+        test_database.drop_database(&mut admin_client).await;
 
         Ok(())
     }
