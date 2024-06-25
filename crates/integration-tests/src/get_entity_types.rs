@@ -53,24 +53,22 @@ mod tests {
 
         debug!("Created database '{}'", test_database.name);
 
-        {
-            create_schema(&mut test_database.client).await?;
+        create_schema(&mut test_database.client).await?;
 
-            let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION)
-                .map_err(|e| format!("Could not read trend store definition: {}", e))?;
+        let trend_store: TrendStore = serde_yaml::from_str(TREND_STORE_DEFINITION)
+            .map_err(|e| format!("Could not read trend store definition: {}", e))?;
 
-            let add_trend_store = AddTrendStore { trend_store };
+        let add_trend_store = AddTrendStore { trend_store };
 
-            let mut tx = test_database.client.transaction().await?;
+        let mut tx = test_database.client.transaction().await?;
 
-            add_trend_store.apply(&mut tx).await?;
+        add_trend_store.apply(&mut tx).await?;
 
-            tx.commit().await?;
+        tx.commit().await?;
 
-            let timestamp =
-                chrono::DateTime::parse_from_rfc3339("2023-03-25T14:00:00+00:00").unwrap();
-            create_partitions_for_timestamp(&mut test_database.client, timestamp.into()).await?;
-        }
+        let timestamp =
+            chrono::DateTime::parse_from_rfc3339("2023-03-25T14:00:00+00:00").unwrap();
+        create_partitions_for_timestamp(&mut test_database.client, timestamp.into()).await?;
 
         let service_address = Ipv4Addr::new(127, 0, 0, 1);
         let service_port = get_available_port(service_address).unwrap();
