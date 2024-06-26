@@ -1906,7 +1906,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests"
-version = "7.1.2"
+version = "7.2.0"
 dependencies = [
  "actix-cors",
  "actix-rt",
@@ -2173,7 +2173,7 @@ dependencies = [
 
 [[package]]
 name = "minerva-cli"
-version = "7.1.2"
+version = "7.2.0"
 dependencies = [
  "actix-cors",
  "actix-rt",
@@ -2213,7 +2213,7 @@ dependencies = [
 
 [[package]]
 name = "minerva-event-service"
-version = "7.1.2"
+version = "7.2.0"
 dependencies = [
  "chrono",
  "deadpool-postgres",
@@ -2234,7 +2234,7 @@ dependencies = [
 
 [[package]]
 name = "minerva-service"
-version = "7.1.2"
+version = "7.2.0"
 dependencies = [
  "actix-cors",
  "actix-web",
