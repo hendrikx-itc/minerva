@@ -146,16 +146,17 @@ impl MinervaCluster {
             .with_network(network_name.clone())
             .start()
             .await
-            .expect("Controller container");
+            .map_err(|e| crate::error::Error::Runtime(format!("Could not create coordinator container: {e}").into()))?;
 
         let controller_host = controller_container
             .get_host()
             .await
-            .expect("Controller host");
+            .map_err(|e| crate::error::Error::Runtime(format!("Could not get coordinator container external host address: {e}").into()))?;
+
         let controller_port = controller_container
             .get_host_port_ipv4(5432)
             .await
-            .expect("Controller port");
+            .map_err(|e| crate::error::Error::Runtime(format!("Could not get coordinator container external port: {e}").into()))?;
 
         debug!("Connecting to controller");
         let mut client = connect_db(controller_host.clone(), controller_port).await;
@@ -163,7 +164,8 @@ impl MinervaCluster {
         let coordinator_host = controller_container
             .get_bridge_ip_address()
             .await
-            .expect("Controller IP address");
+            .map_err(|e| crate::error::Error::Runtime(format!("Could not get coordinator container internal host address: {e}").into()))?;
+
         let coordinator_port: i32 = 5432;
         debug!(
             "Setting Citus coordinator host address: {}:{}",
