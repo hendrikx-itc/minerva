@@ -19,7 +19,7 @@ mod tests {
     #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn get_and_create_entity_sets() -> Result<(), Box<dyn std::error::Error>> {
-        env_logger::init();
+        crate::setup();
 
         let cluster = MinervaCluster::start(3).await?;
 

@@ -54,12 +54,6 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
     "###;
 
-    static CLUSTER: OnceCell<MinervaCluster> = OnceCell::const_new();
-
-    async fn init_cluster() -> MinervaCluster {
-        MinervaCluster::start(3).await.unwrap()
-    }
-
     #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn load_data() -> Result<(), Box<dyn std::error::Error>> {
@@ -69,7 +63,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             .unwrap_or(String::from("1"))
             .eq("0");
 
-        let cluster = CLUSTER.get_or_init(init_cluster).await;
+        let cluster = MinervaCluster::start(3).await?;
 
         let data_source_name = "hub";
 
@@ -143,7 +137,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             .eq("0");
         let data_source_name = "hub";
 
-        let cluster = CLUSTER.get_or_init(init_cluster).await;
+        let cluster = MinervaCluster::start(3).await?;
 
         let test_database = cluster.create_db().await;
 

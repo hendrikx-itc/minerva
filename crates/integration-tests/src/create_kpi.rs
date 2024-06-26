@@ -59,7 +59,7 @@ mod tests {
     async fn create_kpi() -> Result<(), Box<dyn std::error::Error>> {
         use minerva::trend_materialization::get_function_def;
 
-        env_logger::init();
+        crate::setup();
 
         let cluster = MinervaCluster::start(3).await?;
 

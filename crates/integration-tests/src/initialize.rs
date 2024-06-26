@@ -12,7 +12,7 @@ mod tests {
     #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn initialize() -> Result<(), Box<dyn std::error::Error>> {
-        env_logger::init();
+        crate::setup();
 
         let cluster = MinervaCluster::start(3).await?;
 
