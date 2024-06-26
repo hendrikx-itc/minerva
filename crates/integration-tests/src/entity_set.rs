@@ -25,7 +25,7 @@ mod tests {
 
         debug!("Containers started");
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         {
             let mut client = test_database.connect().await?;

@@ -63,7 +63,7 @@ mod tests {
 
         let cluster = MinervaCluster::start(3).await?;
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         debug!("Created database '{}'", test_database.name);
 

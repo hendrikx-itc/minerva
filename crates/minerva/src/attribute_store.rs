@@ -470,7 +470,7 @@ mod tests {
         assert_eq!(changes.len(), 1);
         let first_change = changes.first().expect("Should have a change");
 
-        assert_eq!(first_change.to_string(), "AddAttributes(AttributeStore(test, node), 1)");
+        assert_eq!(first_change.to_string(), "AddAttributes(AttributeStore(test, node), 1):\n - equipment_type: text\n");
     }
 
     #[test]
@@ -499,6 +499,6 @@ mod tests {
         assert_eq!(changes.len(), 1);
         let first_change = changes.first().expect("Should have a change");
 
-        assert_eq!(first_change.to_string(), "RemoveAttributes(AttributeStore(test, node), 1)");
+        assert_eq!(first_change.to_string(), "RemoveAttributes(AttributeStore(test, node), 1)\n - equipment_type\n");
     }
 }

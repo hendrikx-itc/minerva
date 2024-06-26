@@ -51,7 +51,7 @@ mod tests {
 
         debug!("Containers started");
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         debug!("Created database '{}'", test_database.name);
 

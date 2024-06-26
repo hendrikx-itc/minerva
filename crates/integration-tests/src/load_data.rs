@@ -2,7 +2,6 @@
 mod tests {
     use assert_cmd::prelude::*;
     use predicates::prelude::*;
-    use tokio::sync::OnceCell;
     use std::env;
     use std::io::Write;
     use std::path::PathBuf;
@@ -67,7 +66,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
         let data_source_name = "hub";
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         info!("Created database '{}'", test_database.name);
 
@@ -139,7 +138,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
         let cluster = MinervaCluster::start(3).await?;
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         info!("Created database '{}'", test_database.name);
 

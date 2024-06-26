@@ -249,14 +249,14 @@ impl MinervaCluster {
         config
     }
 
-    pub async fn create_db(&self) -> TestDatabase {
+    pub async fn create_db(&self) -> Result<TestDatabase, crate::error::Error> {
         let database_name = generate_name(16);
         let mut client = self.connect_to_coordinator().await;
-        create_database(&mut client, &database_name).await.unwrap();
+        create_database(&mut client, &database_name).await?;
 
-        TestDatabase {
+        Ok(TestDatabase {
             name: database_name.clone(),
             connect_config: self.connect_config(&database_name),
-        }
+        })
     }
 }
