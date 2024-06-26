@@ -3,7 +3,7 @@ use deadpool_postgres::Pool;
 use std::ops::DerefMut;
 use utoipa::ToSchema;
 
-use actix_web::{get, put, post, web::Data, HttpResponse, Responder};
+use actix_web::{get, put, post, web::Data, web::Json, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
 
 use minerva::entity_set::{EntitySet, load_entity_sets, ChangeEntitySet, CreateEntitySet};
@@ -77,13 +77,8 @@ pub(super) async fn get_entity_sets(pool: Data<Pool>) -> Result<HttpResponse, Se
 
 async fn change_entity_set_fn(
     pool: Data<Pool>,
-    post: String,
+    data: Json<EntitySetData>,
 ) -> Result<HttpResponse, Error> {
-    let data: EntitySetData = serde_json::from_str(&post).map_err(|e| Error {
-        code: 400,
-        message: e.to_string(),
-    })?;
-
     let mut manager = pool.get().await.map_err(|e| Error {
         code: 500,
         message: e.to_string(),
@@ -91,7 +86,7 @@ async fn change_entity_set_fn(
 
     let action = ChangeEntitySet {
         entity_set: data.entity_set(),
-        entities: data.entities
+        entities: data.entities.clone(),
     };
 
     let mut tx = manager.transaction().await.map_err(|e| Error {
@@ -128,9 +123,9 @@ async fn change_entity_set_fn(
 #[put("/entitysets")]
 pub(super) async fn change_entity_set(
     pool: Data<Pool>,
-    post: String,
+    data: Json<EntitySetData>,
 ) -> impl Responder {
-    let result = change_entity_set_fn(pool, post).await;
+    let result = change_entity_set_fn(pool, data).await;
     match result {
         Ok(res) => res,
         Err(e) => {
@@ -149,13 +144,8 @@ pub(super) async fn change_entity_set(
 
 async fn create_entity_set_fn(
     pool: Data<Pool>,
-    post: String,
+    data: Json<EntitySetData>,
 ) -> Result<HttpResponse, Error> {
-    let data: EntitySetData = serde_json::from_str(&post).map_err(|e| Error {
-        code: 400,
-        message: e.to_string(),
-    })?;
-
     let mut manager = pool.get().await.map_err(|e| Error {
         code: 500,
         message: e.to_string(),
@@ -199,9 +189,9 @@ async fn create_entity_set_fn(
 #[post("/entitysets")]
 pub(super) async fn create_entity_set(
     pool: Data<Pool>,
-    post: String,
+    data: Json<EntitySetData>,
 ) -> impl Responder {
-    let result = create_entity_set_fn(pool, post).await;
+    let result = create_entity_set_fn(pool, data).await;
     match result {
         Ok(res) => res,
         Err(e) => {
