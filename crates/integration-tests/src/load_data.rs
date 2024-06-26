@@ -53,7 +53,6 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
     "###;
 
-    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn load_data() -> Result<(), Box<dyn std::error::Error>> {
         crate::setup();
@@ -126,7 +125,6 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
         Ok(())
     }
 
-    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn load_data_twice() -> Result<(), Box<dyn std::error::Error>> {
         crate::setup();

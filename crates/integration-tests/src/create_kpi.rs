@@ -54,7 +54,6 @@ mod tests {
             data_type: numeric
     "###;
 
-    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn create_kpi() -> Result<(), Box<dyn std::error::Error>> {
         use minerva::trend_materialization::get_function_def;

@@ -9,7 +9,6 @@ mod tests {
 
     use minerva::cluster::MinervaCluster;
 
-    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn initialize() -> Result<(), Box<dyn std::error::Error>> {
         crate::setup();
