@@ -41,8 +41,6 @@ mod tests {
 
     "###;
 
-    #[cfg(test)]
-    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn get_entity_types() -> Result<(), Box<dyn std::error::Error>> {
         crate::setup();

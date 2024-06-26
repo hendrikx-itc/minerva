@@ -15,8 +15,6 @@ mod tests {
     use crate::common::get_available_port;
 
     /// Test the listing and creation of new entity sets
-    #[cfg(test)]
-    #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn get_and_create_entity_sets() -> Result<(), Box<dyn std::error::Error>> {
         crate::setup();
