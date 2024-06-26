@@ -10,21 +10,22 @@ mod tests {
     use tokio::time::Duration;
 
     use minerva::schema::create_schema;
+    use minerva::cluster::MinervaCluster;
 
-    use crate::common::{get_available_port, MinervaCluster};
+    use crate::common::get_available_port;
 
     /// Test the listing and creation of new entity sets
     #[cfg(test)]
     #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn get_and_create_entity_sets() -> Result<(), Box<dyn std::error::Error>> {
-        env_logger::init();
+        crate::setup();
 
-        let cluster = MinervaCluster::start(3).await;
+        let cluster = MinervaCluster::start(3).await?;
 
         debug!("Containers started");
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         {
             let mut client = test_database.connect().await?;

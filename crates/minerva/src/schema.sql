@@ -1,51 +1,88 @@
 CREATE EXTENSION IF NOT EXISTS citus;
 
+DO
+$do$
+BEGIN
+   IF EXISTS (
+      SELECT FROM pg_catalog.pg_roles
+      WHERE  rolname = 'postgres') THEN
+
+      RAISE NOTICE 'Role "postgres" already exists. Skipping.';
+   ELSE
+      BEGIN   -- nested block
+        CREATE ROLE postgres
+          SUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+      EXCEPTION
+         WHEN duplicate_object THEN
+            RAISE NOTICE 'Role "postgres" was just created by a concurrent transaction. Skipping.';
+      END;
+   END IF;
+END
+$do$;
 
 
 DO
-$$
+$do$
 BEGIN
-  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'postgres') THEN
-    CREATE ROLE postgres
-      SUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
-  END IF;
-END
-$$;
+   IF EXISTS (
+      SELECT FROM pg_catalog.pg_roles
+      WHERE rolname = 'minerva') THEN
 
+      RAISE NOTICE 'Role "minerva" already exists. Skipping.';
+   ELSE
+      BEGIN   -- nested block
+        CREATE ROLE minerva
+          NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+      EXCEPTION
+         WHEN duplicate_object THEN
+            RAISE NOTICE 'Role "minerva" was just created by a concurrent transaction. Skipping.';
+      END;
+   END IF;
+END
+$do$;
 
 DO
-$$
+$do$
 BEGIN
-  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva') THEN
-    CREATE ROLE minerva
-      NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
-  END IF;
-END
-$$;
+   IF EXISTS (
+      SELECT FROM pg_catalog.pg_roles
+      WHERE rolname = 'minerva_writer') THEN
 
-
-DO
-$$
-BEGIN
-  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva_writer') THEN
-    CREATE ROLE minerva_writer
-      NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
-  END IF;
+      RAISE NOTICE 'Role "minerva_writer" already exists. Skipping.';
+   ELSE
+      BEGIN   -- nested block
+        CREATE ROLE minerva_writer
+          NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+      EXCEPTION
+         WHEN duplicate_object THEN
+            RAISE NOTICE 'Role "minerva_writer" was just created by a concurrent transaction. Skipping.';
+      END;
+   END IF;
 END
-$$;
+$do$;
 
 GRANT minerva TO minerva_writer;
 
 
 DO
-$$
+$do$
 BEGIN
-  IF NOT EXISTS(SELECT * FROM pg_roles WHERE rolname = 'minerva_admin') THEN
-    CREATE ROLE minerva_admin
-      LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
-  END IF;
+   IF EXISTS (
+      SELECT FROM pg_catalog.pg_roles
+      WHERE rolname = 'minerva_admin') THEN
+
+      RAISE NOTICE 'Role "minerva_admin" already exists. Skipping.';
+   ELSE
+      BEGIN   -- nested block
+        CREATE ROLE minerva_admin
+          LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+      EXCEPTION
+         WHEN duplicate_object THEN
+            RAISE NOTICE 'Role "minerva_admin" was just created by a concurrent transaction. Skipping.';
+      END;
+   END IF;
 END
-$$;
+$do$;
 
 GRANT minerva TO minerva_admin;
 

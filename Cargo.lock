@@ -2151,8 +2151,10 @@ dependencies = [
  "humantime",
  "humantime-serde",
  "lazy_static",
+ "log",
  "postgres-protocol",
  "postgres-types",
+ "rand",
  "regex",
  "rust_decimal",
  "rustls 0.23.10",
@@ -2160,10 +2162,13 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "testcontainers",
+ "testcontainers-modules",
  "thiserror",
  "tokio",
  "tokio-postgres",
  "tokio-postgres-rustls",
+ "url",
 ]
 
 [[package]]
@@ -2187,6 +2192,7 @@ dependencies = [
  "humantime",
  "humantime-serde",
  "lazy_static",
+ "log",
  "minerva",
  "postgres-types",
  "predicates",

@@ -2,23 +2,20 @@
 mod tests {
     use assert_cmd::prelude::*;
     use predicates::prelude::*;
-    use tokio::sync::OnceCell;
     use std::env;
     use std::io::Write;
     use std::path::PathBuf;
     use std::process::Command;
 
     use log::info;
-
-    use minerva::change::Change;
-
-    use minerva::changes::trend_store::AddTrendStore;
-    use minerva::schema::create_schema;
-    use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
-    use crate::common::MinervaCluster;
+    use minerva::change::Change;
+    use minerva::changes::trend_store::AddTrendStore;
+    use minerva::schema::create_schema;
+    use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
+    use minerva::cluster::MinervaCluster;
 
     const TEST_CSV_DATA: &str = r###"
 node,timestamp,outside_temp,inside_temp,power_kwh,freq_power
@@ -56,12 +53,6 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
     "###;
 
-    static CLUSTER: OnceCell<MinervaCluster> = OnceCell::const_new();
-
-    async fn init_cluster() -> MinervaCluster {
-        MinervaCluster::start(3).await
-    }
-
     #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn load_data() -> Result<(), Box<dyn std::error::Error>> {
@@ -71,11 +62,11 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             .unwrap_or(String::from("1"))
             .eq("0");
 
-        let cluster = CLUSTER.get_or_init(init_cluster).await;
+        let cluster = MinervaCluster::start(3).await?;
 
         let data_source_name = "hub";
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         info!("Created database '{}'", test_database.name);
 
@@ -145,9 +136,9 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             .eq("0");
         let data_source_name = "hub";
 
-        let cluster = CLUSTER.get_or_init(init_cluster).await;
+        let cluster = MinervaCluster::start(3).await?;
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         info!("Created database '{}'", test_database.name);
 
