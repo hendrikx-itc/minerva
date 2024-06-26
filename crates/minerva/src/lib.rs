@@ -16,3 +16,6 @@ pub mod trend_store;
 pub mod trigger;
 pub mod virtual_entity;
 pub mod entity_set;
+
+#[cfg(feature = "test-containers")]
+pub mod cluster;

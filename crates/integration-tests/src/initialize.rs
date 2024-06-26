@@ -7,14 +7,14 @@ mod tests {
     use assert_cmd::prelude::*;
     use predicates::prelude::*;
 
-    use crate::common::MinervaCluster;
+    use minerva::cluster::MinervaCluster;
 
     #[ignore = "Container running not yet supported in CI pipeline"]
     #[tokio::test]
     async fn initialize() -> Result<(), Box<dyn std::error::Error>> {
         env_logger::init();
 
-        let cluster = MinervaCluster::start(3).await;
+        let cluster = MinervaCluster::start(3).await?;
 
         debug!("Containers started");
 

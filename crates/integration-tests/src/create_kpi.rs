@@ -12,8 +12,9 @@ mod tests {
     use minerva::changes::trend_store::AddTrendStore;
     use minerva::schema::create_schema;
     use minerva::trend_store::TrendStore;
+    use minerva::cluster::MinervaCluster;
 
-    use crate::common::{MinervaCluster, get_available_port};
+    use crate::common::get_available_port;
 
     const TREND_STORE_DEFINITION_15M: &str = r###"
     title: Raw node data
@@ -60,7 +61,7 @@ mod tests {
 
         env_logger::init();
 
-        let cluster = MinervaCluster::start(3).await;
+        let cluster = MinervaCluster::start(3).await?;
 
         let test_database = cluster.create_db().await;
 

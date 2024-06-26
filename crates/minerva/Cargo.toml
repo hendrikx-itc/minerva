@@ -28,3 +28,11 @@ rustls = "0.23"
 rustls-native-certs = "0.7"
 lazy_static = "1.4"
 thiserror = "1.0"
+log = "0.4"
+url = { version = "2.5", optional = true}
+rand = { version = "0.8", optional = true}
+testcontainers = { version = "0.18", optional = true }
+testcontainers-modules = { version = "0.6", features = ["postgres", "rabbitmq"], optional = true }
+
+[features]
+test-containers = ["dep:url", "dep:rand", "dep:testcontainers", "dep:testcontainers-modules"]

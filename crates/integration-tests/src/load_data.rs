@@ -9,16 +9,14 @@ mod tests {
     use std::process::Command;
 
     use log::info;
-
-    use minerva::change::Change;
-
-    use minerva::changes::trend_store::AddTrendStore;
-    use minerva::schema::create_schema;
-    use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
-    use crate::common::MinervaCluster;
+    use minerva::change::Change;
+    use minerva::changes::trend_store::AddTrendStore;
+    use minerva::schema::create_schema;
+    use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
+    use minerva::cluster::MinervaCluster;
 
     const TEST_CSV_DATA: &str = r###"
 node,timestamp,outside_temp,inside_temp,power_kwh,freq_power
@@ -59,7 +57,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
     static CLUSTER: OnceCell<MinervaCluster> = OnceCell::const_new();
 
     async fn init_cluster() -> MinervaCluster {
-        MinervaCluster::start(3).await
+        MinervaCluster::start(3).await.unwrap()
     }
 
     #[ignore = "Container running not yet supported in CI pipeline"]

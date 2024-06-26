@@ -10,8 +10,9 @@ mod tests {
     use tokio::time::Duration;
 
     use minerva::schema::create_schema;
+    use minerva::cluster::MinervaCluster;
 
-    use crate::common::{get_available_port, MinervaCluster};
+    use crate::common::get_available_port;
 
     /// Test the listing and creation of new entity sets
     #[cfg(test)]
@@ -20,7 +21,7 @@ mod tests {
     async fn get_and_create_entity_sets() -> Result<(), Box<dyn std::error::Error>> {
         env_logger::init();
 
-        let cluster = MinervaCluster::start(3).await;
+        let cluster = MinervaCluster::start(3).await?;
 
         debug!("Containers started");
 

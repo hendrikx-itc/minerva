@@ -12,8 +12,9 @@ mod tests {
     use minerva::changes::trend_store::AddTrendStore;
     use minerva::schema::create_schema;
     use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
+    use minerva::cluster::MinervaCluster;
 
-    use crate::common::{MinervaCluster, get_available_port};
+    use crate::common::get_available_port;
 
     const TREND_STORE_DEFINITION: &str = r###"
     title: Raw node data
@@ -46,7 +47,7 @@ mod tests {
     async fn get_entity_types() -> Result<(), Box<dyn std::error::Error>> {
         env_logger::init();
 
-        let cluster = MinervaCluster::start(3).await;
+        let cluster = MinervaCluster::start(3).await?;
 
         debug!("Containers started");
 
