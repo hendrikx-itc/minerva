@@ -207,6 +207,8 @@ async fn post_message(client: &Client, data: &Notification) -> Result<String, St
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+
     rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     let config = get_config();
     let pool = connect_db().await.unwrap();
