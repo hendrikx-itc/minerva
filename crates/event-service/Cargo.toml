@@ -22,6 +22,7 @@ rustls = { version = "0.23", features = ["ring"] }
 tokio-postgres-rustls = "0.12"
 rustls-native-certs = "0.7"
 log = "0.4"
+env_logger = "0.11"
 deadpool-postgres = "0.14"
 derive_more = "0.99.17"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }

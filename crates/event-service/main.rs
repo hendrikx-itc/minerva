@@ -2,7 +2,7 @@ use std::env;
 use std::fmt;
 use std::time::{Duration, SystemTime};
 use std::thread::sleep;
-use log::info;
+use log::{debug, info, error};
 use reqwest::{Client, Method, header::{ACCEPT, CONTENT_TYPE}};
 
 use serde::{Deserialize, Serialize};
@@ -39,7 +39,6 @@ struct Notification {
 
 #[derive(Clone)]
 pub struct Config {
-    message_level: i32,
     identity: String,
     notification_store: String,
     sleeptime: Duration,
@@ -50,13 +49,8 @@ pub struct Config {
 
 fn get_config() -> Config {
     let sleep_seconds = env::var("SLEEP").unwrap_or("10".to_string()).parse::<u64>().unwrap();
-    let message_setting = env::var("MESSAGELEVEL").unwrap_or("LOG".to_string());
-    let mut msglevel = 1;
-    if message_setting == "ERROR".to_string() { msglevel = 3; }
-    else if message_setting == "INFO".to_string() { msglevel = 1; }
-    else if message_setting == "DEBUG".to_string() { msglevel = 0; }
+
     Config {
-        message_level: msglevel,
         identity: env::var("IDENTITY").unwrap_or("customer".to_string()),
         notification_store: env::var("NOTIFICATIONSTORE").unwrap_or("trigger-notification".to_string()),
         sleeptime: Duration::new(sleep_seconds, 0),
@@ -213,12 +207,13 @@ async fn post_message(client: &Client, data: &Notification) -> Result<String, St
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+
     rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     let config = get_config();
     let pool = connect_db().await.unwrap();
     let mut client = pool.get().await.unwrap();
     let httpclient = Client::new();
-    let msglevel = config.message_level;
     let transaction = client.transaction().await.unwrap();
     let result = transaction.query_one(
         "SELECT notification_directory.get_last_notification($1, $2)",
@@ -249,9 +244,8 @@ async fn main() {
         let mut missed_notification = -1;
 
         if result.len() > 0 {
-            if msglevel <= 3 {
-                println!("{}: {} notifications received.", Local::now().format("%Y-%m-%d %H:%M:%S"), result.len())
-            };
+            info!("{}: {} notifications received.", Local::now().format("%Y-%m-%d %H:%M:%S"), result.len());
+
             for row in result {
                 let notification_data = NotificationData {
                     id: row.get(0),
@@ -262,30 +256,25 @@ async fn main() {
                     data: row.get(5),
                 };
                 let notification = notification_from_data(notification_data);
-                if msglevel <= 0 {
-                    println!("{}: received notification {}", Local::now().format("%Y-%m-%d %H:%M:%S"), notification);
-                }
+
+                debug!("{}: received notification {}", Local::now().format("%Y-%m-%d %H:%M:%S"), notification);
 
                 let httpresult = post_message(&httpclient, &notification);
                 match httpresult.await {
                     Ok(_) => {
-                        if msglevel <= 0 {
-                            println!("Notification sent on.");
-                        }
+                        debug!("Notification sent on.");
+
                         if notification.id > last_notification { last_notification = notification.id; }
                     },
                     Err(e) => {
-                        if msglevel <= 4 {
-                            println!("{}: Sending of notification {} failed: {}", Local::now().format("%Y-%m-%d %H:%M:%S"), notification, e);
-                        }
+                        error!("{}: Sending of notification {} failed: {}", Local::now().format("%Y-%m-%d %H:%M:%S"), notification, e);
+
                         if missed_notification == -1 || notification.id < missed_notification  { missed_notification = notification.id; }
                     }
                 }
             };
         } else {
-            if msglevel <= 2 {
-                println!("{}: no new notifications received.", Local::now().format("%Y-%m-%d %H:%M:%S"))
-            };
+            info!("{}: no new notifications received.", Local::now().format("%Y-%m-%d %H:%M:%S"))
         }
         if missed_notification > -1 && missed_notification <= last_notification { last_notification = missed_notification - 1; }
         if last_notification > -1 {
@@ -297,9 +286,7 @@ async fn main() {
             .unwrap();
         }
         transaction.commit().await.unwrap();
-        if msglevel <= 0 {
-            println!("Sleeping for {} seconds", config.sleeptime.as_secs());
-        }
+        debug!("Sleeping for {} seconds", config.sleeptime.as_secs());
         sleep(config.sleeptime);
     };
 }

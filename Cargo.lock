@@ -2218,6 +2218,7 @@ dependencies = [
  "chrono",
  "deadpool-postgres",
  "derive_more",
+ "env_logger",
  "humantime-serde",
  "log",
  "postgres",
