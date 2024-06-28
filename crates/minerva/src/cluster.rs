@@ -15,7 +15,7 @@ use tokio::time::{sleep, Duration};
 
 use testcontainers::core::{ContainerPort, ContainerRequest, Mount, WaitFor};
 use testcontainers::{GenericImage, ImageExt, ContainerAsync};
-use testcontainers_modules::testcontainers::runners::AsyncRunner;
+use testcontainers::runners::AsyncRunner;
 
 use crate::database::{connect_to_db, create_database, drop_database};
 use crate::error::Error;
@@ -37,11 +37,9 @@ pub fn create_citus_container(name: &str, exposed_port: Option<u16>) -> Containe
         None => image
     };
 
-    let request = ContainerRequest::from(image);
-
     let conf_file_path = concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf");
 
-    request
+   image 
         .with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
         .with_container_name(name)
         .with_mount(Mount::bind_mount(conf_file_path, "/etc/postgresql/postgresql.conf"))
