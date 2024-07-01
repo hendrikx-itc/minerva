@@ -32,7 +32,7 @@ log = "0.4"
 url = { version = "2.5", optional = true}
 rand = { version = "0.8", optional = true}
 testcontainers = { version = "0.19", optional = true }
-testcontainers-modules = { version = "0.6", features = ["postgres", "rabbitmq"], optional = true }
+testcontainers-modules = { version = "0.7", features = ["postgres", "rabbitmq"], optional = true }
 
 [features]
 test-containers = ["dep:url", "dep:rand", "dep:testcontainers", "dep:testcontainers-modules"]

@@ -37,7 +37,7 @@ reqwest = "0.12"
 rust_decimal = "1.35"
 rust_decimal_macros = "1.34"
 testcontainers = "0.19"
-testcontainers-modules = { version = "0.6", features = ["postgres", "rabbitmq"] }
+testcontainers-modules = { version = "0.7", features = ["postgres", "rabbitmq"] }
 url = "2.5"
 log = "0.4"
 rstest = "0.21"
