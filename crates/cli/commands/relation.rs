@@ -13,7 +13,7 @@ use super::common::{connect_db, Cmd, CmdResult};
 
 #[derive(Debug, Parser, PartialEq)]
 pub struct RelationCreate {
-    #[structopt(help = "trigger definition file")]
+    #[arg(help = "trigger definition file")]
     definition: PathBuf,
 }
 

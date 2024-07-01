@@ -11,7 +11,7 @@ use super::common::{connect_to_db, get_db_config, Cmd, CmdResult, ENV_MINERVA_IN
 
 #[derive(Debug, Parser, PartialEq)]
 pub struct DiffOpt {
-    #[structopt(
+    #[arg(
         long = "with-dir",
         help = "compare with other Minerva instance directory"
     )]
