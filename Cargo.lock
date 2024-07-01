@@ -1937,8 +1937,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "tempfile",
- "testcontainers 0.19.0",
- "testcontainers-modules",
+ "testcontainers",
  "tokio",
  "tokio-postgres",
  "tokio-postgres-rustls",
@@ -2163,8 +2162,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "testcontainers 0.19.0",
- "testcontainers-modules",
+ "testcontainers",
  "thiserror",
  "tokio",
  "tokio-postgres",
@@ -2204,8 +2202,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "term-table",
- "testcontainers 0.19.0",
- "testcontainers-modules",
+ "testcontainers",
  "tokio",
  "tokio-postgres",
  "tokio-postgres-rustls",
@@ -3690,34 +3687,6 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "testcontainers"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2c9b71635ab25d4f789a86678d114a4f390467c8b93fd7feeaf7c443732a511"
-dependencies = [
- "async-trait",
- "bollard",
- "bollard-stubs",
- "bytes",
- "dirs",
- "docker_credential",
- "either",
- "futures",
- "log",
- "memchr",
- "parse-display",
- "reqwest",
- "serde",
- "serde_json",
- "serde_with",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "url",
-]
-
-[[package]]
-name = "testcontainers"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81abdf87437235a275fd0fecaa6ca2c6af28240506e695e9abe84597b3431b35"
@@ -3742,15 +3711,6 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "url",
-]
-
-[[package]]
-name = "testcontainers-modules"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "322fe829905e734f38a73be07e200a25713fe4baa65074277af7b30dbc4ea487"
-dependencies = [
- "testcontainers 0.18.0",
 ]
 
 [[package]]
