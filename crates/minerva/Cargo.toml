@@ -1,8 +1,9 @@
 [package]
 name = "minerva"
-version = "0.2.0"
-authors = ["Alfred Blokland <alfred.blokland@hendrikx-itc.nl>"]
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
 tokio = { version = "1.38", features = ["full"] }
