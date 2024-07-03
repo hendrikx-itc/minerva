@@ -83,8 +83,6 @@ mod tests {
 
         let body = response.text().await?;
 
-        assert_eq!(body, "{}");
-
         match proc_handle.kill() {
             Err(e) => println!("Could not stop web service: {e}"),
             Ok(_) => println!("Stopped web service"),
@@ -93,6 +91,8 @@ mod tests {
         let mut admin_client = cluster.connect_to_coordinator().await;
 
         test_database.drop_database(&mut admin_client).await;
+
+        assert_eq!(body, "{}");
 
         Ok(())
     }
