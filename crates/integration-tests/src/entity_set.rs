@@ -1,14 +1,18 @@
 #[cfg(test)]
 mod tests {
-    use assert_cmd::prelude::*;
     use std::net::{Ipv4Addr, SocketAddr, TcpStream};
     use std::process::Command;
 
     use log::{debug, error};
-    use serde_json::json;
+    use serde_json::{json, Value};
 
     use tokio::time::Duration;
 
+    use assert_cmd::prelude::*;
+
+    use minerva::change::Change;
+    use minerva::trend_store::TrendStore;
+    use minerva::changes::trend_store::AddTrendStore;
     use minerva::schema::create_schema;
     use minerva::cluster::MinervaCluster;
 
@@ -94,6 +98,30 @@ mod tests {
         {
             let mut client = test_database.connect().await?;
             create_schema(&mut client).await?;
+
+            let trend_store: TrendStore = TrendStore {
+                data_source: "integration_test".to_string(),
+                entity_type: "pvpanel".to_string(),
+                granularity: Duration::from_secs(300),
+                partition_size: Duration::from_secs(86400), 
+                parts: [].to_vec(),
+            };
+
+            let add_trend_store = AddTrendStore { trend_store };
+
+            let mut tx = client.transaction().await?;
+
+            // Using this as a hack to make sure the entity type is created
+            add_trend_store.apply(&mut tx).await?;
+
+            let entities = vec!(
+                "panel_01".to_string(),
+                "panel_02".to_string(),
+            );
+
+            tx.execute("INSERT INTO entity.pvpanel(name) SELECT unnest($1::text[])", &[&entities]).await?;
+
+            tx.commit().await?;
         }
 
         {
@@ -125,7 +153,8 @@ mod tests {
             let create_entity_set_data = json!({
                 "name": "TinySet",
                 "owner": "John Doe",
-                "entities": [],
+                "entities": ["panel_01", "panel_02"],
+                "entity_type": "pvpanel",
             });
 
             let response = http_client
@@ -134,9 +163,17 @@ mod tests {
                 .send()
                 .await?;
 
-            let body = response.text().await?;
+            assert_eq!(response.status(), 200);
 
-            //assert_eq!(body, "{}");
+            let body: Value = response.json().await?;
+
+            assert_eq!(
+                body,
+                json!({
+                    "code": 200,
+                    "message": "Entity set created",
+                })
+            );
         }
 
         let mut admin_client = cluster.connect_to_coordinator().await;
