@@ -96,46 +96,48 @@ mod tests {
             create_schema(&mut client).await?;
         }
 
-        let service_address = Ipv4Addr::new(127, 0, 0, 1);
-        let service_port = get_available_port(service_address).unwrap();
+        {
+            let service_address = Ipv4Addr::new(127, 0, 0, 1);
+            let service_port = get_available_port(service_address).unwrap();
 
-        let service_conf = MinervaServiceConfig {
-            pg_host: cluster.controller_host.to_string(),
-            pg_port: cluster.controller_port.to_string(),
-            pg_sslmode: "disable".to_string(),
-            pg_database: test_database.name.to_string(),
-            service_address: service_address.to_string(),
-            service_port,
-        };
+            let service_conf = MinervaServiceConfig {
+                pg_host: cluster.controller_host.to_string(),
+                pg_port: cluster.controller_port.to_string(),
+                pg_sslmode: "disable".to_string(),
+                pg_database: test_database.name.to_string(),
+                service_address: service_address.to_string(),
+                service_port,
+            };
 
-        let service = MinervaService::start(service_conf)?;
+            let service = MinervaService::start(service_conf)?;
 
-        debug!("Started service");
+            debug!("Started service");
 
-        service.wait_for().await;
+            service.wait_for().await;
 
-        let http_client = reqwest::Client::new();
-        let url = format!("{}/entitysets", service.base_url());
-        let response = http_client.get(url.clone()).send().await?;
-        let body = response.text().await?;
+            let http_client = reqwest::Client::new();
+            let url = format!("{}/entitysets", service.base_url());
+            let response = http_client.get(url.clone()).send().await?;
+            let body = response.text().await?;
 
-        assert_eq!(body, "[]");
+            assert_eq!(body, "[]");
 
-        let create_entity_set_data = json!({
-            "name": "TinySet",
-            "owner": "John Doe",
-            "entities": [],
-        });
+            let create_entity_set_data = json!({
+                "name": "TinySet",
+                "owner": "John Doe",
+                "entities": [],
+            });
 
-        let response = http_client
-            .post(url.clone())
-            .json(&create_entity_set_data)
-            .send()
-            .await?;
+            let response = http_client
+                .post(url.clone())
+                .json(&create_entity_set_data)
+                .send()
+                .await?;
 
-        let body = response.text().await?;
+            let body = response.text().await?;
 
-        //assert_eq!(body, "{}");
+            //assert_eq!(body, "{}");
+        }
 
         let mut admin_client = cluster.connect_to_coordinator().await;
 
