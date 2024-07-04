@@ -39,7 +39,7 @@ integration-test:cargo:
   before_script:
     - rustup default nightly
   services:
-    - name: citusdata/citus:12.1.1
+    - name: citusdata/citus:12.1.3
       alias: database
   script:
     - rustc --version && cargo --version  # Print version info for debugging
