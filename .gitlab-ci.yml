@@ -9,7 +9,6 @@ stages:
   - test
   - build
   - build-image
-  - deploy
 
 lint-openapi:
   stage: test
@@ -38,9 +37,6 @@ integration-test:cargo:
     - testcontainers
   before_script:
     - rustup default nightly
-  services:
-    - name: citusdata/citus:12.1.1
-      alias: database
   script:
     - rustc --version && cargo --version  # Print version info for debugging
     - cargo build --package minerva-cli
@@ -97,14 +93,6 @@ build-service-image:
       --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
       --destination "${DOCKER_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
-  rules:
-    - if: $CI_COMMIT_TAG
-
-deploy:
-  stage: deploy
-  environment: production
-  script:
-    - curl --silent --fail ${DEPLOY_HOOK_URL}?version=${CI_COMMIT_TAG}
   rules:
     - if: $CI_COMMIT_TAG
 
