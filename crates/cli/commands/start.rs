@@ -38,7 +38,7 @@ impl Cmd for StartOpt {
 
         let cluster = MinervaCluster::start(node_count).await?;
 
-        let test_database = cluster.create_db().await;
+        let test_database = cluster.create_db().await?;
 
         info!("Connecting to controller");
         {
