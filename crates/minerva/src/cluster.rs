@@ -1,6 +1,7 @@
 const CITUS_IMAGE: &str = "citusdata/citus";
 const CITUS_TAG: &str = "12.0";
 
+use std::io::Write;
 use std::net::IpAddr;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener};
 
@@ -21,12 +22,15 @@ use crate::database::{connect_to_db, create_database, drop_database};
 use crate::error::Error;
 
 
+static POSTGRESQL_CONF: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
+
+
 pub fn generate_name(len: usize) -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), len)
 }
 
 
-pub fn create_citus_container(name: &str, exposed_port: Option<u16>) -> ContainerRequest<GenericImage> {
+pub fn create_citus_container(name: &str, exposed_port: Option<u16>) -> Result<ContainerRequest<GenericImage>, std::io::Error> {
     let image = GenericImage::new(CITUS_IMAGE, CITUS_TAG)
         .with_wait_for(WaitFor::message_on_stdout(
             "PostgreSQL init process complete; ready for start up.",
@@ -37,13 +41,17 @@ pub fn create_citus_container(name: &str, exposed_port: Option<u16>) -> Containe
         None => image
     };
 
-    let conf_file_path = concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf");
+    let mut tmp_config_file = tempfile::NamedTempFile::new()?;
 
-   image 
+    tmp_config_file.write_all(POSTGRESQL_CONF.as_bytes())?;
+
+    let request = image 
         .with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
         .with_container_name(name)
-        .with_mount(Mount::bind_mount(conf_file_path, "/etc/postgresql/postgresql.conf"))
-        .with_cmd(vec!["-c", "config-file=/etc/postgresql/postgresql.conf"])
+        .with_mount(Mount::bind_mount(tmp_config_file.path().to_string_lossy(), "/etc/postgresql/postgresql.conf"))
+        .with_cmd(vec!["-c", "config-file=/etc/postgresql/postgresql.conf"]);
+
+    Ok(request)
 }
 
 pub fn get_available_port(ip_addr: Ipv4Addr) -> Option<u16> {
@@ -142,7 +150,7 @@ impl MinervaCluster {
     pub async fn start(worker_count: u8) -> Result<MinervaCluster, crate::error::Error> {
         let network_name = generate_name(6);
 
-        let controller_container = create_citus_container(&format!("{}_coordinator", network_name), Some(5432))
+        let controller_container = create_citus_container(&format!("{}_coordinator", network_name), Some(5432)).map_err(|e| crate::error::RuntimeError::from_msg(format!("Could not create container: {e}")))?
             .with_network(network_name.clone())
             .start()
             .await
@@ -185,6 +193,7 @@ impl MinervaCluster {
         for i in 1..(worker_count + 1) {
             let name = format!("{}_node{i}", network_name);
             let container = create_citus_container(&name, None)
+                .map_err(|e| crate::error::RuntimeError::from_msg(format!("Could not create container: {e}")))?
                 .with_network(network_name.clone())
                 .start()
                 .await

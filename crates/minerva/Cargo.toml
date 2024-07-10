@@ -33,6 +33,7 @@ log = "0.4"
 url = { version = "2.5", optional = true}
 rand = { version = "0.8", optional = true}
 testcontainers = { version = "0.20", optional = true }
+tempfile = { version = "3.10", optional = true }
 
 [features]
-test-containers = ["dep:url", "dep:rand", "dep:testcontainers"]
+test-containers = ["dep:url", "dep:rand", "dep:testcontainers", "dep:tempfile"]
