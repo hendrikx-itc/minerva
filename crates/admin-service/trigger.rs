@@ -1,7 +1,7 @@
 use deadpool_postgres::Pool;
 use std::ops::DerefMut;
 
-use actix_web::{get, put, web::Data, HttpResponse}; 
+use actix_web::{get, put, web::Data, HttpResponse};
 
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -129,7 +129,7 @@ pub(super) async fn change_thresholds(
             kind: ServiceErrorKind::BadRequest,
             messages: reports,
         }))
-    
+
     } else {
 
         trigger.thresholds = data.thresholds;
