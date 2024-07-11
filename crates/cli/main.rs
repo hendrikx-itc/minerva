@@ -63,6 +63,7 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
 
 #[tokio::main]
 async fn main() {
+    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     let cli = Cli::parse();
 
     if let Some(generator) = cli.generator {

@@ -1104,6 +1104,10 @@ components:
           format: int32
         message:
           type: string
+        report:
+          type: array
+          items:
+            type: object
     Success:
       type: object
       properties:
