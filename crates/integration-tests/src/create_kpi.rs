@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::net::{Ipv4Addr, SocketAddr, TcpStream};
-    use std::time::Duration;
+    use std::net::Ipv4Addr;
     use std::path::PathBuf;
 
     use log::debug;
