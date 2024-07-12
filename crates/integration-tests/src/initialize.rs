@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use std::process::Command;
+    use std::path::PathBuf;
 
     use log::debug;
 
@@ -13,7 +14,9 @@ mod tests {
     async fn initialize() -> Result<(), Box<dyn std::error::Error>> {
         crate::setup();
 
-        let cluster = MinervaCluster::start(3).await?;
+        let config_file = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
+
+        let cluster = MinervaCluster::start(&config_file, 3).await?;
 
         debug!("Containers started");
 
