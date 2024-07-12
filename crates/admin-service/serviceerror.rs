@@ -23,6 +23,15 @@ pub struct ServiceError {
     pub message: String,
 }
 
+impl From<String> for ServiceError {
+    fn from(value: String) -> ServiceError {
+        ServiceError {
+            kind: ServiceErrorKind::InternalError,
+            message: value,
+        }
+    }
+}
+
 #[derive(From, Debug, Serialize)]
 pub struct ExtendedServiceError {
     pub kind: ServiceErrorKind,

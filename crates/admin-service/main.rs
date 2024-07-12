@@ -13,7 +13,7 @@ use tokio_postgres_rustls::MakeRustlsConnect;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use minerva::error::{ConfigurationError, DatabaseError, Error};
+use minerva::error::{ConfigurationError, DatabaseError, Error, RuntimeError};
 
 mod trendmaterialization;
 use trendmaterialization::{
@@ -59,7 +59,7 @@ static ENV_PORT: &str = "SERVICE_PORT";
 static ENV_ADDRESS: &str = "SERVICE_ADDRESS";
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), serviceerror::ServiceError> {
     rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
@@ -127,7 +127,9 @@ async fn main() -> std::io::Result<()> {
         Ok(value) => value,
     };
 
-    let pool = connect_db().await.unwrap();
+    let pool = connect_db()
+        .await
+        .map_err(|e| serviceerror::ServiceError::from(format!("Could not connect to database: {e}")))?;
 
     let openapi = ApiDoc::openapi();
 
@@ -179,9 +181,10 @@ async fn main() -> std::io::Result<()> {
             .service(create_entity_set)
             .service(get_header)
     })
-    .bind((service_address, service_port))?
+    .bind((service_address, service_port)).map_err(|e| serviceerror::ServiceError::from(format!("Could not bind to port: {e}")))?
     .run()
     .await
+    .map_err(|e| serviceerror::ServiceError::from(format!("Runtime error in service: {e}")))
 }
 
 fn get_db_config() -> Result<Config, Error> {
@@ -265,32 +268,13 @@ async fn connect_db() -> Result<Pool, Error> {
     make_db_pool(&config).await
 }
 
-//async fn connect_to_db(
-//    config: &Config,
-//) -> Result<bb8::Pool<PostgresConnectionManager<MakeRustlsConnect>>, Error> {
-//    let mut roots = rustls::RootCertStore::empty();
-//
-//    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs")
-//    {
-//        roots.add(&rustls::Certificate(cert.0)).unwrap();
-//    }
-//
-//    let tls_config = RustlsClientConfig::builder()
-//        .with_safe_defaults()
-//        .with_root_certificates(roots)
-//        .with_no_client_auth();
-//    let tls = MakeRustlsConnect::new(tls_config);
-//    let manager = PostgresConnectionManager::new(config.clone(), tls);
-//
-//    let pool = bb8::Pool::builder().build(manager).await.unwrap();
-//
-//    Ok(pool)
-//}
-
 async fn make_db_pool(config: &Config) -> Result<Pool, Error> {
     let mut roots = rustls::RootCertStore::empty();
 
-    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
+    let certificates = rustls_native_certs::load_native_certs()
+        .map_err(|e| RuntimeError::from(format!("Could not load native certificates: {e}")))?;
+
+    for cert in certificates {
         roots.add(cert).unwrap();
     }
 

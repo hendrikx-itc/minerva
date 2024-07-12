@@ -61,7 +61,9 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             .unwrap_or(String::from("1"))
             .eq("0");
 
-        let cluster = MinervaCluster::start(3).await?;
+        let config_file = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
+
+        let cluster = MinervaCluster::start(&config_file, 3).await?;
 
         let data_source_name = "hub";
 
@@ -134,7 +136,9 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             .eq("0");
         let data_source_name = "hub";
 
-        let cluster = MinervaCluster::start(3).await?;
+        let config_file = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
+
+        let cluster = MinervaCluster::start(&config_file, 3).await?;
 
         let test_database = cluster.create_db().await?;
 

@@ -2,6 +2,7 @@
 mod tests {
     use std::net::{Ipv4Addr, SocketAddr, TcpStream};
     use std::process::Command;
+    use std::path::PathBuf;
 
     use log::{debug, error};
     use serde_json::{json, Value};
@@ -89,7 +90,9 @@ mod tests {
     async fn get_and_create_entity_sets() -> Result<(), Box<dyn std::error::Error>> {
         crate::setup();
 
-        let cluster = MinervaCluster::start(3).await?;
+        let config_file = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
+
+        let cluster = MinervaCluster::start(&config_file, 3).await?;
 
         debug!("Containers started");
 
