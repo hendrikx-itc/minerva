@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use log::{debug, error};
 use assert_cmd::prelude::*;
+use minerva::error::{Error, RuntimeError};
 use rand::distributions::{Alphanumeric, DistString};
 
 use tokio::io::AsyncBufReadExt;
@@ -69,7 +70,7 @@ impl MinervaService {
         })
     }
 
-    async fn wait_for(&self) {
+    pub async fn wait_for(&mut self) -> Result<(), Error> {
         let service_address = format!("{}:{}", self.conf.service_address, self.conf.service_port);
 
         let timeout = Duration::from_millis(1000);
@@ -82,13 +83,24 @@ impl MinervaService {
             debug!("Trying to connect to service at {}", ipv4_addr);
 
             match result {
-                Ok(_) => break,
-                Err(_) => tokio::time::sleep(timeout).await,
+                Ok(_) => return Ok(()),
+                Err(_) => {
+                    // Check if process is still running
+                    let wait_result = self.proc_handle
+                        .try_wait()
+                        .map_err(|e| RuntimeError::from_msg(format!("Could not wait for service exit: {e}")))?;
+
+                    if let Some(status) = wait_result {
+                        panic!("Service prematurely exited with code: {status}");
+                    }
+
+                    tokio::time::sleep(timeout).await
+                },
             }
         }
     }
 
-    fn base_url(&self) -> String {
+    pub fn base_url(&self) -> String {
         format!("http://{}:{}", self.conf.service_address, self.conf.service_port)
     }
 }

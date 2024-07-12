@@ -107,27 +107,9 @@ mod tests {
 
         println!("Started service");
 
+        service.wait_for().await?;
+
         let address = format!("{service_address}:{service_port}");
-
-        let timeout = Duration::from_millis(1000);
-
-        let ipv4_addr: SocketAddr = address.parse().unwrap();
-
-        loop {
-            let result = TcpStream::connect_timeout(&ipv4_addr, timeout);
-
-            match result {
-                Ok(_) => break,
-                Err(_) => {
-                    // Check if process is still running
-                    if let Some(status) = service.proc_handle.try_wait()? {
-                        panic!("Service prematurely exited with code: {status}");
-                    }
-
-                    tokio::time::sleep(timeout).await
-                },
-            }
-        }
 
         let client = reqwest::Client::new();
 

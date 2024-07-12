@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use assert_cmd::prelude::*;
     use std::net::{Ipv4Addr, SocketAddr, TcpStream};
-    use std::process::Command;
     use std::path::PathBuf;
 
     use log::debug;
@@ -15,7 +13,7 @@ mod tests {
     use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
     use minerva::cluster::MinervaCluster;
 
-    use crate::common::get_available_port;
+    use crate::common::{get_available_port, MinervaServiceConfig, MinervaService};
 
     const TREND_STORE_DEFINITION: &str = r###"
     title: Raw node data
@@ -77,46 +75,33 @@ mod tests {
             create_partitions_for_timestamp(&mut client, timestamp.into()).await?;
         }
 
-        let service_address = Ipv4Addr::new(127, 0, 0, 1);
-        let service_port = get_available_port(service_address).unwrap();
+        {
+            let service_address = Ipv4Addr::new(127, 0, 0, 1);
+            let service_port = get_available_port(service_address).unwrap();
 
-        let mut cmd = Command::cargo_bin("minerva-service")?;
-        cmd
-            .env("PGHOST", cluster.controller_host.to_string())
-            .env("PGPORT", cluster.controller_port.to_string())
-            .env("PGSSLMODE", "disable")
-            .env("PGDATABASE", &test_database.name)
-            .env("SERVICE_ADDRESS", service_address.to_string())
-            .env("SERVICE_PORT", service_port.to_string());
+            let service_conf = MinervaServiceConfig {
+                pg_host: cluster.controller_host.to_string(),
+                pg_port: cluster.controller_port.to_string(),
+                pg_sslmode: "disable".to_string(),
+                pg_database: test_database.name.to_string(),
+                service_address: service_address.to_string(),
+                service_port,
+            };
 
-        let mut proc_handle = cmd.spawn().expect("Process started");
+            let mut service = MinervaService::start(service_conf)?;
 
-        println!("Started service");
+            println!("Started service");
 
-        let address = format!("{service_address}:{service_port}");
+            service.wait_for().await?;
 
-        let url = format!("http://{address}/entity-types");
-        let timeout = Duration::from_millis(1000);
+            let address = format!("{service_address}:{service_port}");
 
-        let ipv4_addr: SocketAddr = address.parse().unwrap();
+            let url = format!("http://{address}/entity-types");
 
-        loop {
-            let result = TcpStream::connect_timeout(&ipv4_addr, timeout);
+            let response = reqwest::get(url).await?;
+            let body = response.text().await?;
 
-            debug!("Trying to connect to service at {}", ipv4_addr);
-
-            match result {
-                Ok(_) => break,
-                Err(_) => tokio::time::sleep(timeout).await,
-            }
-        }
-
-        let response = reqwest::get(url).await?;
-        let body = response.text().await?;
-
-        match proc_handle.kill() {
-            Err(e) => println!("Could not stop web service: {e}"),
-            Ok(_) => println!("Stopped web service"),
+            assert_eq!(body, "[{\"id\":1,\"name\":\"entity_set\",\"description\":\"\"},{\"id\":2,\"name\":\"node\",\"description\":\"\"}]");
         }
 
         let mut admin_client = cluster.connect_to_coordinator().await;
@@ -124,8 +109,6 @@ mod tests {
         test_database.drop_database(&mut admin_client).await;
 
         println!("Dropped database '{}'", test_database.name);
-
-        assert_eq!(body, "[{\"id\":1,\"name\":\"entity_set\",\"description\":\"\"},{\"id\":2,\"name\":\"node\",\"description\":\"\"}]");
 
         Ok(())
     }
