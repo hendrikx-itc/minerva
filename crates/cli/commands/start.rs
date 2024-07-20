@@ -36,7 +36,9 @@ impl Cmd for StartOpt {
         info!("Starting containers");
         let node_count = self.node_count.unwrap_or(3);
 
-        let cluster = MinervaCluster::start(node_count).await?;
+        let config_file = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
+
+        let cluster = MinervaCluster::start(&config_file, node_count).await?;
 
         let test_database = cluster.create_db().await?;
 
