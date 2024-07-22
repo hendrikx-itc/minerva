@@ -1,4 +1,5 @@
 pub mod attribute_store;
+pub mod attribute_storage;
 pub mod change;
 pub mod changes;
 pub mod database;
