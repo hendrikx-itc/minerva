@@ -123,37 +123,37 @@ pub fn parse_meas_value(data_type: DataType, value: &str) -> MeasValue {
             let value: Option<i16> = value.parse().ok();
 
             MeasValue::Int2(value)
-        },
+        }
         DataType::Integer => {
             let value: Option<i32> = value.parse().ok();
 
             MeasValue::Integer(value)
-        },
+        }
         DataType::Numeric => {
             let value: Option<Decimal> = value.parse().ok();
 
             MeasValue::Numeric(value)
-        },
+        }
         DataType::Int8 => {
             let value: Option<i64> = value.parse().ok();
 
             MeasValue::Int8(value)
-        },
+        }
         DataType::Real => {
             let value: Option<f32> = value.parse().ok();
 
             MeasValue::Real(value)
-        },
+        }
         DataType::Double => {
             let value: Option<f64> = value.parse().ok();
 
             MeasValue::Double(value)
-        },
+        }
         _ => {
             let value: String = value.to_string();
 
             MeasValue::Text(value)
-        },
+        }
     }
 }
 
@@ -162,9 +162,7 @@ pub fn map_int2(value: &Option<i16>, target_data_type: DataType) -> Result<MeasV
         DataType::Int2 => Ok(MeasValue::Int2(*value)),
         DataType::Integer => Ok(MeasValue::Integer(value.map(|x| x as i32))),
         DataType::Int8 => Ok(MeasValue::Int8(value.map(|x| x as i64))),
-        DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(Decimal::from_i16).flatten(),
-        )),
+        DataType::Numeric => Ok(MeasValue::Numeric(value.map(Decimal::from_i16).flatten())),
         DataType::Double => Ok(MeasValue::Double(value.map(f64::from_i16).flatten())),
         DataType::Real => Ok(MeasValue::Real(value.map(f32::from_i16).flatten())),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
@@ -177,9 +175,7 @@ pub fn map_int4(value: &Option<i32>, target_data_type: DataType) -> Result<MeasV
     match target_data_type {
         DataType::Integer => Ok(MeasValue::Integer(*value)),
         DataType::Int8 => Ok(MeasValue::Int8(value.map(|x| x as i64))),
-        DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(Decimal::from_i32).flatten(),
-        )),
+        DataType::Numeric => Ok(MeasValue::Numeric(value.map(Decimal::from_i32).flatten())),
         DataType::Double => Ok(MeasValue::Double(value.map(f64::from_i32).flatten())),
         DataType::Real => Ok(MeasValue::Real(value.map(f32::from_i32).flatten())),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
@@ -192,9 +188,7 @@ pub fn map_int8(value: &Option<i64>, target_data_type: DataType) -> Result<MeasV
     match target_data_type {
         DataType::Integer => Ok(MeasValue::Integer(value.map(|x| x as i32))),
         DataType::Int8 => Ok(MeasValue::Int8(*value)),
-        DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(Decimal::from_i64).flatten(),
-        )),
+        DataType::Numeric => Ok(MeasValue::Numeric(value.map(Decimal::from_i64).flatten())),
         DataType::Double => Ok(MeasValue::Double(value.map(f64::from_i64).flatten())),
         DataType::Real => Ok(MeasValue::Real(value.map(f32::from_i64).flatten())),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
@@ -205,15 +199,11 @@ pub fn map_int8(value: &Option<i64>, target_data_type: DataType) -> Result<MeasV
 
 pub fn map_real(value: &Option<f32>, target_data_type: DataType) -> Result<MeasValue, Error> {
     match target_data_type {
-        DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(Decimal::from_f32).flatten(),
-        )),
+        DataType::Numeric => Ok(MeasValue::Numeric(value.map(Decimal::from_f32).flatten())),
         DataType::Real => Ok(MeasValue::Real(*value)),
         DataType::Double => Ok(MeasValue::Double(value.map(f64::from_f32).flatten())),
         DataType::Int8 => Ok(MeasValue::Int8(value.map(i64::from_f32).flatten())),
-        DataType::Integer => Ok(MeasValue::Integer(
-            value.map(i32::from_f32).flatten(),
-        )),
+        DataType::Integer => Ok(MeasValue::Integer(value.map(i32::from_f32).flatten())),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
             msg: format!("No mapping defined for {:?} -> {}", value, target_data_type),
         })),
@@ -222,14 +212,10 @@ pub fn map_real(value: &Option<f32>, target_data_type: DataType) -> Result<MeasV
 
 pub fn map_double(value: &Option<f64>, target_data_type: DataType) -> Result<MeasValue, Error> {
     match target_data_type {
-        DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(Decimal::from_f64).flatten(),
-        )),
+        DataType::Numeric => Ok(MeasValue::Numeric(value.map(Decimal::from_f64).flatten())),
         DataType::Double => Ok(MeasValue::Double(*value)),
         DataType::Int8 => Ok(MeasValue::Int8(value.map(i64::from_f64).flatten())),
-        DataType::Integer => Ok(MeasValue::Integer(
-            value.map(i32::from_f64).flatten(),
-        )),
+        DataType::Integer => Ok(MeasValue::Integer(value.map(i32::from_f64).flatten())),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
             msg: format!("No mapping defined for {:?} -> {}", value, target_data_type),
         })),
@@ -261,7 +247,7 @@ impl MeasValue {
             DataType::Int8 => MeasValue::Int8(None),
             DataType::Real => MeasValue::Real(None),
             DataType::Double => MeasValue::Double(None),
-            _ => MeasValue::Text("".to_string())
+            _ => MeasValue::Text("".to_string()),
         }
     }
 
@@ -325,26 +311,6 @@ impl fmt::Display for MeasValue {
                 Some(i) => write!(f, "{}", i),
                 None => write!(f, "NULL"),
             },
-        }
-    }
-}
-
-trait ToType {
-    fn to_type(&self) -> &Type;
-}
-
-impl ToType for MeasValue {
-    fn to_type(&self) -> &Type {
-        match self {
-            MeasValue::Int2(_) => &Type::INT2,
-            MeasValue::Integer(_) => &Type::INT4,
-            MeasValue::Int8(_) => &Type::INT8,
-            MeasValue::Real(_) => &Type::NUMERIC,
-            MeasValue::Double(_) => &Type::NUMERIC,
-            MeasValue::Text(_) => &Type::TEXT,
-            MeasValue::TextArray(_) => &Type::TEXT_ARRAY,
-            MeasValue::Timestamp(_) => &Type::TIMESTAMPTZ,
-            MeasValue::Numeric(_) => &Type::NUMERIC,
         }
     }
 }

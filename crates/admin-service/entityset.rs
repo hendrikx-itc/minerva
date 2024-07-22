@@ -1,13 +1,13 @@
-use serde::{Deserialize, Serialize};
 use deadpool_postgres::Pool;
+use serde::{Deserialize, Serialize};
 use std::ops::DerefMut;
 use utoipa::ToSchema;
 
-use actix_web::{get, put, post, web::Data, web::Json, HttpResponse, Responder};
+use actix_web::{get, post, put, web::Data, web::Json, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
 
-use minerva::entity_set::{EntitySet, load_entity_sets, ChangeEntitySet, CreateEntitySet};
 use minerva::change::Change;
+use minerva::entity_set::{load_entity_sets, ChangeEntitySet, CreateEntitySet, EntitySet};
 
 use super::serviceerror::{ServiceError, ServiceErrorKind};
 use crate::error::{Error, Success};
@@ -30,17 +30,17 @@ impl EntitySetData {
     fn entity_set(&self) -> EntitySet {
         let group = match &self.group {
             None => "".to_string(),
-            Some(value) => value.to_string()
+            Some(value) => value.to_string(),
         };
         let entity_type = match &self.entity_type {
             None => "".to_string(),
-            Some(value) => value.to_string()
+            Some(value) => value.to_string(),
         };
         let description = match &self.description {
             None => "".to_string(),
-            Some(value) => value.to_string()
+            Some(value) => value.to_string(),
         };
-        EntitySet{
+        EntitySet {
             name: self.name.to_string(),
             group,
             entity_type,
@@ -70,7 +70,10 @@ pub(super) async fn get_entity_sets(pool: Data<Pool>) -> Result<HttpResponse, Se
 
     let client: &mut tokio_postgres::Client = manager.deref_mut().deref_mut();
 
-    let data = load_entity_sets(client).await.map_err(|e| Error { code: 500, message: e.to_string() } )?;
+    let data = load_entity_sets(client).await.map_err(|e| Error {
+        code: 500,
+        message: e.to_string(),
+    })?;
 
     Ok(HttpResponse::Ok().json(data))
 }
@@ -107,7 +110,7 @@ async fn change_entity_set_fn(
     Ok(HttpResponse::Ok().json(Success {
         code: 200,
         message: "Entity set changed".to_string(),
-    }))   
+    }))
 }
 
 #[utoipa::path(
@@ -129,14 +132,14 @@ pub(super) async fn change_entity_set(
     match result {
         Ok(res) => res,
         Err(e) => {
-            let err = Error{
+            let err = Error {
                 code: e.code,
-                message: e.message
+                message: e.message,
             };
             match err.code {
                 400 => HttpResponse::BadRequest().json(err),
                 409 => HttpResponse::Conflict().json(err),
-                _ => HttpResponse::InternalServerError().json(err)
+                _ => HttpResponse::InternalServerError().json(err),
             }
         }
     }
@@ -152,7 +155,7 @@ async fn create_entity_set_fn(
     })?;
 
     let action = CreateEntitySet {
-        entity_set: data.entity_set()
+        entity_set: data.entity_set(),
     };
 
     let mut tx = manager.transaction().await.map_err(|e| Error {
@@ -173,7 +176,7 @@ async fn create_entity_set_fn(
     Ok(HttpResponse::Ok().json(Success {
         code: 200,
         message: "Entity set created".to_string(),
-    }))   
+    }))
 }
 
 #[utoipa::path(
@@ -195,14 +198,14 @@ pub(super) async fn create_entity_set(
     match result {
         Ok(res) => res,
         Err(e) => {
-            let err = Error{
+            let err = Error {
                 code: e.code,
-                message: e.message
+                message: e.message,
             };
             match err.code {
                 400 => HttpResponse::BadRequest().json(err),
                 409 => HttpResponse::Conflict().json(err),
-                _ => HttpResponse::InternalServerError().json(err)
+                _ => HttpResponse::InternalServerError().json(err),
             }
         }
     }

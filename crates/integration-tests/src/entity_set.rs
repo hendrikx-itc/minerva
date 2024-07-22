@@ -9,10 +9,10 @@ mod tests {
     use tokio::time::Duration;
 
     use minerva::change::Change;
-    use minerva::trend_store::TrendStore;
     use minerva::changes::trend_store::AddTrendStore;
-    use minerva::schema::create_schema;
     use minerva::cluster::MinervaCluster;
+    use minerva::schema::create_schema;
+    use minerva::trend_store::TrendStore;
 
     use crate::common::{get_available_port, MinervaService, MinervaServiceConfig};
 
@@ -37,7 +37,7 @@ mod tests {
                 data_source: "integration_test".to_string(),
                 entity_type: "pvpanel".to_string(),
                 granularity: Duration::from_secs(300),
-                partition_size: Duration::from_secs(86400), 
+                partition_size: Duration::from_secs(86400),
                 parts: [].to_vec(),
             };
 
@@ -48,12 +48,13 @@ mod tests {
             // Using this as a hack to make sure the entity type is created
             add_trend_store.apply(&mut tx).await?;
 
-            let entities = vec!(
-                "panel_01".to_string(),
-                "panel_02".to_string(),
-            );
+            let entities = vec!["panel_01".to_string(), "panel_02".to_string()];
 
-            tx.execute("INSERT INTO entity.pvpanel(name) SELECT unnest($1::text[])", &[&entities]).await?;
+            tx.execute(
+                "INSERT INTO entity.pvpanel(name) SELECT unnest($1::text[])",
+                &[&entities],
+            )
+            .await?;
 
             tx.commit().await?;
         }

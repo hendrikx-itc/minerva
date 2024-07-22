@@ -10,6 +10,7 @@ use tokio_postgres::{Client, GenericClient};
 use super::attribute_store::{load_attribute_stores, AddAttributeStore, AttributeStore};
 use super::change::Change;
 use super::changes::trend_store::AddTrendStore;
+use super::entity_set::{load_entity_sets, EntitySet};
 use super::error::Error;
 use super::notification_store::{
     load_notification_stores, AddNotificationStore, NotificationStore,
@@ -22,7 +23,6 @@ use super::trend_materialization::{
 use super::trend_store::{load_trend_store_from_file, load_trend_stores, TrendStore};
 use super::trigger::{load_trigger_from_file, load_triggers, AddTrigger, Trigger};
 use super::virtual_entity::{load_virtual_entity_from_file, AddVirtualEntity, VirtualEntity};
-use super::entity_set::{load_entity_sets, EntitySet};
 
 pub struct MinervaInstance {
     pub instance_root: Option<PathBuf>,
@@ -79,7 +79,7 @@ impl MinervaInstance {
         let relations = load_relations_from(minerva_instance_root).collect();
         let trend_materializations = load_materializations_from(minerva_instance_root).collect();
         let triggers = load_triggers_from(minerva_instance_root).collect();
-        let entity_sets: Vec<EntitySet> = vec!();
+        let entity_sets: Vec<EntitySet> = vec![];
 
         MinervaInstance {
             instance_root: Some(PathBuf::from(minerva_instance_root)),
@@ -224,7 +224,11 @@ impl MinervaInstance {
         changes
     }
 
-    pub async fn update<T: GenericClient + Send + Sync>(&self, client: &mut T, other: &MinervaInstance) -> Result<(), Error> {
+    pub async fn update<T: GenericClient + Send + Sync>(
+        &self,
+        client: &mut T,
+        other: &MinervaInstance,
+    ) -> Result<(), Error> {
         let changes = self.diff(other);
 
         println!("Applying changes:");
@@ -292,7 +296,10 @@ fn load_attribute_stores_from(
         })
 }
 
-async fn initialize_attribute_stores(client: &mut Client, attribute_stores: &Vec<AttributeStore>) -> Result<(), Error> {
+async fn initialize_attribute_stores(
+    client: &mut Client,
+    attribute_stores: &Vec<AttributeStore>,
+) -> Result<(), Error> {
     for attribute_store in attribute_stores {
         let change = AddAttributeStore {
             attribute_store: attribute_store.clone(),
@@ -300,7 +307,11 @@ async fn initialize_attribute_stores(client: &mut Client, attribute_stores: &Vec
 
         let mut tx = client.transaction().await?;
 
-        tx.execute("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'", &[]).await?;
+        tx.execute(
+            "SET LOCAL citus.multi_shard_modify_mode TO 'sequential'",
+            &[],
+        )
+        .await?;
 
         match change.apply(&mut tx).await {
             Ok(message) => {
@@ -391,7 +402,10 @@ fn load_trend_stores_from(minerva_instance_root: &Path) -> impl Iterator<Item = 
         })
 }
 
-async fn initialize_trend_stores(client: &mut Client, trend_stores: &Vec<TrendStore>) -> Result<(), Error> {
+async fn initialize_trend_stores(
+    client: &mut Client,
+    trend_stores: &Vec<TrendStore>,
+) -> Result<(), Error> {
     for trend_store in trend_stores {
         let change = AddTrendStore {
             trend_store: trend_store.clone(),
@@ -399,7 +413,11 @@ async fn initialize_trend_stores(client: &mut Client, trend_stores: &Vec<TrendSt
 
         let mut tx = client.transaction().await?;
 
-        tx.execute("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'", &[]).await?;
+        tx.execute(
+            "SET LOCAL citus.multi_shard_modify_mode TO 'sequential'",
+            &[],
+        )
+        .await?;
 
         match change.apply(&mut tx).await {
             Ok(message) => {
@@ -489,7 +507,10 @@ fn load_relations_from(minerva_instance_root: &Path) -> impl Iterator<Item = Rel
         })
 }
 
-async fn initialize_virtual_entities(client: &mut Client, virtual_entities: &Vec<VirtualEntity>) -> Result<(), Error> {
+async fn initialize_virtual_entities(
+    client: &mut Client,
+    virtual_entities: &Vec<VirtualEntity>,
+) -> Result<(), Error> {
     for virtual_entity in virtual_entities {
         let change: AddVirtualEntity = AddVirtualEntity::from(virtual_entity.clone());
 
@@ -499,11 +520,11 @@ async fn initialize_virtual_entities(client: &mut Client, virtual_entities: &Vec
             Ok(message) => {
                 tx.commit().await?;
                 println!("{message}")
-            },
+            }
             Err(e) => {
                 tx.rollback().await?;
                 print!("Error creating virtual entity: {e}")
-            },
+            }
         }
     }
 
@@ -520,14 +541,14 @@ async fn initialize_relations(client: &mut Client, relations: &Vec<Relation>) ->
             Ok(message) => {
                 tx.commit().await?;
                 println!("{message}")
-            },
+            }
             Err(e) => {
                 tx.rollback().await?;
                 print!("Error creating relation: {e}")
-            },
+            }
         }
     }
-    
+
     Ok(())
 }
 
@@ -544,11 +565,11 @@ async fn initialize_trend_materializations(
             Ok(message) => {
                 tx.commit().await?;
                 println!("{message}")
-            },
+            }
             Err(e) => {
                 tx.rollback().await?;
                 println!("Error creating trend materialization: {e}")
-            },
+            }
         }
     }
 
@@ -568,11 +589,11 @@ async fn initialize_triggers(client: &mut Client, triggers: &Vec<Trigger>) -> Re
             Ok(message) => {
                 tx.commit().await?;
                 println!("{message}")
-            },
+            }
             Err(e) => {
                 tx.rollback().await?;
                 println!("Error creating trigger '{}': {}", trigger.name, e)
-            },
+            }
         }
     }
 

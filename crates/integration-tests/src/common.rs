@@ -2,13 +2,12 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream};
 use std::process::Command;
 use std::time::Duration;
 
-use log::{debug, error};
 use assert_cmd::prelude::*;
+use log::{debug, error};
 use minerva::error::{Error, RuntimeError};
 use rand::distributions::{Alphanumeric, DistString};
 
 use tokio::io::AsyncBufReadExt;
-
 
 pub fn generate_name(len: usize) -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), len)
@@ -22,13 +21,20 @@ fn port_available(addr: SocketAddr) -> bool {
     TcpListener::bind(addr).is_ok()
 }
 
-pub fn print_stdout<I: tokio::io::AsyncBufRead + std::marker::Unpin + std::marker::Send + 'static>(prefix: String, mut reader: I) {
+pub fn print_stdout<
+    I: tokio::io::AsyncBufRead + std::marker::Unpin + std::marker::Send + 'static,
+>(
+    prefix: String,
+    mut reader: I,
+) {
     tokio::spawn(async move {
         let mut buffer = String::new();
         loop {
             let result = reader.read_line(&mut buffer).await;
 
-            if let Ok(0) = result { break };
+            if let Ok(0) = result {
+                break;
+            };
 
             print!("{prefix} - {buffer}");
 
@@ -64,10 +70,7 @@ impl MinervaService {
 
         let proc_handle = cmd.spawn()?;
 
-        Ok(MinervaService {
-            conf,
-            proc_handle,
-        })
+        Ok(MinervaService { conf, proc_handle })
     }
 
     pub async fn wait_for(&mut self) -> Result<(), Error> {
@@ -86,22 +89,25 @@ impl MinervaService {
                 Ok(_) => return Ok(()),
                 Err(_) => {
                     // Check if process is still running
-                    let wait_result = self.proc_handle
-                        .try_wait()
-                        .map_err(|e| RuntimeError::from_msg(format!("Could not wait for service exit: {e}")))?;
+                    let wait_result = self.proc_handle.try_wait().map_err(|e| {
+                        RuntimeError::from_msg(format!("Could not wait for service exit: {e}"))
+                    })?;
 
                     if let Some(status) = wait_result {
                         panic!("Service prematurely exited with code: {status}");
                     }
 
                     tokio::time::sleep(timeout).await
-                },
+                }
             }
         }
     }
 
     pub fn base_url(&self) -> String {
-        format!("http://{}:{}", self.conf.service_address, self.conf.service_port)
+        format!(
+            "http://{}:{}",
+            self.conf.service_address, self.conf.service_port
+        )
     }
 }
 
@@ -113,4 +119,3 @@ impl Drop for MinervaService {
         }
     }
 }
-

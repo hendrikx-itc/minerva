@@ -46,7 +46,7 @@ mod trigger;
 use trigger::{change_thresholds, get_triggers, TriggerData};
 
 mod entityset;
-use entityset::{get_entity_sets, change_entity_set, create_entity_set, EntitySetData};
+use entityset::{change_entity_set, create_entity_set, get_entity_sets, EntitySetData};
 
 mod header;
 use header::get_header;
@@ -63,7 +63,9 @@ static DEFAULT_PORT: &str = "8000";
 
 #[actix_web::main]
 async fn main() -> Result<(), serviceerror::ServiceError> {
-    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     #[derive(OpenApi)]
@@ -122,7 +124,10 @@ async fn main() -> Result<(), serviceerror::ServiceError> {
 
     let service_address: String = env::var(ENV_ADDRESS).unwrap_or(DEFAULT_ADDRESS.to_string());
 
-    let service_port: u16 = match env::var(ENV_PORT).unwrap_or(DEFAULT_PORT.to_string()).parse() {
+    let service_port: u16 = match env::var(ENV_PORT)
+        .unwrap_or(DEFAULT_PORT.to_string())
+        .parse()
+    {
         Err(e) => {
             println!("Could not parse service port value '{ENV_PORT}': {e}");
             exit(-1);
@@ -130,9 +135,9 @@ async fn main() -> Result<(), serviceerror::ServiceError> {
         Ok(value) => value,
     };
 
-    let pool = connect_db()
-        .await
-        .map_err(|e| serviceerror::ServiceError::from(format!("Could not connect to database: {e}")))?;
+    let pool = connect_db().await.map_err(|e| {
+        serviceerror::ServiceError::from(format!("Could not connect to database: {e}"))
+    })?;
 
     let openapi = ApiDoc::openapi();
 
@@ -184,7 +189,8 @@ async fn main() -> Result<(), serviceerror::ServiceError> {
             .service(create_entity_set)
             .service(get_header)
     })
-    .bind((service_address, service_port)).map_err(|e| serviceerror::ServiceError::from(format!("Could not bind to port: {e}")))?
+    .bind((service_address, service_port))
+    .map_err(|e| serviceerror::ServiceError::from(format!("Could not bind to port: {e}")))?
     .run()
     .await
     .map_err(|e| serviceerror::ServiceError::from(format!("Runtime error in service: {e}")))

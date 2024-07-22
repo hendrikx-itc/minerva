@@ -4,8 +4,8 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use dialoguer::Confirm;
 use clap::Parser;
+use dialoguer::Confirm;
 
 use tokio_postgres::Client;
 
@@ -97,17 +97,21 @@ async fn update(
         {
             let mut tx = client.transaction().await?;
 
-            tx.execute("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'", &[]).await?;
+            tx.execute(
+                "SET LOCAL citus.multi_shard_modify_mode TO 'sequential'",
+                &[],
+            )
+            .await?;
 
             match change.apply(&mut tx).await {
                 Ok(message) => {
                     tx.commit().await?;
                     println!("> {}", &message)
-                },
+                }
                 Err(err) => {
                     tx.rollback().await?;
                     println!("! Error applying change: {}", &err)
-                },
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
+use log::debug;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -44,8 +45,6 @@ pub async fn load_data<P: AsRef<Path>>(
     file_path: P,
     create_partitions: bool,
 ) -> Result<(), Error> {
-    println!("Loading file {}", file_path.as_ref().to_string_lossy());
-
     let description = json!({"csv-load": file_path.as_ref().to_string_lossy()});
 
     let f = File::open(file_path).map_err(|e| format!("{}", e))?;
@@ -94,6 +93,8 @@ pub async fn load_data<P: AsRef<Path>>(
 
     let job_id = start_job(client, &description).await?;
 
+    debug!("Started job with Id {job_id}");
+
     let raw_data_package: Vec<(String, DateTime<chrono::Utc>, Vec<String>)> = csv_reader
         .records()
         .map(|record| {
@@ -126,9 +127,13 @@ pub async fn load_data<P: AsRef<Path>>(
 
     if create_partitions {
         for record in &raw_data_package {
-            create_partitions_for_trend_store_and_timestamp(client, trend_store_id, record.1)
-                .await
-                .map_err(|e| format!("Error creating partition for timestamp: {e}"))?;
+            create_partitions_for_trend_store_and_timestamp(
+                client,
+                trend_store_id,
+                record.1,
+            )
+            .await
+            .map_err(|e| format!("Error creating partition for timestamp: {e}"))?;
         }
     }
 
@@ -142,9 +147,9 @@ pub async fn load_data<P: AsRef<Path>>(
         )
         .await?;
 
-    println!("Job ID: {job_id}");
-
     end_job(client, job_id).await?;
+
+    debug!("Finished job with Id {job_id}");
 
     Ok(())
 }

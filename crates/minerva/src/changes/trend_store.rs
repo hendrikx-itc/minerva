@@ -1,5 +1,5 @@
-use std::fmt;
 use serde_json::Value;
+use std::fmt;
 use tokio_postgres::Transaction;
 
 use async_trait::async_trait;
@@ -292,7 +292,10 @@ impl fmt::Display for ModifyTrendExtraData {
         write!(
             f,
             "Trend({}.{}, {}->{})",
-            &self.trend_store_part_name, &self.trend_name, &self.from_extra_data, &self.to_extra_data
+            &self.trend_store_part_name,
+            &self.trend_name,
+            &self.from_extra_data,
+            &self.to_extra_data
         )
     }
 }
@@ -319,11 +322,8 @@ impl Change for ModifyTrendExtraData {
             .await;
 
         if let Err(e) = result {
-            return Err(
-                DatabaseError::from_msg(format!("Error changing extra_data: {e}")).into(),
-            );
+            return Err(DatabaseError::from_msg(format!("Error changing extra_data: {e}")).into());
         }
-
 
         Ok(format!(
             "Altered extra_data for trend '{}'.'{}'",
