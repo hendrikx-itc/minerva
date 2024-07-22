@@ -37,8 +37,8 @@ pub(super) async fn get_triggers(pool: Data<Pool>) -> Result<HttpResponse, Servi
         message: "".to_string(),
     })?;
 
-    let mut client: &mut tokio_postgres::Client = manager.deref_mut().deref_mut();
-    let triggerdata = list_triggers(&mut client).await.map_err(|e| Error {
+    let client: &mut tokio_postgres::Client = manager.deref_mut().deref_mut();
+    let triggerdata = list_triggers(client).await.map_err(|e| Error {
         code: 500,
         message: e.to_string(),
     })?;
@@ -46,17 +46,17 @@ pub(super) async fn get_triggers(pool: Data<Pool>) -> Result<HttpResponse, Servi
     let mut result: Vec<TriggerData> = [].to_vec();
 
     for trigger in triggerdata.iter() {
-        let thresholds = load_thresholds_with_client(&mut client, &trigger.0)
+        let thresholds = load_thresholds_with_client(client, &trigger.name)
             .await
             .map_err(|e| Error {
                 code: 500,
                 message: e.to_string(),
             })?;
         result.push(TriggerData {
-            name: trigger.0.clone(),
-            enabled: trigger.5,
-            description: trigger.4.clone(),
-            thresholds: thresholds,
+            name: trigger.name.clone(),
+            enabled: trigger.enabled,
+            description: trigger.description.clone(),
+            thresholds,
         })
     }
 
@@ -124,7 +124,7 @@ pub(super) async fn change_thresholds(
         }
     }
 
-    if reports.len() > 0 {
+    if !reports.is_empty() {
         Ok(HttpResponse::Conflict().json(ExtendedServiceError {
             kind: ServiceErrorKind::BadRequest,
             messages: reports,

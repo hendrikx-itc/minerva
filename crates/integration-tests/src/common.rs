@@ -55,11 +55,11 @@ impl MinervaService {
     pub fn start(conf: MinervaServiceConfig) -> Result<MinervaService, Box<dyn std::error::Error>> {
         let mut cmd = Command::cargo_bin("minerva-service")?;
 
-        cmd.env("PGHOST", conf.pg_host.to_string())
-            .env("PGPORT", conf.pg_port.to_string())
-            .env("PGSSLMODE", conf.pg_sslmode.to_string())
-            .env("PGDATABASE", conf.pg_database.to_string())
-            .env("SERVICE_ADDRESS", conf.service_address.to_string())
+        cmd.env("PGHOST", &conf.pg_host)
+            .env("PGPORT", &conf.pg_port)
+            .env("PGSSLMODE", &conf.pg_sslmode)
+            .env("PGDATABASE", &conf.pg_database)
+            .env("SERVICE_ADDRESS", &conf.service_address)
             .env("SERVICE_PORT", conf.service_port.to_string());
 
         let proc_handle = cmd.spawn()?;

@@ -878,15 +878,13 @@ pub fn load_materializations_from(
 }
 
 pub fn map_sql_to_plpgsql(src: String) -> String {
-    let mut lines: Vec<String> = Vec::new();
-
-    lines.push("BEGIN\n".into());
-    lines.push("RETURN QUERY EXECUTE $query$\n".into());
-    lines.push(src);
-    lines.push("$query$ USING $1;\n".into());
-    lines.push("END;\n".into());
-
-    lines.join("")
+    [
+        "BEGIN\n".into(),
+        "RETURN QUERY EXECUTE $query$\n".into(),
+        src,
+        "$query$ USING $1;\n".into(),
+        "END;\n".into(),
+    ].join("")
 }
 
 /// Citus does not support the construct with parameterized queries in plain sql functions. The use
@@ -962,7 +960,7 @@ pub async fn load_materializations<T: GenericClient + Send + Sync>(
             trend_materializations.push(trend_materialization);
         }
 
-        if let Some(_) = src_function {
+        if src_function.is_some() {
             let (function_lang, function_def) = coorce_to_plpgsql(
                 get_function_def(conn, &target_trend_store_part)
                     .await
@@ -1074,7 +1072,11 @@ pub async fn get_function_return_type<T: GenericClient + Send + Sync>(
             rows.iter().map(|row| (row.get(0), row.get(1))).collect()
         }).unwrap();
 
-    let columns_part = columns.iter().map(|(name, data_type)| format!("    \"{name}\" {data_type}")).collect::<Vec<String>>().join(",\n".into());
+    let columns_part = columns
+        .iter()
+        .map(|(name, data_type)| format!("    \"{name}\" {data_type}"))
+        .collect::<Vec<String>>()
+        .join(",\n");
 
     Some(format!("TABLE (\n{}\n)\n", columns_part))
 }
@@ -1178,7 +1180,7 @@ pub async fn populate_source_fingerprint<T: GenericClient + Send + Sync>(
         let query = format!(
             "select {}(timestamp) AS timestamp from trend.{} group by timestamp",
             mapping_func,
-            escape_identifier(&source_name),
+            escape_identifier(source_name),
         );
 
         let cte_name = format!("source_{}", index + 1);
@@ -1188,7 +1190,7 @@ pub async fn populate_source_fingerprint<T: GenericClient + Send + Sync>(
         ctes.push(cte);
 
         if index == 0 {
-            query_parts.push(format!("SELECT trend_directory.update_source_fingerprint(m.id, source_1.timestamp) FROM source_1"));
+            query_parts.push("SELECT trend_directory.update_source_fingerprint(m.id, source_1.timestamp) FROM source_1".to_string());
         } else {
             query_parts.push(format!("JOIN {cte_name} ON source_1.timestamp = {cte_name}.timestamp"));
         }

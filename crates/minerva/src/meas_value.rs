@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self};
 
 use rust_decimal::prelude::*;
 
@@ -163,10 +163,10 @@ pub fn map_int2(value: &Option<i16>, target_data_type: DataType) -> Result<MeasV
         DataType::Integer => Ok(MeasValue::Integer(value.map(|x| x as i32))),
         DataType::Int8 => Ok(MeasValue::Int8(value.map(|x| x as i64))),
         DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(|x| Decimal::from_i16(x)).flatten(),
+            value.map(Decimal::from_i16).flatten(),
         )),
-        DataType::Double => Ok(MeasValue::Double(value.map(|x| f64::from_i16(x)).flatten())),
-        DataType::Real => Ok(MeasValue::Real(value.map(|x| f32::from_i16(x)).flatten())),
+        DataType::Double => Ok(MeasValue::Double(value.map(f64::from_i16).flatten())),
+        DataType::Real => Ok(MeasValue::Real(value.map(f32::from_i16).flatten())),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
             msg: format!("No mapping defined for {:?} -> {}", value, target_data_type),
         })),
@@ -178,10 +178,10 @@ pub fn map_int4(value: &Option<i32>, target_data_type: DataType) -> Result<MeasV
         DataType::Integer => Ok(MeasValue::Integer(*value)),
         DataType::Int8 => Ok(MeasValue::Int8(value.map(|x| x as i64))),
         DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(|x| Decimal::from_i32(x)).flatten(),
+            value.map(Decimal::from_i32).flatten(),
         )),
-        DataType::Double => Ok(MeasValue::Double(value.map(|x| f64::from_i32(x)).flatten())),
-        DataType::Real => Ok(MeasValue::Real(value.map(|x| f32::from_i32(x)).flatten())),
+        DataType::Double => Ok(MeasValue::Double(value.map(f64::from_i32).flatten())),
+        DataType::Real => Ok(MeasValue::Real(value.map(f32::from_i32).flatten())),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
             msg: format!("No mapping defined for {:?} -> {}", value, target_data_type),
         })),
@@ -193,10 +193,10 @@ pub fn map_int8(value: &Option<i64>, target_data_type: DataType) -> Result<MeasV
         DataType::Integer => Ok(MeasValue::Integer(value.map(|x| x as i32))),
         DataType::Int8 => Ok(MeasValue::Int8(*value)),
         DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(|x| Decimal::from_i64(x)).flatten(),
+            value.map(Decimal::from_i64).flatten(),
         )),
-        DataType::Double => Ok(MeasValue::Double(value.map(|x| f64::from_i64(x)).flatten())),
-        DataType::Real => Ok(MeasValue::Real(value.map(|x| f32::from_i64(x)).flatten())),
+        DataType::Double => Ok(MeasValue::Double(value.map(f64::from_i64).flatten())),
+        DataType::Real => Ok(MeasValue::Real(value.map(f32::from_i64).flatten())),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
             msg: format!("No mapping defined for {:?} -> {}", value, target_data_type),
         })),
@@ -206,13 +206,13 @@ pub fn map_int8(value: &Option<i64>, target_data_type: DataType) -> Result<MeasV
 pub fn map_real(value: &Option<f32>, target_data_type: DataType) -> Result<MeasValue, Error> {
     match target_data_type {
         DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(|x| Decimal::from_f32(x)).flatten(),
+            value.map(Decimal::from_f32).flatten(),
         )),
         DataType::Real => Ok(MeasValue::Real(*value)),
-        DataType::Double => Ok(MeasValue::Double(value.map(|x| f64::from_f32(x)).flatten())),
-        DataType::Int8 => Ok(MeasValue::Int8(value.map(|x| i64::from_f32(x)).flatten())),
+        DataType::Double => Ok(MeasValue::Double(value.map(f64::from_f32).flatten())),
+        DataType::Int8 => Ok(MeasValue::Int8(value.map(i64::from_f32).flatten())),
         DataType::Integer => Ok(MeasValue::Integer(
-            value.map(|x| i32::from_f32(x)).flatten(),
+            value.map(i32::from_f32).flatten(),
         )),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
             msg: format!("No mapping defined for {:?} -> {}", value, target_data_type),
@@ -223,12 +223,12 @@ pub fn map_real(value: &Option<f32>, target_data_type: DataType) -> Result<MeasV
 pub fn map_double(value: &Option<f64>, target_data_type: DataType) -> Result<MeasValue, Error> {
     match target_data_type {
         DataType::Numeric => Ok(MeasValue::Numeric(
-            value.map(|x| Decimal::from_f64(x)).flatten(),
+            value.map(Decimal::from_f64).flatten(),
         )),
         DataType::Double => Ok(MeasValue::Double(*value)),
-        DataType::Int8 => Ok(MeasValue::Int8(value.map(|x| i64::from_f64(x)).flatten())),
+        DataType::Int8 => Ok(MeasValue::Int8(value.map(i64::from_f64).flatten())),
         DataType::Integer => Ok(MeasValue::Integer(
-            value.map(|x| i32::from_f64(x)).flatten(),
+            value.map(i32::from_f64).flatten(),
         )),
         _ => Err(Error::Runtime(crate::error::RuntimeError {
             msg: format!("No mapping defined for {:?} -> {}", value, target_data_type),
@@ -285,7 +285,7 @@ impl MeasValue {
                 })),
             },
             MeasValue::Timestamp(v) => match data_type {
-                DataType::Timestamp => Ok(MeasValue::Timestamp(v.clone())),
+                DataType::Timestamp => Ok(MeasValue::Timestamp(*v)),
                 _ => Err(Error::Runtime(crate::error::RuntimeError {
                     msg: format!("No mapping defined for {:?} -> {}", v, data_type),
                 })),
@@ -293,39 +293,37 @@ impl MeasValue {
             MeasValue::Numeric(v) => map_numeric(v, data_type),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl fmt::Display for MeasValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             MeasValue::Int2(v) => match v {
-                Some(i) => i.to_string(),
-                None => "NULL".to_string(),
+                Some(i) => write!(f, "{}", i),
+                None => write!(f, "NULL"),
             },
             MeasValue::Integer(v) => match v {
-                Some(i) => i.to_string(),
-                None => "NULL".to_string(),
+                Some(i) => write!(f, "{}", i),
+                None => write!(f, "NULL"),
             },
             MeasValue::Int8(v) => match v {
-                Some(i) => i.to_string(),
-                None => "NULL".to_string(),
+                Some(i) => write!(f, "{}", i),
+                None => write!(f, "NULL"),
             },
             MeasValue::Real(v) => match v {
-                Some(i) => i.to_string(),
-                None => "NULL".to_string(),
+                Some(i) => write!(f, "{}", i),
+                None => write!(f, "NULL"),
             },
             MeasValue::Double(v) => match v {
-                Some(d) => d.to_string(),
-                None => "NULL".to_string(),
+                Some(i) => write!(f, "{}", i),
+                None => write!(f, "NULL"),
             },
-            MeasValue::Text(v) => v.clone(),
-            MeasValue::TextArray(_) => {
-                "ARRAY(text)".to_string()
-            },
-            MeasValue::Timestamp(v) => {
-                format!("{}", v)
-            },
+            MeasValue::Text(v) => write!(f, "{}", v),
+            MeasValue::TextArray(_) => write!(f, "ARRAY(text)"),
+            MeasValue::Timestamp(v) => write!(f, "{}", v),
             MeasValue::Numeric(v) => match v {
-                Some(n) => n.to_string(),
-                None => "NULL".to_string(),
+                Some(i) => write!(f, "{}", i),
+                None => write!(f, "NULL"),
             },
         }
     }

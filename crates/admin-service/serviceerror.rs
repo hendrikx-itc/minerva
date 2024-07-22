@@ -12,7 +12,6 @@ use super::error::{Error, ExtendedError};
 pub enum ServiceErrorKind {
     NotFound,
     PoolError,
-    DbError,
     BadRequest,
     InternalError,
 }
@@ -63,7 +62,6 @@ impl ResponseError for ServiceError {
         match self.kind {
             ServiceErrorKind::NotFound => StatusCode::NOT_FOUND,
             ServiceErrorKind::PoolError => StatusCode::INTERNAL_SERVER_ERROR,
-            ServiceErrorKind::DbError => StatusCode::INTERNAL_SERVER_ERROR,
             ServiceErrorKind::BadRequest => StatusCode::BAD_REQUEST,
             ServiceErrorKind::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         }
@@ -84,7 +82,6 @@ impl ResponseError for ExtendedServiceError {
         match self.kind {
             ServiceErrorKind::NotFound => StatusCode::NOT_FOUND,
             ServiceErrorKind::PoolError => StatusCode::INTERNAL_SERVER_ERROR,
-            ServiceErrorKind::DbError => StatusCode::INTERNAL_SERVER_ERROR,
             ServiceErrorKind::BadRequest => StatusCode::BAD_REQUEST,
             ServiceErrorKind::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         }

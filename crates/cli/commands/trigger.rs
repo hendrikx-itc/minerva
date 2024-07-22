@@ -40,11 +40,11 @@ impl Cmd for TriggerList {
         ]);
         for trigger in triggers {
             table.add_row(vec![
-                trigger.0,
-                trigger.1,
-                trigger.2,
-                trigger.3,
-                trigger.5.to_string(),
+                trigger.name,
+                trigger.notification_store,
+                trigger.granularity,
+                trigger.default_interval,
+                trigger.enabled.to_string(),
             ]);
         }
 

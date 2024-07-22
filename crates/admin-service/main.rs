@@ -7,7 +7,7 @@ use actix_web::{middleware::Logger, web, App, HttpServer};
 
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use rustls::ClientConfig as RustlsClientConfig;
-use tokio_postgres::{config::SslMode, Config};
+use tokio_postgres::{config::SslMode, Config, NoTls};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
 use utoipa::OpenApi;
@@ -57,6 +57,9 @@ mod serviceerror;
 static ENV_DB_CONN: &str = "MINERVA_DB_CONN";
 static ENV_PORT: &str = "SERVICE_PORT";
 static ENV_ADDRESS: &str = "SERVICE_ADDRESS";
+
+static DEFAULT_ADDRESS: &str = "0.0.0.0";
+static DEFAULT_PORT: &str = "8000";
 
 #[actix_web::main]
 async fn main() -> Result<(), serviceerror::ServiceError> {
@@ -117,9 +120,9 @@ async fn main() -> Result<(), serviceerror::ServiceError> {
     )]
     struct ApiDoc;
 
-    let service_address: String = env::var(ENV_ADDRESS).unwrap_or("0.0.0.0".to_string());
+    let service_address: String = env::var(ENV_ADDRESS).unwrap_or(DEFAULT_ADDRESS.to_string());
 
-    let service_port: u16 = match env::var(ENV_PORT).unwrap_or("8000".to_string()).parse() {
+    let service_port: u16 = match env::var(ENV_PORT).unwrap_or(DEFAULT_PORT.to_string()).parse() {
         Err(e) => {
             println!("Could not parse service port value '{ENV_PORT}': {e}");
             exit(-1);
@@ -269,23 +272,29 @@ async fn connect_db() -> Result<Pool, Error> {
 }
 
 async fn make_db_pool(config: &Config) -> Result<Pool, Error> {
-    let mut roots = rustls::RootCertStore::empty();
-
-    let certificates = rustls_native_certs::load_native_certs()
-        .map_err(|e| RuntimeError::from(format!("Could not load native certificates: {e}")))?;
-
-    for cert in certificates {
-        roots.add(cert).unwrap();
-    }
-
-    let tls_config = RustlsClientConfig::builder()
-        .with_root_certificates(roots)
-        .with_no_client_auth();
-    let tls = MakeRustlsConnect::new(tls_config);
     let mgr_config = ManagerConfig {
         recycling_method: RecyclingMethod::Fast,
     };
-    let mgr = Manager::from_config(config.clone(), tls, mgr_config);
+
+    let mgr = if config.get_ssl_mode() == SslMode::Disable {
+        Manager::from_config(config.clone(), NoTls, mgr_config)
+    } else {
+        let mut roots = rustls::RootCertStore::empty();
+
+        let certificates = rustls_native_certs::load_native_certs()
+            .map_err(|e| RuntimeError::from(format!("Could not load native certificates: {e}")))?;
+
+        for cert in certificates {
+            roots.add(cert).unwrap();
+        }
+
+        let tls_config = RustlsClientConfig::builder()
+            .with_root_certificates(roots)
+            .with_no_client_auth();
+        let tls = MakeRustlsConnect::new(tls_config);
+
+        Manager::from_config(config.clone(), tls, mgr_config)
+    };
 
     Pool::builder(mgr)
         .max_size(16)

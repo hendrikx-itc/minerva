@@ -110,18 +110,25 @@ impl FileTrigger {
             trend_store_links: self.trend_store_links.clone(),
             mapping_functions: self.mapping_functions.clone(),
             description: self.description.clone(),
-            granularity: self.granularity.clone(),
-            enabled: match self.enabled {
-                Some(value) => value,
-                None => true
-            }
+            granularity: self.granularity,
+            enabled: self.enabled.unwrap_or(true),
         }
     }
 }
 
+/// Basic trigger representation for e.g. showing list of available triggers
+pub struct TriggerRepr {
+    pub name: String,
+    pub notification_store: String,
+    pub granularity: String,
+    pub default_interval: String,
+    pub description: String,
+    pub enabled: bool,
+}
+
 pub async fn list_triggers(
     conn: &mut Client,
-) -> Result<Vec<(String, String, String, String, String, bool)>, String> {
+) -> Result<Vec<TriggerRepr>, String> {
     let query = concat!(
         "SELECT name, ns::text, granularity::text, default_interval::text, description, enabled ",
         "FROM trigger.rule ",
@@ -130,7 +137,7 @@ pub async fn list_triggers(
 
     let result = conn.query(query, &[]).await.unwrap();
 
-    let triggers: Result<Vec<(String, String, String, String, String, bool)>, String> = result
+    let triggers: Result<Vec<TriggerRepr>, String> = result
         .into_iter()
         .map(|row: Row| {
             let name: String = row
@@ -152,14 +159,14 @@ pub async fn list_triggers(
                 .try_get(5)
                 .map_err(|e| format!("could not retrieve enabled: {e}"))?;
 
-            let trigger_row = (
+            let trigger_row = TriggerRepr {
                 name,
-                notification_store.unwrap_or("UNDEFINED".into()),
-                granularity.unwrap_or("UNDEFINED".into()),
-                default_interval.unwrap_or("UNDEFINED".into()),
-                description.unwrap_or("".to_string()),
+                notification_store: notification_store.unwrap_or("UNDEFINED".into()),
+                granularity: granularity.unwrap_or("UNDEFINED".into()),
+                default_interval: default_interval.unwrap_or("UNDEFINED".into()),
+                description: description.unwrap_or("".to_string()),
                 enabled,
-            );
+            };
             Ok(trigger_row)
         })
         .collect();
@@ -1093,34 +1100,6 @@ fn extract_rule_from_src(src: &str) -> Result<String, Error> {
     Ok(condition.into())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::extract_rule_from_src;
-
-    #[test]
-    fn test_rule_extraction_single_line() {
-        let condition_function_source = r#" SELECT * FROM trigger_rule."4G/hourly/PacketDropRate_with_threshold"($1) WHERE "packet_drop_rate" > "packet_drop_rate_max"; "#;
-
-        let rule = extract_rule_from_src(&condition_function_source).unwrap();
-
-        assert_eq!(rule, r#""packet_drop_rate" > "packet_drop_rate_max""#);
-    }
-
-    #[test]
-    fn test_rule_extraction_multi_line() {
-        let condition_function_source = r#" SELECT * FROM trigger_rule."4G/hourly/PacketDropRate_with_threshold"($1) WHERE "packet_drop_rate" > "packet_drop_rate_max" AND
-        "packet_drop_amount" > "packet_drop_amount_min"; "#;
-
-        let rule = extract_rule_from_src(&condition_function_source).unwrap();
-
-        assert_eq!(
-            rule,
-            r#""packet_drop_rate" > "packet_drop_rate_max" AND
-        "packet_drop_amount" > "packet_drop_amount_min""#
-        );
-    }
-}
-
 pub async fn load_trigger<T: GenericClient + Send + Sync>(
     conn: &mut T,
     name: &str,
@@ -1202,7 +1181,7 @@ pub async fn load_trigger<T: GenericClient + Send + Sync>(
         trend_store_links,
         weight: weight_function_source,
         description: description.unwrap_or("".to_string()),
-        enabled: enabled,
+        enabled,
     })
 }
 
@@ -1238,10 +1217,10 @@ where
 {
     let query = format!("SELECT entity_id, timestamp::text, weight, details, data::text FROM trigger_rule.\"{}_create_notification\"($1::timestamptz)", name);
 
-    let query_args = vec![&timestamp as &(dyn ToSql + Sync)];
+    let query_args = [&timestamp as &(dyn ToSql + Sync)];
 
     let notifications: Vec<(i32, String, i32, String, String)> = conn
-        .query(&query, query_args.iter().as_slice())
+        .query(&query, &query_args)
         .await
         .map_err(|e| DatabaseError::from_msg(format!("Error retrieving notifications: {e}")))?
         .into_iter()
@@ -1531,4 +1510,32 @@ pub async fn load_thresholds_with_client(
 
 pub fn dump_trigger(trigger: &Trigger) -> String {
     serde_json::to_string_pretty(trigger).unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extract_rule_from_src;
+
+    #[test]
+    fn test_rule_extraction_single_line() {
+        let condition_function_source = r#" SELECT * FROM trigger_rule."4G/hourly/PacketDropRate_with_threshold"($1) WHERE "packet_drop_rate" > "packet_drop_rate_max"; "#;
+
+        let rule = extract_rule_from_src(&condition_function_source).unwrap();
+
+        assert_eq!(rule, r#""packet_drop_rate" > "packet_drop_rate_max""#);
+    }
+
+    #[test]
+    fn test_rule_extraction_multi_line() {
+        let condition_function_source = r#" SELECT * FROM trigger_rule."4G/hourly/PacketDropRate_with_threshold"($1) WHERE "packet_drop_rate" > "packet_drop_rate_max" AND
+        "packet_drop_amount" > "packet_drop_amount_min"; "#;
+
+        let rule = extract_rule_from_src(&condition_function_source).unwrap();
+
+        assert_eq!(
+            rule,
+            r#""packet_drop_rate" > "packet_drop_rate_max" AND
+        "packet_drop_amount" > "packet_drop_amount_min""#
+        );
+    }
 }

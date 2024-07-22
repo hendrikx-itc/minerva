@@ -37,7 +37,7 @@ impl Cmd for UpdateOpt {
                 // Next to passing on the Minerva instance root directory, we need to set the
                 // environment variable for any child processes that might be started during
                 // initialization.
-                std::env::set_var(&ENV_MINERVA_INSTANCE_ROOT, &root);
+                std::env::set_var(ENV_MINERVA_INSTANCE_ROOT, root);
 
                 root.clone()
             }

@@ -243,7 +243,7 @@ async fn main() {
 
         let mut missed_notification = -1;
 
-        if result.len() > 0 {
+        if !result.is_empty() {
             info!("{}: {} notifications received.", Local::now().format("%Y-%m-%d %H:%M:%S"), result.len());
 
             for row in result {
