@@ -4,7 +4,7 @@ use std::sync::RwLock;
 
 use postgres_protocol::escape::escape_identifier;
 use thiserror::Error;
-use tokio_postgres::Transaction;
+use tokio_postgres::GenericClient;
 
 use lazy_static::lazy_static;
 
@@ -29,8 +29,8 @@ pub enum EntityMappingError {
     UnmappedEntityError,
 }
 
-pub async fn names_to_entity_ids(
-    client: &Transaction<'_>,
+pub async fn names_to_entity_ids<T: GenericClient>(
+    client: &T,
     entity_type_table: &str,
     names: Vec<String>,
 ) -> Result<Vec<i32>, EntityMappingError> {
@@ -96,8 +96,8 @@ pub async fn names_to_entity_ids(
         .collect()
 }
 
-async fn create_entity(
-    client: &Transaction<'_>,
+async fn create_entity<T: GenericClient>(
+    client: &T,
     entity_type_table: &str,
     name: &str,
 ) -> Result<i32, EntityMappingError> {

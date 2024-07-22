@@ -4,7 +4,7 @@ use tokio_postgres::GenericClient;
 use crate::error::{DatabaseError, Error};
 
 pub async fn start_job<T: GenericClient + Send + Sync>(
-    client: &mut T,
+    client: &T,
     description: &Value,
 ) -> Result<i64, Error> {
     let query = "SELECT logging.start_job($1)";
@@ -22,7 +22,7 @@ pub async fn start_job<T: GenericClient + Send + Sync>(
 }
 
 pub async fn end_job<T: GenericClient + Send + Sync>(
-    client: &mut T,
+    client: &T,
     job_id: i64,
 ) -> Result<(), Error> {
     let query = "SELECT logging.end_job($1)";

@@ -24,6 +24,8 @@ pub struct LoadDataOpt {
 #[async_trait]
 impl Cmd for LoadDataOpt {
     async fn run(&self) -> CmdResult {
+        env_logger::init();
+
         let mut client = connect_db().await?;
 
         let parser_config: ParserConfig = match &self.parser_config {

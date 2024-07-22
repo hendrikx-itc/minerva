@@ -13,6 +13,7 @@ use std::time::Duration;
 use tokio_postgres::error::SqlState;
 use tokio_postgres::types::ToSql;
 use tokio_postgres::{binary_copy::BinaryCopyInWriter, Client, GenericClient, Row, Transaction};
+use log::debug;
 
 use chrono::{DateTime, Utc};
 use rust_decimal::prelude::*;
@@ -36,15 +37,11 @@ use super::interval::parse_interval;
 
 type PostgresName = String;
 
-trait SanityCheck {
-    fn check(&self) -> Result<(), String>;
-}
-
 #[async_trait]
 pub trait RawMeasurementStore {
     async fn store_raw(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut Client,
         job_id: i64,
         trends: &[String],
         data_package: &[(String, DateTime<chrono::Utc>, Vec<String>)],
@@ -56,7 +53,7 @@ pub trait RawMeasurementStore {
 pub trait MeasurementStore {
     async fn store(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut Client, 
         job_id: i64,
         trends: &[String],
         data_package: &[ValueRow],
@@ -64,15 +61,15 @@ pub trait MeasurementStore {
 
     async fn store_package<U>(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut Client,
         data_package: &U,
     ) -> Result<(), Error>
     where
         U: DataPackage + std::marker::Sync;
 
-    async fn mark_modified(
+    async fn mark_modified<T: GenericClient + std::marker::Sync>(
         &self,
-        client: &mut Transaction<'_>,
+        client: &T,
         timestamp: &DateTime<chrono::Utc>,
     ) -> Result<(), Error>;
 }
@@ -395,7 +392,7 @@ impl<'a> SubPackageExtractor<'a> {
 impl RawMeasurementStore for TrendStore {
     async fn store_raw(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut Client,
         job_id: i64,
         trend_names: &[String],
         records: &[(String, DateTime<chrono::Utc>, Vec<String>)],
@@ -461,7 +458,7 @@ impl RawMeasurementStore for TrendStore {
 impl MeasurementStore for TrendStorePart {
     async fn store(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut Client,
         job_id: i64,
         trends: &[String],
         data_package: &[ValueRow],
@@ -474,23 +471,30 @@ impl MeasurementStore for TrendStorePart {
             .store_copy_from(client, job_id, trends, data_package)
             .await
         {
-            Ok(_) => Ok(()),
-            Err(e) => match e {
-                Error::Database(dbe) => match dbe.kind {
-                    DatabaseErrorKind::UniqueViolation => {
-                        self.store_insert(client, job_id, trends, data_package)
-                            .await
-                    }
-                    _ => Err(Error::Database(dbe)),
-                },
-                _ => Err(e),
+            Ok(_) => {
+                Ok(())
             },
+            Err(e) => {
+                debug!("ERROR!!!: {e}");
+                match e {
+                    Error::Database(dbe) => match dbe.kind {
+                        DatabaseErrorKind::UniqueViolation => {
+                            self.store_insert(client, job_id, trends, data_package)
+                                .await?;
+
+                            Ok(())
+                        },
+                        _ => Err(Error::Database(dbe)),
+                    },
+                    _ => Err(e),
+                }
+            }
         }
     }
 
     async fn store_package<U>(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut Client,
         data_package: &U,
     ) -> Result<(), Error>
     where
@@ -520,9 +524,9 @@ impl MeasurementStore for TrendStorePart {
             })
     }
 
-    async fn mark_modified(
+    async fn mark_modified<T: GenericClient + std::marker::Sync>(
         &self,
-        client: &mut Transaction<'_>,
+        client: &T,
         timestamp: &DateTime<chrono::Utc>,
     ) -> Result<(), Error> {
         let query = concat!(
@@ -606,11 +610,11 @@ pub struct ValueRow {
 impl TrendStorePart {
     pub async fn store_copy_from<'a, I>(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut Client,
         job_id: i64,
         trends: &[String],
         data_rows: I,
-    ) -> Result<(), Error>
+    ) -> Result<u64, Error>
     where
         I: IntoIterator<Item = &'a ValueRow>,
     {
@@ -643,15 +647,13 @@ impl TrendStorePart {
             })
             .collect();
 
-        let tx = client.transaction().await?;
-
         if matched_trends.is_empty() {
-            return Ok(());
+            return Ok(0);
         }
 
         let query = copy_from_query(self, &matched_trends);
 
-        let copy_in_sink = tx.copy_in(&query).await.map_err(|e| {
+        let copy_in_sink = client.copy_in(&query).await.map_err(|e| {
             Error::Database(DatabaseError::from_msg(format!(
                 "Error starting COPY command: {}",
                 e
@@ -688,12 +690,14 @@ impl TrendStorePart {
                 })?;
         }
 
-        binary_copy_writer.finish().await.map_err(|e| {
-            let kind = match e.code() {
-                Some(&SqlState::UNIQUE_VIOLATION) => {
-                    crate::error::DatabaseErrorKind::UniqueViolation
-                }
-                _ => crate::error::DatabaseErrorKind::Default,
+        let row_count = binary_copy_writer.finish().await.map_err(|e| {
+            // For some reason, the error code returned by e.code() is XX000, or INTERNAL_ERROR.
+            // The string representation of the error does contain the 'duplicate key' violation
+            // indication.
+            let kind = if e.to_string().contains("duplicate key value violates unique constraint") {
+                crate::error::DatabaseErrorKind::UniqueViolation
+            } else {
+                crate::error::DatabaseErrorKind::Default
             };
 
             Error::Database(DatabaseError {
@@ -702,12 +706,12 @@ impl TrendStorePart {
             })
         })?;
 
-        Ok(())
+        Ok(row_count)
     }
 
     pub async fn store_copy_from_package<'a, 'b, U>(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut Client,
         data_package: &U,
     ) -> Result<(), Error>
     where
@@ -742,15 +746,13 @@ impl TrendStorePart {
             .map(|(index, trend)| (*index, trend.data_type))
             .collect();
 
-        let tx = client.transaction().await?;
-
         if matched_trends.is_empty() {
             return Ok(());
         }
 
         let query = copy_from_query(self, &matched_trends);
 
-        let copy_in_sink = tx.copy_in(&query).await.map_err(|e| {
+        let copy_in_sink = client.copy_in(&query).await.map_err(|e| {
             Error::Database(DatabaseError::from_msg(format!(
                 "Error starting COPY command: {}",
                 e
@@ -786,18 +788,12 @@ impl TrendStorePart {
             })
         })?;
 
-        tx.commit().await.map_err(|e| {
-            Error::Database(DatabaseError::from_msg(format!(
-                "Could commit data load using COPY command: {e}"
-            )))
-        })?;
-
         Ok(())
     }
 
-    async fn store_insert(
+    async fn store_insert<T: GenericClient>(
         &self,
-        client: &mut Transaction<'_>,
+        tx: &mut T,
         job_id: i64,
         trends: &[String],
         data_package: &[ValueRow],
@@ -817,8 +813,6 @@ impl TrendStorePart {
         }
 
         let created_timestamp = Utc::now();
-
-        let tx = client.transaction().await?;
 
         let query = insert_query(self, &matched_trends);
 
@@ -858,22 +852,17 @@ impl TrendStorePart {
             tx.execute(&query, &values).await?;
         }
 
-        tx.commit().await.map_err(|e| {
-            Error::Database(DatabaseError::from_msg(format!(
-                "Could commit data load using COPY command: {e}"
-            )))
-        })?;
-
         Ok(())
     }
 
-    async fn store_insert_package<U>(
+    async fn store_insert_package<U, T>(
         &self,
-        client: &mut Transaction<'_>,
+        client: &mut T,
         data_package: &U,
     ) -> Result<(), Error>
     where
         U: DataPackage,
+        T: GenericClient,
     {
         // List of indexes of matched trends to extract corresponding values
         let mut matched_trend_indexes: Vec<Option<usize>> = Vec::new();
@@ -997,12 +986,6 @@ impl fmt::Display for TrendStorePart {
     }
 }
 
-impl SanityCheck for TrendStorePart {
-    fn check(&self) -> Result<(), String> {
-        Ok(())
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TrendStore {
     pub data_source: String,
@@ -1103,7 +1086,7 @@ pub async fn delete_trend_store(conn: &mut Client, id: i32) -> Result<(), Delete
 }
 
 pub async fn get_trend_store_id<T: GenericClient>(
-    conn: &mut T,
+    conn: &T,
     trend_store: &TrendStore,
 ) -> Result<i32, Error> {
     let query = concat!(
@@ -1133,7 +1116,7 @@ pub async fn get_trend_store_id<T: GenericClient>(
 }
 
 pub async fn load_trend_store<T: GenericClient>(
-    conn: &mut T,
+    conn: &T,
     data_source: &str,
     entity_type: &str,
     granularity: &Duration,
@@ -1167,7 +1150,7 @@ pub async fn load_trend_store<T: GenericClient>(
 }
 
 async fn load_trend_store_parts<T: GenericClient>(
-    conn: &mut T,
+    conn: &T,
     trend_store_id: i32,
 ) -> Vec<TrendStorePart> {
     let trend_store_part_query =
@@ -1426,7 +1409,7 @@ pub async fn create_partitions_for_trend_store_and_timestamp<T: GenericClient>(
     trend_store_id: i32,
     timestamp: DateTime<Utc>,
 ) -> Result<(), Error> {
-    println!("Creating partitions for trend store {}", &trend_store_id);
+    debug!("Creating partitions for trend store {}", &trend_store_id);
 
     let query = concat!(
         "WITH partition_indexes AS (",
@@ -1461,7 +1444,7 @@ pub async fn create_partitions_for_trend_store_and_timestamp<T: GenericClient>(
 
         transaction.commit().await?;
 
-        println!(
+        debug!(
             "Created partition for '{}': '{}'",
             &part_name, &partition_name
         );

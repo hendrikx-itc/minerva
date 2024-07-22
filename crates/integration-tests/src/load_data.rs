@@ -91,8 +91,12 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             create_partitions_for_timestamp(&mut client, timestamp.into()).await?;
         }
 
+        let log_level = std::env::var("RUST_LOG").unwrap_or("error".to_string());
+
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd.env("PGUSER", "postgres")
+        cmd
+            .env("RUST_LOG", log_level)
+            .env("PGUSER", "postgres")
             .env("PGHOST", cluster.controller_host.to_string())
             .env("PGPORT", cluster.controller_port.to_string())
             .env("PGSSLMODE", "disable")
@@ -104,8 +108,10 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
         let instance_root_path = std::fs::canonicalize("../../examples/tiny_instance_v1").unwrap();
 
-        let mut file_path = PathBuf::from(instance_root_path);
-        file_path.push("sample-data/sample.csv");
+        let file_path: PathBuf = [
+            instance_root_path,
+            "sample-data/sample.csv".into()
+        ].iter().collect();
 
         cmd.arg("load-data")
             .arg("--data-source")
@@ -113,7 +119,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             .arg(&file_path);
         cmd.assert()
             .success()
-            .stdout(predicate::str::contains("Job ID"));
+            .stdout(predicate::str::contains("Finished processing"));
 
         if !keep_database {
             let mut client = cluster.connect_to_coordinator().await;
@@ -164,8 +170,12 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
             create_partitions_for_timestamp(&mut client, timestamp.into()).await?;
         }
 
+        let log_level = std::env::var("RUST_LOG").unwrap_or("error".to_string());
+
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd.env("PGUSER", "postgres")
+        cmd
+            .env("RUST_LOG", log_level.clone())
+            .env("PGUSER", "postgres")
             .env("PGHOST", cluster.controller_host.to_string())
             .env("PGPORT", cluster.controller_port.to_string())
             .env("PGSSLMODE", "disable")
@@ -181,10 +191,13 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
         let output = cmd.output().unwrap();
 
-        println!("{}", String::from_utf8(output.stdout).unwrap());
+        println!("o >> {}", String::from_utf8(output.stdout).unwrap());
+        println!("e >> {}", String::from_utf8(output.stderr).unwrap());
 
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd.env("PGUSER", "postgres")
+        cmd
+            .env("RUST_LOG", log_level)
+            .env("PGUSER", "postgres")
             .env("PGHOST", cluster.controller_host.to_string())
             .env("PGPORT", cluster.controller_port.to_string())
             .env("PGSSLMODE", "disable")
@@ -202,7 +215,8 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
         let output = cmd.output().unwrap();
 
-        println!("{}", String::from_utf8(output.stdout).unwrap());
+        println!("o >> {}", String::from_utf8(output.stdout).unwrap());
+        println!("e >> {}", String::from_utf8(output.stderr).unwrap());
 
         {
             let client = test_database.connect().await?;
@@ -216,7 +230,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
             let row = client
                 .query_one(query, &[&"hillside14", &"2023-03-25T14:00:00Z"])
-                .await?;
+                .await.expect("Exactly one record for hillside14");
 
             let expected_value: Decimal = dec!(212.4);
             let value: Decimal = row.get(0);
@@ -225,7 +239,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
 
             let row = client
                 .query_one(query, &[&"hillside15", &"2023-03-25T14:00:00Z"])
-                .await?;
+                .await.expect("Exactly one record for hillside15");
 
             let expected_value: Decimal = dec!(200.0);
             let value: Decimal = row.get(0);

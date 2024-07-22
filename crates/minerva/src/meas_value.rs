@@ -315,26 +315,6 @@ impl fmt::Display for MeasValue {
     }
 }
 
-trait ToType {
-    fn to_type(&self) -> &Type;
-}
-
-impl ToType for MeasValue {
-    fn to_type(&self) -> &Type {
-        match self {
-            MeasValue::Int2(_) => &Type::INT2,
-            MeasValue::Integer(_) => &Type::INT4,
-            MeasValue::Int8(_) => &Type::INT8,
-            MeasValue::Real(_) => &Type::NUMERIC,
-            MeasValue::Double(_) => &Type::NUMERIC,
-            MeasValue::Text(_) => &Type::TEXT,
-            MeasValue::TextArray(_) => &Type::TEXT_ARRAY,
-            MeasValue::Timestamp(_) => &Type::TIMESTAMPTZ,
-            MeasValue::Numeric(_) => &Type::NUMERIC,
-        }
-    }
-}
-
 impl ToSql for MeasValue {
     fn to_sql(
         &self,
