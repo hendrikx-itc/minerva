@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use std::path::PathBuf;
 use clap::Parser;
+use std::path::PathBuf;
 
 use minerva::error::ConfigurationError;
 use minerva::loading::{load_data, ParserConfig, TrendsFrom, TrendsFromHeader};

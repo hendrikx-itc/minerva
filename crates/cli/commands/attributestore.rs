@@ -25,7 +25,7 @@ pub struct AttributeStoreUpdate {
 #[derive(Debug, Parser, PartialEq)]
 pub struct AttributeStoreOpt {
     #[command(subcommand)]
-    command: AttributeStoreOptCommands
+    command: AttributeStoreOptCommands,
 }
 
 #[derive(Debug, Subcommand, PartialEq)]
@@ -70,7 +70,7 @@ async fn run_attribute_store_create_cmd(args: &AttributeStoreCreate) -> CmdResul
             Err(Error::Runtime(RuntimeError {
                 msg: format!("Error creating attribute store: {e}"),
             }))
-        },
+        }
     }
 }
 

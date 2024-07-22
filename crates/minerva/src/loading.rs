@@ -92,7 +92,9 @@ pub async fn load_data<P: AsRef<Path>>(
         }
     };
 
-    let job_id = start_job(client, &description).await?;
+    let mut transaction = client.transaction().await?;
+
+    let job_id = start_job(&mut transaction, &description).await?;
 
     let raw_data_package: Vec<(String, DateTime<chrono::Utc>, Vec<String>)> = csv_reader
         .records()
@@ -116,25 +118,29 @@ pub async fn load_data<P: AsRef<Path>>(
 
     let granularity = parse_interval(&parser_config.granularity).unwrap();
 
-    let trend_store: TrendStore = load_trend_store(client, data_source, &parser_config.entity_type, &granularity)
+    let trend_store: TrendStore = load_trend_store(&mut transaction, data_source, &parser_config.entity_type, &granularity)
         .await
         .map_err(|e| format!("Error loading trend store for data source '{data_source}', entity type '{}' and granularity '{}': {e}", parser_config.entity_type, parser_config.granularity))?;
 
-    let trend_store_id: i32 = get_trend_store_id(client, &trend_store)
+    let trend_store_id: i32 = get_trend_store_id(&mut transaction, &trend_store)
         .await
         .map_err(|e| format!("Error loading trend store Id from database: {e}"))?;
 
     if create_partitions {
         for record in &raw_data_package {
-            create_partitions_for_trend_store_and_timestamp(client, trend_store_id, record.1)
-                .await
-                .map_err(|e| format!("Error creating partition for timestamp: {e}"))?;
+            create_partitions_for_trend_store_and_timestamp(
+                &mut transaction,
+                trend_store_id,
+                record.1,
+            )
+            .await
+            .map_err(|e| format!("Error creating partition for timestamp: {e}"))?;
         }
     }
 
     trend_store
         .store_raw(
-            client,
+            &mut transaction,
             job_id,
             &trends,
             &raw_data_package,
@@ -144,7 +150,9 @@ pub async fn load_data<P: AsRef<Path>>(
 
     println!("Job ID: {job_id}");
 
-    end_job(client, job_id).await?;
+    end_job(&mut transaction, job_id).await?;
+
+    transaction.commit().await?;
 
     Ok(())
 }

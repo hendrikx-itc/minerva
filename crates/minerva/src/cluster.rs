@@ -5,43 +5,47 @@ use std::net::IpAddr;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener};
 use std::path::Path;
 
-use log::{error, debug};
+use log::{debug, error};
 
 use rand::distributions::{Alphanumeric, DistString};
 
-use tokio_postgres::config::Config;
-use tokio_postgres::{Client, NoTls};
 use tokio::io::AsyncBufReadExt;
 use tokio::time::{sleep, Duration};
+use tokio_postgres::config::Config;
+use tokio_postgres::{Client, NoTls};
 
 use testcontainers::core::{ContainerPort, ContainerRequest, Mount, WaitFor};
-use testcontainers::{GenericImage, ImageExt, ContainerAsync};
 use testcontainers::runners::AsyncRunner;
+use testcontainers::{ContainerAsync, GenericImage, ImageExt};
 
 use crate::database::{connect_to_db, create_database, drop_database};
 use crate::error::Error;
-
 
 pub fn generate_name(len: usize) -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), len)
 }
 
-
-pub fn create_citus_container(name: &str, exposed_port: Option<u16>, config_file: &Path) -> ContainerRequest<GenericImage> {
-    let image = GenericImage::new(CITUS_IMAGE, CITUS_TAG)
-        .with_wait_for(WaitFor::message_on_stdout(
-            "PostgreSQL init process complete; ready for start up.",
-        ));
+pub fn create_citus_container(
+    name: &str,
+    exposed_port: Option<u16>,
+    config_file: &Path,
+) -> ContainerRequest<GenericImage> {
+    let image = GenericImage::new(CITUS_IMAGE, CITUS_TAG).with_wait_for(
+        WaitFor::message_on_stdout("PostgreSQL init process complete; ready for start up."),
+    );
 
     let image = match exposed_port {
         Some(port) => image.with_exposed_port(ContainerPort::Tcp(port)),
-        None => image
+        None => image,
     };
 
-   image 
+    image
         .with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
         .with_container_name(name)
-        .with_mount(Mount::bind_mount(config_file.to_string_lossy(), "/etc/postgresql/postgresql.conf"))
+        .with_mount(Mount::bind_mount(
+            config_file.to_string_lossy(),
+            "/etc/postgresql/postgresql.conf",
+        ))
         .with_cmd(vec!["-c", "config-file=/etc/postgresql/postgresql.conf"])
 }
 
@@ -65,13 +69,20 @@ pub async fn add_worker(client: &mut Client, host: IpAddr, port: u16) -> Result<
     Ok(())
 }
 
-pub fn print_stdout<I: tokio::io::AsyncBufRead + std::marker::Unpin + std::marker::Send + 'static>(prefix: String, mut reader: I) {
+pub fn print_stdout<
+    I: tokio::io::AsyncBufRead + std::marker::Unpin + std::marker::Send + 'static,
+>(
+    prefix: String,
+    mut reader: I,
+) {
     tokio::spawn(async move {
         let mut buffer = String::new();
         loop {
             let result = reader.read_line(&mut buffer).await;
 
-            if let Ok(0) = result { break };
+            if let Ok(0) = result {
+                break;
+            };
 
             print!("{prefix} - {buffer}");
 
@@ -138,24 +149,40 @@ pub struct MinervaCluster {
 }
 
 impl MinervaCluster {
-    pub async fn start(config_file: &Path, worker_count: u8) -> Result<MinervaCluster, crate::error::Error> {
+    pub async fn start(
+        config_file: &Path,
+        worker_count: u8,
+    ) -> Result<MinervaCluster, crate::error::Error> {
         let network_name = generate_name(6);
 
-        let controller_container = create_citus_container(&format!("{}_coordinator", network_name), Some(5432), config_file)
-            .with_network(network_name.clone())
-            .start()
-            .await
-            .map_err(|e| crate::error::Error::Runtime(format!("Could not create coordinator container: {e}").into()))?;
+        let controller_container = create_citus_container(
+            &format!("{}_coordinator", network_name),
+            Some(5432),
+            config_file,
+        )
+        .with_network(network_name.clone())
+        .start()
+        .await
+        .map_err(|e| {
+            crate::error::Error::Runtime(
+                format!("Could not create coordinator container: {e}").into(),
+            )
+        })?;
 
-        let controller_host = controller_container
-            .get_host()
-            .await
-            .map_err(|e| crate::error::Error::Runtime(format!("Could not get coordinator container external host address: {e}").into()))?;
+        let controller_host = controller_container.get_host().await.map_err(|e| {
+            crate::error::Error::Runtime(
+                format!("Could not get coordinator container external host address: {e}").into(),
+            )
+        })?;
 
         let controller_port = controller_container
             .get_host_port_ipv4(5432)
             .await
-            .map_err(|e| crate::error::Error::Runtime(format!("Could not get coordinator container external port: {e}").into()))?;
+            .map_err(|e| {
+                crate::error::Error::Runtime(
+                    format!("Could not get coordinator container external port: {e}").into(),
+                )
+            })?;
 
         debug!("Connecting to controller");
         let mut client = connect_db(controller_host.clone(), controller_port).await;
@@ -163,7 +190,12 @@ impl MinervaCluster {
         let coordinator_host = controller_container
             .get_bridge_ip_address()
             .await
-            .map_err(|e| crate::error::Error::Runtime(format!("Could not get coordinator container internal host address: {e}").into()))?;
+            .map_err(|e| {
+                crate::error::Error::Runtime(
+                    format!("Could not get coordinator container internal host address: {e}")
+                        .into(),
+                )
+            })?;
 
         let coordinator_port: i32 = 5432;
         debug!(
@@ -187,7 +219,9 @@ impl MinervaCluster {
                 .with_network(network_name.clone())
                 .start()
                 .await
-                .map_err(|e| Error::Runtime(format!("Could not start worker node container: {e}").into()))?;
+                .map_err(|e| {
+                    Error::Runtime(format!("Could not start worker node container: {e}").into())
+                })?;
 
             let container_address = container.get_bridge_ip_address().await.unwrap();
 
@@ -195,13 +229,9 @@ impl MinervaCluster {
 
             sleep(Duration::from_secs(1)).await;
 
-            add_worker(
-                &mut client,
-                container_address,
-                5432,
-            )
-            .await
-            .expect("Could not connect worker");
+            add_worker(&mut client, container_address, 5432)
+                .await
+                .expect("Could not connect worker");
 
             node_containers.push(Box::pin(container));
         }
@@ -219,11 +249,13 @@ impl MinervaCluster {
     }
 
     pub async fn connect_to_coordinator(&self) -> Client {
-        let controller_host = self.controller_container
+        let controller_host = self
+            .controller_container
             .get_host()
             .await
             .expect("Controller host");
-        let controller_port = self.controller_container
+        let controller_port = self
+            .controller_container
             .get_host_port_ipv4(5432)
             .await
             .expect("Controller port");

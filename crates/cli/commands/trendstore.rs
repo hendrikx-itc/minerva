@@ -5,9 +5,9 @@ use chrono::DateTime;
 use chrono::FixedOffset;
 
 use async_trait::async_trait;
-use dialoguer::Confirm;
 use chrono::Utc;
 use clap::Parser;
+use dialoguer::Confirm;
 
 use clap::Subcommand;
 use comfy_table;
@@ -138,13 +138,13 @@ impl Cmd for TrendStoreUpdate {
                         println!("* {change}");
 
                         if Confirm::new()
-                                .with_prompt("Apply change?")
-                                .interact()
-                                .map_err(|e| {
-                                    Error::Runtime(RuntimeError {
-                                        msg: format!("Could not process input: {e}"),
-                                    })
-                                })?
+                            .with_prompt("Apply change?")
+                            .interact()
+                            .map_err(|e| {
+                                Error::Runtime(RuntimeError {
+                                    msg: format!("Could not process input: {e}"),
+                                })
+                            })?
                         {
                             let mut tx = client.transaction().await?;
 
@@ -257,7 +257,7 @@ impl Cmd for TrendStorePartitionRemove {
 #[derive(Debug, Parser, PartialEq)]
 pub struct TrendStorePartition {
     #[command(subcommand)]
-    command: TrendStorePartitionCommands
+    command: TrendStorePartitionCommands,
 }
 
 #[derive(Debug, Subcommand, PartialEq)]
@@ -378,7 +378,7 @@ impl Cmd for TrendStorePartAnalyze {
 #[derive(Debug, Parser, PartialEq)]
 pub struct TrendStorePartOpt {
     #[command(subcommand)]
-    command: TrendStorePartOptCommands
+    command: TrendStorePartOptCommands,
 }
 
 #[derive(Debug, Subcommand, PartialEq)]
@@ -450,9 +450,9 @@ impl Cmd for TrendStoreDeleteTimestamp {
 
 #[derive(Debug, Parser, PartialEq)]
 pub struct TrendStoreDump {
-    #[arg(help="data source of trend store to dump")]
+    #[arg(help = "data source of trend store to dump")]
     data_source: String,
-    #[arg(help="entity type of trend store to dump")]
+    #[arg(help = "entity type of trend store to dump")]
     entity_type: String,
     #[arg(
         help="granularity of trend store to dump",
@@ -466,7 +466,13 @@ impl Cmd for TrendStoreDump {
     async fn run(&self) -> CmdResult {
         let mut client = connect_db().await?;
 
-        let trend_store = load_trend_store(&mut client, &self.data_source, &self.entity_type, &self.granularity).await?;
+        let trend_store = load_trend_store(
+            &mut client,
+            &self.data_source,
+            &self.entity_type,
+            &self.granularity,
+        )
+        .await?;
 
         let trend_store_definition = trend_store.dump()?;
 
@@ -479,7 +485,7 @@ impl Cmd for TrendStoreDump {
 #[derive(Debug, Parser, PartialEq)]
 pub struct TrendStoreOpt {
     #[command(subcommand)]
-    command: TrendStoreOptCommands
+    command: TrendStoreOptCommands,
 }
 
 #[derive(Debug, Subcommand, PartialEq)]
@@ -527,7 +533,9 @@ impl TrendStoreOpt {
                 TrendStorePartOptCommands::Analyze(analyze) => analyze.run().await,
             },
             TrendStoreOptCommands::RenameTrend(rename_trend) => rename_trend.run().await,
-            TrendStoreOptCommands::DeleteTimestamp(delete_timestamp) => delete_timestamp.run().await,
+            TrendStoreOptCommands::DeleteTimestamp(delete_timestamp) => {
+                delete_timestamp.run().await
+            }
             TrendStoreOptCommands::Dump(dump) => dump.run().await,
         }
     }

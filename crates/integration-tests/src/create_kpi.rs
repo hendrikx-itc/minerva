@@ -8,12 +8,12 @@ mod tests {
     use minerva::change::Change;
 
     use minerva::changes::trend_store::AddTrendStore;
+    use minerva::cluster::MinervaCluster;
     use minerva::schema::create_schema;
     use minerva::trend_store::TrendStore;
-    use minerva::cluster::MinervaCluster;
 
     use crate::common::get_available_port;
-    use crate::common::{MinervaServiceConfig, MinervaService};
+    use crate::common::{MinervaService, MinervaServiceConfig};
 
     const TREND_STORE_DEFINITION_15M: &str = r###"
     title: Raw node data
@@ -151,10 +151,15 @@ mod tests {
         let (language, src): (String, String) = {
             let mut client = test_database.connect().await?;
 
-            get_function_def(&mut client, "kpi-test-kpi_node_15m").await.unwrap()
+            get_function_def(&mut client, "kpi-test-kpi_node_15m")
+                .await
+                .unwrap()
         };
 
-        assert_eq!(body, "{\"code\":200,\"message\":\"Successfully created KPI\"}");
+        assert_eq!(
+            body,
+            "{\"code\":200,\"message\":\"Successfully created KPI\"}"
+        );
 
         assert_eq!(language, "plpgsql");
 

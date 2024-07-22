@@ -14,11 +14,14 @@ pub fn parse_interval(interval_str: &str) -> Result<Duration, Error> {
         Some(cap) => {
             format!("{} hours {} minutes {} seconds", &cap[1], &cap[2], &cap[3])
         }
-        None => month_re.replace(interval_str, "month").to_string()
+        None => month_re.replace(interval_str, "month").to_string(),
     };
 
-    humantime::parse_duration(&interval_str)
-        .map_err(|e| Error::Runtime(RuntimeError::from_msg(format!("Could not parse '{interval_str}' as interval: {e}"))))
+    humantime::parse_duration(&interval_str).map_err(|e| {
+        Error::Runtime(RuntimeError::from_msg(format!(
+            "Could not parse '{interval_str}' as interval: {e}"
+        )))
+    })
 }
 
 #[cfg(test)]

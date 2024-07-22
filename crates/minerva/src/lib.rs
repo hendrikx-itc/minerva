@@ -1,8 +1,10 @@
-pub mod attribute_store;
 pub mod attribute_storage;
+pub mod attribute_store;
 pub mod change;
 pub mod changes;
 pub mod database;
+pub mod entity;
+pub mod entity_set;
 pub mod error;
 pub mod instance;
 pub mod interval;
@@ -16,7 +18,6 @@ pub mod trend_materialization;
 pub mod trend_store;
 pub mod trigger;
 pub mod virtual_entity;
-pub mod entity_set;
 
 #[cfg(feature = "test-containers")]
 pub mod cluster;

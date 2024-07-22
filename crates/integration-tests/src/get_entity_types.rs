@@ -7,11 +7,11 @@ mod tests {
 
     use minerva::change::Change;
     use minerva::changes::trend_store::AddTrendStore;
+    use minerva::cluster::MinervaCluster;
     use minerva::schema::create_schema;
     use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
-    use minerva::cluster::MinervaCluster;
 
-    use crate::common::{get_available_port, MinervaServiceConfig, MinervaService};
+    use crate::common::{get_available_port, MinervaService, MinervaServiceConfig};
 
     const TREND_STORE_DEFINITION: &str = r###"
     title: Raw node data

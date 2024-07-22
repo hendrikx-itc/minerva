@@ -4,14 +4,15 @@ use std::ops::DerefMut;
 use actix_web::{get, put, web::Data, HttpResponse};
 
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use serde_json::Map;
+use utoipa::ToSchema;
 
 use minerva::trigger::{
-    list_triggers, load_thresholds_with_client, load_trigger, set_thresholds, set_enabled, Threshold,
+    list_triggers, load_thresholds_with_client, load_trigger, set_enabled, set_thresholds,
+    Threshold,
 };
 
-use super::serviceerror::{ServiceError, ExtendedServiceError, ServiceErrorKind};
+use super::serviceerror::{ExtendedServiceError, ServiceError, ServiceErrorKind};
 use crate::error::{Error, Success};
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
@@ -107,8 +108,12 @@ pub(super) async fn change_thresholds(
     let mut reports = Map::new();
 
     for threshold in &data.thresholds {
-        match trigger.thresholds.iter().find(|th| th.name == threshold.name) {
-            Some(_) => {},
+        match trigger
+            .thresholds
+            .iter()
+            .find(|th| th.name == threshold.name)
+        {
+            Some(_) => {}
             None => {
                 reports.insert(threshold.name.clone(), "This field is required".into());
             }
@@ -117,7 +122,7 @@ pub(super) async fn change_thresholds(
 
     for threshold in &trigger.thresholds {
         match data.thresholds.iter().find(|th| th.name == threshold.name) {
-            Some(_) => {},
+            Some(_) => {}
             None => {
                 reports.insert(threshold.name.clone(), "This field does not exist".into());
             }
@@ -129,9 +134,7 @@ pub(super) async fn change_thresholds(
             kind: ServiceErrorKind::BadRequest,
             messages: reports,
         }))
-
     } else {
-
         trigger.thresholds = data.thresholds;
         trigger.enabled = data.enabled;
         trigger.description = data.description;

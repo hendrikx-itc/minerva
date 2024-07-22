@@ -1,18 +1,21 @@
+use log::{debug, error, info};
+use reqwest::{
+    header::{ACCEPT, CONTENT_TYPE},
+    Client, Method,
+};
 use std::env;
 use std::fmt;
-use std::time::{Duration, SystemTime};
 use std::thread::sleep;
-use log::{debug, info, error};
-use reqwest::{Client, Method, header::{ACCEPT, CONTENT_TYPE}};
+use std::time::{Duration, SystemTime};
 
+use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use chrono::{DateTime, Utc, Local};
 
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
+use rustls::ClientConfig as RustlsClientConfig;
 use tokio_postgres::{config::SslMode, Config as TokioConfig, Row};
 use tokio_postgres_rustls::MakeRustlsConnect;
-use rustls::ClientConfig as RustlsClientConfig;
 
 static ENV_DB_CONN: &str = "MINERVA_DB_CONN";
 
@@ -48,22 +51,37 @@ pub struct Config {
 }
 
 fn get_config() -> Config {
-    let sleep_seconds = env::var("SLEEP").unwrap_or("10".to_string()).parse::<u64>().unwrap();
+    let sleep_seconds = env::var("SLEEP")
+        .unwrap_or("10".to_string())
+        .parse::<u64>()
+        .unwrap();
 
     Config {
         identity: env::var("IDENTITY").unwrap_or("customer".to_string()),
-        notification_store: env::var("NOTIFICATIONSTORE").unwrap_or("trigger-notification".to_string()),
+        notification_store: env::var("NOTIFICATIONSTORE")
+            .unwrap_or("trigger-notification".to_string()),
         sleeptime: Duration::new(sleep_seconds, 0),
-        max_notifications: env::var("MAXNOTIFICATIONS").unwrap_or("100".to_string()).parse::<i32>().unwrap(),
-        http_endpoint: env::var("ENDPOINT").unwrap_or("http://localhost:8000/notifications".to_string()),
-        method: Method::from_bytes(&env::var("METHOD").unwrap_or("POST".to_string()).into_bytes()).unwrap()
+        max_notifications: env::var("MAXNOTIFICATIONS")
+            .unwrap_or("100".to_string())
+            .parse::<i32>()
+            .unwrap(),
+        http_endpoint: env::var("ENDPOINT")
+            .unwrap_or("http://localhost:8000/notifications".to_string()),
+        method: Method::from_bytes(
+            &env::var("METHOD")
+                .unwrap_or("POST".to_string())
+                .into_bytes(),
+        )
+        .unwrap(),
     }
 }
 
 fn notification_from_data(data: NotificationData) -> Notification {
     Notification {
         id: data.id,
-        timestamp: DateTime::parse_from_str(&data.timestamp, "%Y-%m-%d %H:%M:%S%.6f%#z").unwrap().into(),
+        timestamp: DateTime::parse_from_str(&data.timestamp, "%Y-%m-%d %H:%M:%S%.6f%#z")
+            .unwrap()
+            .into(),
         rule: data.rule,
         entity: data.entity,
         details: data.details,
@@ -77,9 +95,7 @@ impl fmt::Display for Notification {
         write!(
             f,
             "Notification: rule {} for entity {} at {}",
-            &self.rule,
-            &self.entity,
-            date,
+            &self.rule, &self.entity, date,
         )
     }
 }
@@ -98,9 +114,7 @@ fn get_db_config() -> Result<TokioConfig, String> {
                 "disable" => SslMode::Disable,
                 "prefer" => SslMode::Prefer,
                 "require" => SslMode::Require,
-                _ => {
-                    return Err(format!("Unsupported SSL mode '{}'", &env_sslmode))
-                }
+                _ => return Err(format!("Unsupported SSL mode '{}'", &env_sslmode)),
             };
 
             let config = config
@@ -198,10 +212,10 @@ async fn post_message(client: &Client, data: &Notification) -> Result<String, St
             let finalres = res.text().await;
             match finalres {
                 Ok(res) => Ok(res),
-                Err(e) => Err(e.to_string())
+                Err(e) => Err(e.to_string()),
             }
         }
-        Err(e) => Err(e.to_string())
+        Err(e) => Err(e.to_string()),
     }
 }
 
@@ -209,18 +223,21 @@ async fn post_message(client: &Client, data: &Notification) -> Result<String, St
 async fn main() {
     env_logger::init();
 
-    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
     let config = get_config();
     let pool = connect_db().await.unwrap();
     let mut client = pool.get().await.unwrap();
     let httpclient = Client::new();
     let transaction = client.transaction().await.unwrap();
-    let result = transaction.query_one(
-        "SELECT notification_directory.get_last_notification($1, $2)",
-        &[&config.identity, &config.notification_store]
-    )
-    .await
-    .unwrap();
+    let result = transaction
+        .query_one(
+            "SELECT notification_directory.get_last_notification($1, $2)",
+            &[&config.identity, &config.notification_store],
+        )
+        .await
+        .unwrap();
     let mut last_notification: i32 = result.get(0);
     transaction.commit().await.unwrap();
 
@@ -244,7 +261,11 @@ async fn main() {
         let mut missed_notification = -1;
 
         if !result.is_empty() {
-            info!("{}: {} notifications received.", Local::now().format("%Y-%m-%d %H:%M:%S"), result.len());
+            info!(
+                "{}: {} notifications received.",
+                Local::now().format("%Y-%m-%d %H:%M:%S"),
+                result.len()
+            );
 
             for row in result {
                 let notification_data = NotificationData {
@@ -257,36 +278,59 @@ async fn main() {
                 };
                 let notification = notification_from_data(notification_data);
 
-                debug!("{}: received notification {}", Local::now().format("%Y-%m-%d %H:%M:%S"), notification);
+                debug!(
+                    "{}: received notification {}",
+                    Local::now().format("%Y-%m-%d %H:%M:%S"),
+                    notification
+                );
 
                 let httpresult = post_message(&httpclient, &notification);
                 match httpresult.await {
                     Ok(_) => {
                         debug!("Notification sent on.");
 
-                        if notification.id > last_notification { last_notification = notification.id; }
-                    },
+                        if notification.id > last_notification {
+                            last_notification = notification.id;
+                        }
+                    }
                     Err(e) => {
-                        error!("{}: Sending of notification {} failed: {}", Local::now().format("%Y-%m-%d %H:%M:%S"), notification, e);
+                        error!(
+                            "{}: Sending of notification {} failed: {}",
+                            Local::now().format("%Y-%m-%d %H:%M:%S"),
+                            notification,
+                            e
+                        );
 
-                        if missed_notification == -1 || notification.id < missed_notification  { missed_notification = notification.id; }
+                        if missed_notification == -1 || notification.id < missed_notification {
+                            missed_notification = notification.id;
+                        }
                     }
                 }
-            };
+            }
         } else {
-            info!("{}: no new notifications received.", Local::now().format("%Y-%m-%d %H:%M:%S"))
-        }
-        if missed_notification > -1 && missed_notification <= last_notification { last_notification = missed_notification - 1; }
-        if last_notification > -1 {
-            transaction.execute(
-                "SELECT notification_directory.set_last_notification($1, $2, $3)",
-                &[&config.identity, &config.notification_store, &last_notification]
+            info!(
+                "{}: no new notifications received.",
+                Local::now().format("%Y-%m-%d %H:%M:%S")
             )
-            .await
-            .unwrap();
+        }
+        if missed_notification > -1 && missed_notification <= last_notification {
+            last_notification = missed_notification - 1;
+        }
+        if last_notification > -1 {
+            transaction
+                .execute(
+                    "SELECT notification_directory.set_last_notification($1, $2, $3)",
+                    &[
+                        &config.identity,
+                        &config.notification_store,
+                        &last_notification,
+                    ],
+                )
+                .await
+                .unwrap();
         }
         transaction.commit().await.unwrap();
         debug!("Sleeping for {} seconds", config.sleeptime.as_secs());
         sleep(config.sleeptime);
-    };
+    }
 }

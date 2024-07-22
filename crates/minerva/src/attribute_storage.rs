@@ -1,22 +1,23 @@
 use bytes::BytesMut;
+use chrono::Utc;
 use futures_util::pin_mut;
 use log::debug;
 use postgres_protocol::escape::escape_identifier;
 use thiserror::Error;
 use tokio_postgres::binary_copy::BinaryCopyInWriter;
-use tokio_postgres::types::{ToSql, Type, IsNull};
+use tokio_postgres::types::{IsNull, ToSql, Type};
 use tokio_postgres::Transaction;
 
 use crate::attribute_store::{Attribute, AttributeStore};
-use crate::meas_value::{
-    parse_meas_value, DataType, MeasValue, INT2_NONE_VALUE, TEXT_NONE_VALUE,
-};
-
+use crate::entity::{names_to_entity_ids, EntityMappingError};
+use crate::meas_value::{parse_meas_value, DataType, MeasValue, INT2_NONE_VALUE, TEXT_NONE_VALUE};
 
 #[derive(Error, Debug)]
 pub enum AttributeStorageError {
     #[error("Database error: {0}")]
     DatabaseError(tokio_postgres::Error),
+    #[error("Could not map entities: {0}")]
+    EntityMappingError(EntityMappingError),
 }
 
 #[derive(Debug, Clone)]
@@ -130,50 +131,6 @@ pub trait RawAttributeStore {
     ) -> impl std::future::Future<Output = Result<(), AttributeStorageError>> + Send;
 }
 
-async fn create_temp_table<C: tokio_postgres::GenericClient + Send + Sync>(
-    client: &C,
-    attribute_store: &AttributeStore,
-) -> Result<String, AttributeStorageError> {
-    let temp_table_name = format!(
-        "tmp_{}_{}",
-        attribute_store.data_source, attribute_store.entity_type
-    );
-    let attribute_columns_part: String = attribute_store
-        .attributes
-        .iter()
-        .map(|att| format!("{} {}", escape_identifier(&att.name), att.data_type))
-        .collect::<Vec<String>>()
-        .join(",");
-
-    let create_temp_table_query = format!(
-        "CREATE TEMPORARY TABLE {}(entity_name text,{}) ON COMMIT DROP",
-        escape_identifier(&temp_table_name),
-        attribute_columns_part
-    );
-
-    client
-        .execute(&create_temp_table_query, &[])
-        .await
-        .map_err(AttributeStorageError::DatabaseError)?;
-
-    Ok(temp_table_name)
-}
-
-async fn create_entities<C: tokio_postgres::GenericClient + Send + Sync>(
-    client: &C,
-    type_name: &str,
-    entity_names: Vec<String>,
-) -> Result<u64, AttributeStorageError> {
-    let query = format!("WITH names AS (SELECT unnest($1::text[]) AS name) INSERT INTO entity.{}(name) SELECT name FROM names ON CONFLICT DO NOTHING", escape_identifier(type_name));
-
-    let count = client
-        .execute(&query, &[&entity_names])
-        .await
-        .map_err(AttributeStorageError::DatabaseError)?;
-
-    Ok(count)
-}
-
 impl RawAttributeStore for AttributeStore {
     async fn store(
         &self,
@@ -181,7 +138,7 @@ impl RawAttributeStore for AttributeStore {
         attributes: Vec<String>,
         rows: Vec<AttributeDataRow>,
     ) -> Result<(), AttributeStorageError> {
-        let matched_attributes: Vec<(usize, &Attribute)> = self 
+        let matched_attributes: Vec<(usize, &Attribute)> = self
             .attributes
             .iter()
             .filter_map(|att| {
@@ -192,24 +149,15 @@ impl RawAttributeStore for AttributeStore {
             })
             .collect();
 
-        let table_name = format!(
-            "{}_{}",
-            self.data_source, self.entity_type
-        );
+        let table_name = format!("{}_{}", self.data_source, self.entity_type);
 
-        let entity_ids: Vec<i32> = names_to_entity_ids(
-            client,
-            &self.entity_type,
-            records
-                .iter()
-                .map(|(entity_name, _timestamp, _values)| entity_name.clone())
-                .collect(),
-        )
-        .await?;
+        let entity_names = rows.iter().map(|row| row.entity_name.clone()).collect();
 
-        let temp_table_name = create_temp_table(tx, self).await?;
+        let entity_ids: Vec<i32> = names_to_entity_ids(tx, &self.entity_type, entity_names)
+            .await
+            .map_err(AttributeStorageError::EntityMappingError)?;
 
-        let mut column_names = vec!["entity_name".to_string()];
+        let mut column_names = vec!["entity_id".to_string(), "timestamp".to_string()];
         column_names.extend(
             matched_attributes
                 .iter()
@@ -219,8 +167,8 @@ impl RawAttributeStore for AttributeStore {
         let column_names_part = column_names.join(",");
 
         let copy_from_query = format!(
-            "COPY {}({}) FROM STDIN BINARY",
-            escape_identifier(&temp_table_name),
+            "COPY attribute_staging.{}({}) FROM STDIN BINARY",
+            escape_identifier(&table_name),
             column_names_part,
         );
 
@@ -229,7 +177,7 @@ impl RawAttributeStore for AttributeStore {
             .await
             .map_err(AttributeStorageError::DatabaseError)?;
 
-        let types: Vec<Type> = vec![Type::TEXT]
+        let types: Vec<Type> = vec![Type::INT4, Type::TIMESTAMPTZ]
             .into_iter()
             .chain(
                 matched_attributes
@@ -238,24 +186,21 @@ impl RawAttributeStore for AttributeStore {
             )
             .collect();
 
-        debug!("types: {:?}", &types);
-
         let binary_copy_writer = BinaryCopyInWriter::new(copy_in_sink, &types);
         pin_mut!(binary_copy_writer);
 
-        for row in rows {
+        let timestamp = Utc::now();
+
+        for (row, entity_id) in rows.iter().zip(entity_ids) {
             let attr_values: Vec<_> = matched_attributes
                 .iter()
-                .map(|(index, attr)| {
-                    debug!("{}: {}", attr.name, attr.data_type);
-                    AttributeValue {
-                        data_type: attr.data_type,
-                        inner_value: row.values.get(*index).unwrap(),
-                    }
+                .map(|(index, attr)| AttributeValue {
+                    data_type: attr.data_type,
+                    inner_value: row.values.get(*index).unwrap(),
                 })
                 .collect();
 
-            let mut vs: Vec<&(dyn ToSql + Sync)> = vec![map_string(&row.entity_name)];
+            let mut vs: Vec<&(dyn ToSql + Sync)> = vec![&entity_id, &timestamp];
             vs.extend(attr_values.iter().map(map_value));
 
             binary_copy_writer
@@ -265,60 +210,22 @@ impl RawAttributeStore for AttributeStore {
                 .map_err(AttributeStorageError::DatabaseError)?;
         }
 
-        binary_copy_writer.finish().await.unwrap();
-
-        let entity_column_name = "entity_name";
-
-        let get_missing_entities_query = format!(
-            "SELECT tmp.{} name FROM {} tmp LEFT JOIN entity.{} e ON e.name = tmp.{} WHERE e.id IS NULL",
-            escape_identifier(entity_column_name), escape_identifier(&temp_table_name), escape_identifier(&self.entity_type), escape_identifier(entity_column_name)
-        );
-
-        let rows = tx.query(&get_missing_entities_query, &[])
+        let staged_count = binary_copy_writer
+            .finish()
             .await
             .map_err(AttributeStorageError::DatabaseError)?;
-
-        let missing_entities = rows
-            .iter()
-            .map(|row| row.try_get::<usize, String>(0))
-            .collect::<Result<Vec<String>, tokio_postgres::error::Error>>()
-            .map_err(AttributeStorageError::DatabaseError)?;
-
-        if !missing_entities.is_empty() {
-            debug!("Missing entities: {:?}", missing_entities);
-
-            let created =
-                create_entities(tx, &self.entity_type, missing_entities).await?;
-
-            debug!("Created entities: {}", created);
-        }
 
         if matched_attributes.is_empty() {
             debug!("No attributes matched, skipping storing");
             return Ok(());
         }
 
-        let fields = matched_attributes
-            .iter()
-            .map(|(_index, att)| escape_identifier(&att.name))
-            .collect::<Vec<String>>()
-            .join(",");
-
-        // Transfer from temp table to the attribute staging table
-        let query = format!(
-            "INSERT INTO attribute_staging.{}(entity_id, timestamp, {fields}) SELECT e.id, now(), {fields} FROM {} tmp JOIN entity.{} e ON e.name = tmp.{}",
-            escape_identifier(&table_name), escape_identifier(&temp_table_name), escape_identifier(&self.entity_type), escape_identifier(entity_column_name),
-        );
-
-        let staged_count = tx.execute(&query, &[])
-            .await
-            .map_err(AttributeStorageError::DatabaseError)?;
-
         debug!("Staged {} records in '{}'", staged_count, &table_name);
 
         let transfer_staged_query = "SELECT attribute_directory.transfer_staged(attribute_store) FROM attribute_directory.attribute_store WHERE attribute_store::text = $1";
 
-        let row = tx.query_one(transfer_staged_query, &[&table_name])
+        let row = tx
+            .query_one(transfer_staged_query, &[&table_name])
             .await
             .map_err(AttributeStorageError::DatabaseError)?;
 
@@ -328,7 +235,7 @@ impl RawAttributeStore for AttributeStore {
             "Stored {} rows with {} attributes for '{}'",
             rows.len(),
             attributes.len(),
-            self 
+            self
         );
 
         Ok(())
@@ -336,9 +243,5 @@ impl RawAttributeStore for AttributeStore {
 }
 
 fn map_value<'a>(value: &'a AttributeValue) -> &'a (dyn ToSql + Sync) {
-    value
-}
-
-fn map_string(value: &String) -> &(dyn ToSql + Sync) {
     value
 }

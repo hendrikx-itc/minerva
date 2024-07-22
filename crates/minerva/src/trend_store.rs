@@ -4,19 +4,15 @@ use postgres_protocol::escape::escape_identifier;
 use postgres_types::Type;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::convert::From;
 use std::fmt;
 use std::iter::zip;
 use std::path::PathBuf;
-use std::sync::RwLock;
 use std::time::Duration;
 use tokio_postgres::error::SqlState;
 use tokio_postgres::types::ToSql;
-use tokio_postgres::{binary_copy::BinaryCopyInWriter, Client, GenericClient, Row};
-
-use lazy_static::lazy_static;
+use tokio_postgres::{binary_copy::BinaryCopyInWriter, Client, GenericClient, Row, Transaction};
 
 use chrono::{DateTime, Utc};
 use rust_decimal::prelude::*;
@@ -25,8 +21,10 @@ use rust_decimal::Decimal;
 use async_trait::async_trait;
 
 use crate::changes::trend_store::{
-    AddTrendStorePart, AddTrends, ModifyTrendDataType, ModifyTrendExtraData, ModifyTrendDataTypes, RemoveTrends,
+    AddTrendStorePart, AddTrends, ModifyTrendDataType, ModifyTrendDataTypes, ModifyTrendExtraData,
+    RemoveTrends,
 };
+use crate::entity::names_to_entity_ids;
 use crate::error::DatabaseErrorKind;
 use crate::meas_value::{
     DataType, MeasValue, INT8_NONE_VALUE, INTEGER_NONE_VALUE, NUMERIC_NONE_VALUE, TEXT_NONE_VALUE,
@@ -46,7 +44,7 @@ trait SanityCheck {
 pub trait RawMeasurementStore {
     async fn store_raw(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         job_id: i64,
         trends: &[String],
         data_package: &[(String, DateTime<chrono::Utc>, Vec<String>)],
@@ -58,7 +56,7 @@ pub trait RawMeasurementStore {
 pub trait MeasurementStore {
     async fn store(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         job_id: i64,
         trends: &[String],
         data_package: &[ValueRow],
@@ -66,7 +64,7 @@ pub trait MeasurementStore {
 
     async fn store_package<U>(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         data_package: &U,
     ) -> Result<(), Error>
     where
@@ -74,7 +72,7 @@ pub trait MeasurementStore {
 
     async fn mark_modified(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         timestamp: &DateTime<chrono::Utc>,
     ) -> Result<(), Error>;
 }
@@ -198,15 +196,15 @@ impl Trend {
                 if value == null_value {
                     Ok(MeasValue::Numeric(None))
                 } else {
-                    Ok(MeasValue::Numeric(Some(
-                        Decimal::from_str(value).map_err(|e| {
+                    Ok(MeasValue::Numeric(Some(Decimal::from_str(value).map_err(
+                        |e| {
                             Error::Runtime(RuntimeError {
                                 msg: format!(
                                     "Could not parse numeric measurement value '{value}': {e}"
                                 ),
                             })
-                        })?,
-                    )))
+                        },
+                    )?)))
                 }
             }
             DataType::Int8 => {
@@ -382,7 +380,11 @@ impl<'a> SubPackageExtractor<'a> {
 
             timestamps.insert(timestamp);
 
-            sub_package.push(ValueRow { entity_id: *entity_id, timestamp: *timestamp, values: meas_values?});
+            sub_package.push(ValueRow {
+                entity_id: *entity_id,
+                timestamp: *timestamp,
+                values: meas_values?,
+            });
         }
 
         Ok((sub_package, timestamps.into_iter().collect()))
@@ -393,7 +395,7 @@ impl<'a> SubPackageExtractor<'a> {
 impl RawMeasurementStore for TrendStore {
     async fn store_raw(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         job_id: i64,
         trend_names: &[String],
         records: &[(String, DateTime<chrono::Utc>, Vec<String>)],
@@ -407,7 +409,8 @@ impl RawMeasurementStore for TrendStore {
                 .map(|(entity_name, _timestamp, _values)| entity_name.clone())
                 .collect(),
         )
-        .await?;
+        .await
+        .map_err(|e| Error::Runtime(RuntimeError::from_msg(e.to_string())))?;
 
         let mut extractors: HashMap<&str, SubPackageExtractor> = HashMap::new();
 
@@ -458,7 +461,7 @@ impl RawMeasurementStore for TrendStore {
 impl MeasurementStore for TrendStorePart {
     async fn store(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         job_id: i64,
         trends: &[String],
         data_package: &[ValueRow],
@@ -487,22 +490,18 @@ impl MeasurementStore for TrendStorePart {
 
     async fn store_package<U>(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         data_package: &U,
     ) -> Result<(), Error>
     where
-        U: DataPackage + std::marker::Sync {
-
-        match self
-            .store_copy_from_package(client, data_package)
-            .await
-        {
+        U: DataPackage + std::marker::Sync,
+    {
+        match self.store_copy_from_package(client, data_package).await {
             Ok(_) => Ok(()),
             Err(e) => match e {
                 Error::Database(dbe) => match dbe.kind {
                     DatabaseErrorKind::UniqueViolation => {
-                        self.store_insert_package(client, data_package)
-                            .await
+                        self.store_insert_package(client, data_package).await
                     }
                     _ => Err(Error::Database(dbe)),
                 },
@@ -510,18 +509,20 @@ impl MeasurementStore for TrendStorePart {
             },
         }?;
 
-        self.mark_modified(client, data_package.timestamp()).await.map_err(|e| {
-            Error::Database(DatabaseError::from_msg(format!(
-                "Could not mark timestamp modified '{}' - '{}': {e}",
-                self.name,
-                data_package.timestamp(),
-            )))
-        })
+        self.mark_modified(client, data_package.timestamp())
+            .await
+            .map_err(|e| {
+                Error::Database(DatabaseError::from_msg(format!(
+                    "Could not mark timestamp modified '{}' - '{}': {e}",
+                    self.name,
+                    data_package.timestamp(),
+                )))
+            })
     }
 
     async fn mark_modified(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         timestamp: &DateTime<chrono::Utc>,
     ) -> Result<(), Error> {
         let query = concat!(
@@ -543,109 +544,13 @@ impl MeasurementStore for TrendStorePart {
     }
 }
 
-type Data = HashMap<String, i32>;
-lazy_static! {
-    static ref ENTITY_CACHE: RwLock<Data> = RwLock::new(HashMap::new());
-}
-
-std::thread_local! {
-  static ENTITY_MAPPING_CACHE: RefCell<HashMap<(String, String), i32>> = RefCell::new(HashMap::new());
-}
-
-pub async fn names_to_entity_ids(
-    client: &mut Client,
-    entity_type_table: &str,
-    names: Vec<String>,
-) -> Result<Vec<i32>, Error> {
-    let mut entity_ids: HashMap<String, i32> = HashMap::new();
-
-    let query = format!(
-        "WITH lookup_list AS (SELECT unnest($1::text[]) AS name) \
-        SELECT l.name, e.id FROM lookup_list l \
-        LEFT JOIN entity.{} e ON l.name = e.name ",
-        escape_identifier(entity_type_table)
-    );
-
-    let mut names_list: Vec<&str> = Vec::new();
-
-    ENTITY_MAPPING_CACHE.with(|m| {
-        let mapping = m.borrow();
-
-        for name in &names {
-            if let Some(entity_id) =
-                mapping.get(&(entity_type_table.to_string(), String::from(name)))
-            {
-                entity_ids.insert(name.clone(), *entity_id);
-            } else {
-                names_list.push(name.as_ref());
-            }
-        }
-    });
-
-    // Only lookup in the database if there is anything left to lookup
-    if !names_list.is_empty() {
-        let rows = client.query(&query, &[&names_list]).await?;
-
-        for row in rows {
-            let name: String = row.get(0);
-            let entity_id_value: Option<i32> = row.try_get(1)?;
-            let entity_id: i32 = match entity_id_value {
-                Some(entity_id) => entity_id,
-                None => create_entity(client, entity_type_table, &name).await?,
-            };
-
-            ENTITY_MAPPING_CACHE.with(|m| {
-                let mut mapping = m.borrow_mut();
-
-                mapping.insert((entity_type_table.to_string(), name.clone()), entity_id)
-            });
-
-            entity_ids.insert(name, entity_id);
-        }
-    }
-
-    names
-        .into_iter()
-        .map(|name| -> Result<i32, Error> {
-            entity_ids
-                .get(&name)
-                .copied()
-                .ok_or(Error::Runtime(RuntimeError::from(
-                    "Could not find Id for entity name".to_string()
-                )))
-        })
-        .collect()
-}
-
-async fn create_entity(
-    client: &mut Client,
-    entity_type_table: &str,
-    name: &str,
-) -> Result<i32, Error> {
-    let query = format!(
-        "INSERT INTO entity.{}(name) VALUES($1) ON CONFLICT(name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
-        escape_identifier(entity_type_table)
-    );
-
-    let rows = client.query(&query, &[&name]).await?;
-
-    match rows.first() {
-        Some(row) => row
-            .try_get(0)
-            .map_err(|e| Error::from(RuntimeError::from(format!("Could not create entity: {e}")))),
-        None => Err(Error::from(RuntimeError::from(
-            "Could not insert entity".to_string(),
-        ))),
-    }
-}
-
 struct ValueMapper<'a> {
     index: Option<usize>,
     data_type: &'a DataType,
 }
 
 impl<'a> ValueMapper<'a> {
-    fn map_value_from(&self, values: &'a[MeasValue]) -> &'a (dyn ToSql + Sync) {
+    fn map_value_from(&self, values: &'a [MeasValue]) -> &'a (dyn ToSql + Sync) {
         match self.index {
             Some(index) => {
                 match values.get(index) {
@@ -701,7 +606,7 @@ pub struct ValueRow {
 impl TrendStorePart {
     pub async fn store_copy_from<'a, I>(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         job_id: i64,
         trends: &[String],
         data_rows: I,
@@ -761,8 +666,12 @@ impl TrendStorePart {
         let created_timestamp = Utc::now();
 
         for value_row in data_rows {
-            let mut values: Vec<&(dyn ToSql + Sync)> =
-                vec![&value_row.entity_id, &value_row.timestamp, &created_timestamp, &job_id];
+            let mut values: Vec<&(dyn ToSql + Sync)> = vec![
+                &value_row.entity_id,
+                &value_row.timestamp,
+                &created_timestamp,
+                &job_id,
+            ];
 
             values.extend(
                 index_trend_map
@@ -781,7 +690,9 @@ impl TrendStorePart {
 
         binary_copy_writer.finish().await.map_err(|e| {
             let kind = match e.code() {
-                Some(&SqlState::UNIQUE_VIOLATION) => crate::error::DatabaseErrorKind::UniqueViolation,
+                Some(&SqlState::UNIQUE_VIOLATION) => {
+                    crate::error::DatabaseErrorKind::UniqueViolation
+                }
                 _ => crate::error::DatabaseErrorKind::Default,
             };
 
@@ -791,18 +702,12 @@ impl TrendStorePart {
             })
         })?;
 
-        tx.commit().await.map_err(|e| {
-            Error::Database(DatabaseError::from_msg(format!(
-                "Could commit data load using COPY command: {e}"
-            )))
-        })?;
-
         Ok(())
     }
 
     pub async fn store_copy_from_package<'a, 'b, U>(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         data_package: &U,
     ) -> Result<(), Error>
     where
@@ -869,7 +774,9 @@ impl TrendStorePart {
 
         binary_copy_writer.finish().await.map_err(|e| {
             let kind = match e.code() {
-                Some(&SqlState::UNIQUE_VIOLATION) => crate::error::DatabaseErrorKind::UniqueViolation,
+                Some(&SqlState::UNIQUE_VIOLATION) => {
+                    crate::error::DatabaseErrorKind::UniqueViolation
+                }
                 _ => crate::error::DatabaseErrorKind::Default,
             };
 
@@ -890,7 +797,7 @@ impl TrendStorePart {
 
     async fn store_insert(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         job_id: i64,
         trends: &[String],
         data_package: &[ValueRow],
@@ -962,11 +869,12 @@ impl TrendStorePart {
 
     async fn store_insert_package<U>(
         &self,
-        client: &mut Client,
+        client: &mut Transaction<'_>,
         data_package: &U,
     ) -> Result<(), Error>
     where
-        U: DataPackage, {
+        U: DataPackage,
+    {
         // List of indexes of matched trends to extract corresponding values
         let mut matched_trend_indexes: Vec<Option<usize>> = Vec::new();
         let mut matched_trends: Vec<&Trend> = Vec::new();
@@ -974,7 +882,10 @@ impl TrendStorePart {
 
         // Filter trends that match the trend store parts trends
         for t in self.trends.iter() {
-            let index = data_package.trends().iter().position(|trend_name| trend_name == &t.name);
+            let index = data_package
+                .trends()
+                .iter()
+                .position(|trend_name| trend_name == &t.name);
 
             if let Some(i) = index {
                 matched_trend_indexes.push(index);
@@ -989,7 +900,9 @@ impl TrendStorePart {
 
         let query = insert_query(self, &matched_trends);
 
-        data_package.insert(&mut tx, &query, &values, &created_timestamp).await?;
+        data_package
+            .insert(&mut tx, &query, &values, &created_timestamp)
+            .await?;
 
         tx.commit().await.map_err(|e| {
             Error::Database(DatabaseError::from_msg(format!(
@@ -1127,7 +1040,11 @@ impl TrendStore {
     }
 
     pub fn dump(&self) -> Result<String, Error> {
-        serde_yaml::to_string(self).map_err(|e| Error::Runtime(RuntimeError::from_msg(format!("Could not serialize trend store to yaml: {e}"))))
+        serde_yaml::to_string(self).map_err(|e| {
+            Error::Runtime(RuntimeError::from_msg(format!(
+                "Could not serialize trend store to yaml: {e}"
+            )))
+        })
     }
 }
 
@@ -1395,8 +1312,8 @@ pub fn load_trend_store_from_file(path: &PathBuf) -> Result<TrendStore, Error> {
 }
 
 /// Create partitions for the full retention period of all trend stores.
-pub async fn create_partitions(
-    client: &mut Client,
+pub async fn create_partitions<T: GenericClient>(
+    client: &mut T,
     ahead_interval: Option<Duration>,
 ) -> Result<(), Error> {
     let ahead_interval = match ahead_interval {
@@ -1420,8 +1337,8 @@ pub async fn create_partitions(
     Ok(())
 }
 
-pub async fn create_partitions_for_timestamp(
-    client: &mut Client,
+pub async fn create_partitions_for_timestamp<T: GenericClient>(
+    client: &mut T,
     timestamp: DateTime<Utc>,
 ) -> Result<(), Error> {
     let query = concat!("SELECT id FROM trend_directory.trend_store");
@@ -1440,8 +1357,8 @@ pub async fn create_partitions_for_timestamp(
     Ok(())
 }
 
-pub async fn create_partitions_for_trend_store(
-    client: &mut Client,
+pub async fn create_partitions_for_trend_store<T: GenericClient>(
+    client: &mut T,
     trend_store_id: i32,
     ahead_interval: Duration,
 ) -> Result<(), Error> {
@@ -1466,7 +1383,11 @@ pub async fn create_partitions_for_trend_store(
         .map_err(|e| DatabaseError::from_msg(format!("Error loading trend store Ids: {e}")))?;
 
     if !result.is_empty() {
-        println!("Creating {} partitions for trend store {}", result.len(), &trend_store_id);
+        println!(
+            "Creating {} partitions for trend store {}",
+            result.len(),
+            &trend_store_id
+        );
     }
 
     for row in result {
@@ -1474,17 +1395,25 @@ pub async fn create_partitions_for_trend_store(
         let part_name: String = row.get(1);
         let partition_index: i32 = row.get(2);
 
-        match create_partition_for_trend_store_part(client, trend_store_part_id, partition_index).await {
+        let transaction = client.transaction().await?;
+
+        match create_partition_for_trend_store_part(
+            &transaction,
+            trend_store_part_id,
+            partition_index,
+        )
+        .await
+        {
             Ok(partition_name) => {
+                transaction.commit().await?;
                 println!(
                     "Created partition for '{}': '{}'",
                     &part_name, &partition_name
                 );
-            },
+            }
             Err(e) => {
-                println!(
-                    "Error creating partition '{part_name}': {e}"
-                );
+                transaction.rollback().await?;
+                println!("Error creating partition '{part_name}': {e}");
             }
         }
     }
@@ -1492,8 +1421,8 @@ pub async fn create_partitions_for_trend_store(
     Ok(())
 }
 
-pub async fn create_partitions_for_trend_store_and_timestamp(
-    client: &mut Client,
+pub async fn create_partitions_for_trend_store_and_timestamp<T: GenericClient>(
+    client: &mut T,
     trend_store_id: i32,
     timestamp: DateTime<Utc>,
 ) -> Result<(), Error> {
@@ -1521,9 +1450,16 @@ pub async fn create_partitions_for_trend_store_and_timestamp(
         let part_name: String = row.get(1);
         let partition_index: i32 = row.get(2);
 
-        let partition_name =
-            create_partition_for_trend_store_part(client, trend_store_part_id, partition_index)
-                .await?;
+        let transaction = client.transaction().await?;
+
+        let partition_name = create_partition_for_trend_store_part(
+            &transaction,
+            trend_store_part_id,
+            partition_index,
+        )
+        .await?;
+
+        transaction.commit().await?;
 
         println!(
             "Created partition for '{}': '{}'",
@@ -1535,7 +1471,7 @@ pub async fn create_partitions_for_trend_store_and_timestamp(
 }
 
 async fn create_partition_for_trend_store_part(
-    client: &mut Client,
+    client: &Transaction<'_>,
     trend_store_part_id: i32,
     partition_index: i32,
 ) -> Result<String, Error> {

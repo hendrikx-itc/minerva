@@ -44,7 +44,11 @@ impl fmt::Display for AddAttributes {
             "AddAttributes({}, {}):\n{}",
             &self.attribute_store,
             &self.attributes.len(),
-            self.attributes.iter().map(|att| format!(" - {}: {}\n", att.name, att.data_type)).collect::<Vec<String>>().join(""),
+            self.attributes
+                .iter()
+                .map(|att| format!(" - {}: {}\n", att.name, att.data_type))
+                .collect::<Vec<String>>()
+                .join(""),
         )
     }
 }
@@ -84,7 +88,9 @@ impl Change for AddAttributes {
                 )
                 .await
                 .map_err(|e| {
-                    DatabaseError::from_msg(format!("Error adding attributes to attribute store: {e}"))
+                    DatabaseError::from_msg(format!(
+                        "Error adding attributes to attribute store: {e}"
+                    ))
                 })?;
         }
 
@@ -107,7 +113,11 @@ impl fmt::Display for RemoveAttributes {
             "RemoveAttributes({}, {})\n{}",
             &self.attribute_store,
             &self.attributes.len(),
-            self.attributes.iter().map(|att| format!(" - {att}\n")).collect::<Vec<String>>().join(""),
+            self.attributes
+                .iter()
+                .map(|att| format!(" - {att}\n"))
+                .collect::<Vec<String>>()
+                .join(""),
         )
     }
 }
@@ -145,7 +155,9 @@ impl Change for RemoveAttributes {
                 )
                 .await
                 .map_err(|e| {
-                    DatabaseError::from_msg(format!("Error removing attribute '{attribute}' from attribute store: {e}"))
+                    DatabaseError::from_msg(format!(
+                        "Error removing attribute '{attribute}' from attribute store: {e}"
+                    ))
                 })?;
         }
 
@@ -156,9 +168,6 @@ impl Change for RemoveAttributes {
         ))
     }
 }
-
-
-
 
 pub struct ChangeAttribute {
     pub attribute_store: AttributeStore,
@@ -337,7 +346,9 @@ impl Change for AddAttributeStore {
     }
 }
 
-pub async fn load_attribute_stores<T: GenericClient + Send + Sync>(conn: &mut T) -> Result<Vec<AttributeStore>, Error> {
+pub async fn load_attribute_stores<T: GenericClient + Send + Sync>(
+    conn: &mut T,
+) -> Result<Vec<AttributeStore>, Error> {
     let mut attribute_stores: Vec<AttributeStore> = Vec::new();
 
     let query = concat!(
@@ -396,7 +407,10 @@ pub async fn load_attribute_store<T: GenericClient + Send + Sync>(
     })
 }
 
-async fn load_attributes<T: GenericClient + Send + Sync>(conn: &mut T, attribute_store_id: i32) -> Vec<Attribute> {
+async fn load_attributes<T: GenericClient + Send + Sync>(
+    conn: &mut T,
+    attribute_store_id: i32,
+) -> Vec<Attribute> {
     let attribute_query = "SELECT name, data_type, description FROM attribute_directory.attribute WHERE attribute_store_id = $1";
     let attribute_result = conn
         .query(attribute_query, &[&attribute_store_id])
@@ -449,20 +463,17 @@ mod tests {
         let my_attribute_store = AttributeStore {
             data_source: "test".to_string(),
             entity_type: "node".to_string(),
-            attributes: vec![
-            ]
+            attributes: vec![],
         };
 
         let other_attribute_store = AttributeStore {
             data_source: "test".to_string(),
             entity_type: "node".to_string(),
-            attributes: vec![
-                Attribute {
-                    name: "equipment_type".to_string(),
-                    data_type: DataType::Text,
-                    description: "Type name from vendor".to_string(),
-                }
-            ]
+            attributes: vec![Attribute {
+                name: "equipment_type".to_string(),
+                data_type: DataType::Text,
+                description: "Type name from vendor".to_string(),
+            }],
         };
 
         let changes = my_attribute_store.diff(&other_attribute_store);
@@ -470,7 +481,10 @@ mod tests {
         assert_eq!(changes.len(), 1);
         let first_change = changes.first().expect("Should have a change");
 
-        assert_eq!(first_change.to_string(), "AddAttributes(AttributeStore(test, node), 1):\n - equipment_type: text\n");
+        assert_eq!(
+            first_change.to_string(),
+            "AddAttributes(AttributeStore(test, node), 1):\n - equipment_type: text\n"
+        );
     }
 
     #[test]
@@ -478,20 +492,17 @@ mod tests {
         let my_attribute_store = AttributeStore {
             data_source: "test".to_string(),
             entity_type: "node".to_string(),
-            attributes: vec![
-                Attribute {
-                    name: "equipment_type".to_string(),
-                    data_type: DataType::Text,
-                    description: "Type name from vendor".to_string(),
-                }
-            ]
+            attributes: vec![Attribute {
+                name: "equipment_type".to_string(),
+                data_type: DataType::Text,
+                description: "Type name from vendor".to_string(),
+            }],
         };
 
         let other_attribute_store = AttributeStore {
             data_source: "test".to_string(),
             entity_type: "node".to_string(),
-            attributes: vec![
-            ]
+            attributes: vec![],
         };
 
         let changes = my_attribute_store.diff(&other_attribute_store);
@@ -499,6 +510,9 @@ mod tests {
         assert_eq!(changes.len(), 1);
         let first_change = changes.first().expect("Should have a change");
 
-        assert_eq!(first_change.to_string(), "RemoveAttributes(AttributeStore(test, node), 1)\n - equipment_type\n");
+        assert_eq!(
+            first_change.to_string(),
+            "RemoveAttributes(AttributeStore(test, node), 1)\n - equipment_type\n"
+        );
     }
 }

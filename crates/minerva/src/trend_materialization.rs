@@ -2,11 +2,11 @@ use glob::glob;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_yaml;
-use tokio_postgres::Transaction;
 use std::fmt;
 use std::marker::{Send, Sync};
 use std::path::Path;
 use std::time::Duration;
+use tokio_postgres::Transaction;
 
 use postgres_protocol::escape::escape_identifier;
 use tokio_postgres::{types::ToSql, types::Type, GenericClient};
@@ -126,11 +126,14 @@ impl TrendViewMaterialization {
             "WHERE dstp.name = $1"
         );
 
-        client.execute(query, &[&self.target_trend_store_part, &view_ident])
+        client
+            .execute(query, &[&self.target_trend_store_part, &view_ident])
             .await
-            .map_err(|e| Error::Database(DatabaseError::from_msg(format!(
-                "Error initializing view materialization: {e}"
-            ))))?;
+            .map_err(|e| {
+                Error::Database(DatabaseError::from_msg(format!(
+                    "Error initializing view materialization: {e}"
+                )))
+            })?;
 
         Ok(())
     }
@@ -441,7 +444,10 @@ impl TrendFunctionMaterialization {
         &self,
         client: &mut T,
     ) -> Result<(), Error> {
-        let function_ident = format!("trend.{}", &escape_identifier(&self.target_trend_store_part));
+        let function_ident = format!(
+            "trend.{}",
+            &escape_identifier(&self.target_trend_store_part)
+        );
 
         let query = concat!(
             "INSERT INTO trend_directory.function_materialization(materialization_id, src_function) ",
@@ -452,11 +458,14 @@ impl TrendFunctionMaterialization {
             "WHERE dstp.name = $1"
         );
 
-        client.execute(query, &[&self.target_trend_store_part, &function_ident])
+        client
+            .execute(query, &[&self.target_trend_store_part, &function_ident])
             .await
-            .map_err(|e| Error::Database(DatabaseError::from_msg(format!(
-                "Error initializing function materialization: {e}"
-            ))))?;
+            .map_err(|e| {
+                Error::Database(DatabaseError::from_msg(format!(
+                    "Error initializing function materialization: {e}"
+                )))
+            })?;
 
         Ok(())
     }
@@ -700,12 +709,16 @@ impl TrendMaterialization {
 
     pub fn dump(&self) -> Result<String, Error> {
         match self {
-            TrendMaterialization::View(m) => {
-                serde_yaml::to_string(m).map_err(|e| Error::Runtime(RuntimeError::from_msg(format!("Could not dump view materialization: {e}"))))
-            },
-            TrendMaterialization::Function(m) => {
-                serde_yaml::to_string(m).map_err(|e| Error::Runtime(RuntimeError::from_msg(format!("Could not dump function materialization: {e}"))))
-            },
+            TrendMaterialization::View(m) => serde_yaml::to_string(m).map_err(|e| {
+                Error::Runtime(RuntimeError::from_msg(format!(
+                    "Could not dump view materialization: {e}"
+                )))
+            }),
+            TrendMaterialization::Function(m) => serde_yaml::to_string(m).map_err(|e| {
+                Error::Runtime(RuntimeError::from_msg(format!(
+                    "Could not dump function materialization: {e}"
+                )))
+            }),
         }
     }
 
@@ -725,11 +738,11 @@ impl TrendMaterialization {
             "WHERE tsl.materialization_id = m.id AND dstp.name = $1"
         );
 
-        client.execute(query, &[&self.name()])
-            .await
-            .map_err(|e| Error::Database(DatabaseError::from_msg(format!(
+        client.execute(query, &[&self.name()]).await.map_err(|e| {
+            Error::Database(DatabaseError::from_msg(format!(
                 "Error removing materialization_trend_store_link records: {e}"
-            ))))?;
+            )))
+        })?;
 
         Ok(())
     }
@@ -752,11 +765,11 @@ impl TrendMaterialization {
             "WHERE m.id = vm.materialization_id AND dstp.name = $1"
         );
 
-        client.execute(query, &[&self.name()])
-            .await
-            .map_err(|e| Error::Database(DatabaseError::from_msg(format!(
+        client.execute(query, &[&self.name()]).await.map_err(|e| {
+            Error::Database(DatabaseError::from_msg(format!(
                 "Error removing view_materialization record: {e}"
-            ))))?;
+            )))
+        })?;
 
         let query = concat!(
             "DELETE FROM trend_directory.function_materialization fm ",
@@ -766,11 +779,11 @@ impl TrendMaterialization {
             "WHERE m.id = fm.materialization_id AND dstp.name = $1"
         );
 
-        client.execute(query, &[&self.name()])
-            .await
-            .map_err(|e| Error::Database(DatabaseError::from_msg(format!(
+        client.execute(query, &[&self.name()]).await.map_err(|e| {
+            Error::Database(DatabaseError::from_msg(format!(
                 "Error removing function_materialization record: {e}"
-            ))))?;
+            )))
+        })?;
 
         self.drop_sources(client).await?;
 
@@ -781,11 +794,11 @@ impl TrendMaterialization {
             escape_identifier(&fingerprint_function_name)
         );
 
-        client.execute(&query, &[])
-            .await
-            .map_err(|e| Error::Database(DatabaseError::from_msg(format!(
+        client.execute(&query, &[]).await.map_err(|e| {
+            Error::Database(DatabaseError::from_msg(format!(
                 "Error dropping fingerprint function '{fingerprint_function_name}': {e}"
-            ))))?;
+            )))
+        })?;
 
         Ok(())
     }
@@ -884,7 +897,8 @@ pub fn map_sql_to_plpgsql(src: String) -> String {
         src,
         "$query$ USING $1;\n".into(),
         "END;\n".into(),
-    ].join("")
+    ]
+    .join("")
 }
 
 /// Citus does not support the construct with parameterized queries in plain sql functions. The use
@@ -893,7 +907,9 @@ fn coorce_to_plpgsql((lang, src): (String, String)) -> Result<(String, String), 
     match lang.as_str() {
         "sql" => Ok(("plpgsql".into(), map_sql_to_plpgsql(src))),
         "plpgsql" => Ok((lang, src)),
-        _ => Err(Error::Runtime(RuntimeError::from_msg(format!("Unexpected language '{lang}'"))))
+        _ => Err(Error::Runtime(RuntimeError::from_msg(format!(
+            "Unexpected language '{lang}'"
+        )))),
     }
 }
 
@@ -926,9 +942,13 @@ pub async fn load_materializations<T: GenericClient + Send + Sync>(
         let src_function: Option<String> = row.get(8);
 
         let fingerprint_function_name = format!("{}_fingerprint", &target_trend_store_part);
-        let (_fingerprint_function_lang, fingerprint_function_def) = get_function_def(conn, &fingerprint_function_name)
-            .await
-            .unwrap_or(("failed getting language".into(), "failed getting sources".into()));
+        let (_fingerprint_function_lang, fingerprint_function_def) =
+            get_function_def(conn, &fingerprint_function_name)
+                .await
+                .unwrap_or((
+                    "failed getting language".into(),
+                    "failed getting sources".into(),
+                ));
 
         let processing_delay = parse_interval(&processing_delay_str)
             .map_err(|e| Error::Runtime(RuntimeError::from_msg(format!("Could not load materialization '{target_trend_store_part}' due to failure in parsing of processing_delay: {e}"))))?;
@@ -964,7 +984,10 @@ pub async fn load_materializations<T: GenericClient + Send + Sync>(
             let (function_lang, function_def) = coorce_to_plpgsql(
                 get_function_def(conn, &target_trend_store_part)
                     .await
-                    .unwrap_or(("failed getting language".into(), "failed getting sources".into()))
+                    .unwrap_or((
+                        "failed getting language".into(),
+                        "failed getting sources".into(),
+                    )),
             )?;
             let return_type = get_function_return_type(conn, &target_trend_store_part)
                 .await
@@ -1066,11 +1089,11 @@ pub async fn get_function_return_type<T: GenericClient + Send + Sync>(
 ) -> Option<String> {
     let query = "SELECT unnest(proargnames[2:]), format_type(unnest(proallargtypes[2:]), null) FROM pg_proc WHERE proname = $1";
 
-    let columns: Vec<(String, String)> = client.query(query, &[&function_name])
+    let columns: Vec<(String, String)> = client
+        .query(query, &[&function_name])
         .await
-        .map(|rows| {
-            rows.iter().map(|row| (row.get(0), row.get(1))).collect()
-        }).unwrap();
+        .map(|rows| rows.iter().map(|row| (row.get(0), row.get(1))).collect())
+        .unwrap();
 
     let columns_part = columns
         .iter()
@@ -1192,13 +1215,20 @@ pub async fn populate_source_fingerprint<T: GenericClient + Send + Sync>(
         if index == 0 {
             query_parts.push("SELECT trend_directory.update_source_fingerprint(m.id, source_1.timestamp) FROM source_1".to_string());
         } else {
-            query_parts.push(format!("JOIN {cte_name} ON source_1.timestamp = {cte_name}.timestamp"));
+            query_parts.push(format!(
+                "JOIN {cte_name} ON source_1.timestamp = {cte_name}.timestamp"
+            ));
         }
     }
 
-    let query = format!("WITH {} {}, trend_directory.materialization m WHERE m::text = $1", ctes.join(","), query_parts.join(" "));
+    let query = format!(
+        "WITH {} {}, trend_directory.materialization m WHERE m::text = $1",
+        ctes.join(","),
+        query_parts.join(" ")
+    );
 
-    client.execute(&query, &[&materialization])
+    client
+        .execute(&query, &[&materialization])
         .await
         .map_err(|e| format!("Error loading trend materializations: {e}"))?;
 

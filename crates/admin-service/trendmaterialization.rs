@@ -341,10 +341,7 @@ impl TrendFunctionMaterializationData {
         Ok(materialization)
     }
 
-    pub async fn update(
-        &self,
-        client: &mut Transaction<'_>,
-    ) -> Result<Success, Error> {
+    pub async fn update(&self, client: &mut Transaction<'_>) -> Result<Success, Error> {
         client
             .query_one(
                 concat!(

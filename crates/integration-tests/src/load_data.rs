@@ -13,9 +13,9 @@ mod tests {
 
     use minerva::change::Change;
     use minerva::changes::trend_store::AddTrendStore;
+    use minerva::cluster::MinervaCluster;
     use minerva::schema::create_schema;
     use minerva::trend_store::{create_partitions_for_timestamp, TrendStore};
-    use minerva::cluster::MinervaCluster;
 
     const TEST_CSV_DATA: &str = r###"
 node,timestamp,outside_temp,inside_temp,power_kwh,freq_power
@@ -92,8 +92,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
         }
 
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd
-            .env("PGUSER", "postgres")
+        cmd.env("PGUSER", "postgres")
             .env("PGHOST", cluster.controller_host.to_string())
             .env("PGPORT", cluster.controller_port.to_string())
             .env("PGSSLMODE", "disable")
@@ -166,8 +165,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
         }
 
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd
-            .env("PGUSER", "postgres")
+        cmd.env("PGUSER", "postgres")
             .env("PGHOST", cluster.controller_host.to_string())
             .env("PGPORT", cluster.controller_port.to_string())
             .env("PGSSLMODE", "disable")
@@ -186,8 +184,7 @@ hillside15,2023-03-25T14:00:00Z,55.9,200.0
         println!("{}", String::from_utf8(output.stdout).unwrap());
 
         let mut cmd = Command::cargo_bin("minerva")?;
-        cmd
-            .env("PGUSER", "postgres")
+        cmd.env("PGUSER", "postgres")
             .env("PGHOST", cluster.controller_host.to_string())
             .env("PGPORT", cluster.controller_port.to_string())
             .env("PGSSLMODE", "disable")

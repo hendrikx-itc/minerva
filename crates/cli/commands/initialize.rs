@@ -23,9 +23,7 @@ pub struct InitializeOpt {
     database_name: Option<String>,
     #[arg(long = "create-partitions", help = "create partitions")]
     create_partitions: bool,
-    #[arg(
-        help = "Minerva instance definition root directory"
-    )]
+    #[arg(help = "Minerva instance definition root directory")]
     instance_root: PathBuf,
 }
 

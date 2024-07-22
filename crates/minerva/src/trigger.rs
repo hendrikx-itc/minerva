@@ -126,9 +126,7 @@ pub struct TriggerRepr {
     pub enabled: bool,
 }
 
-pub async fn list_triggers(
-    conn: &mut Client,
-) -> Result<Vec<TriggerRepr>, String> {
+pub async fn list_triggers(conn: &mut Client) -> Result<Vec<TriggerRepr>, String> {
     let query = concat!(
         "SELECT name, ns::text, granularity::text, default_interval::text, description, enabled ",
         "FROM trigger.rule ",
@@ -1035,7 +1033,6 @@ impl Change for VerifyTrigger {
         Ok(message)
     }
 }
-
 
 pub struct EnableTrigger {
     pub trigger_name: String,

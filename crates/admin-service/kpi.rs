@@ -229,19 +229,22 @@ impl KpiRawData {
     ) -> Result<Kpi, String> {
         let implementedkpi = self.get_implemented_data(transaction).await?;
 
-        let kpi = implementedkpi.get_kpi(transaction, granularity).await.map_err(|e| format!("Could not define KPI: {e:?}"))?;
-        
+        let kpi = implementedkpi
+            .get_kpi(transaction, granularity)
+            .await
+            .map_err(|e| format!("Could not define KPI: {e:?}"))?;
+
         kpi.ok_or("So such KPI found".into())
     }
 
-    async fn create(
-        &self,
-        transaction: &mut Transaction<'_>,
-    ) -> Result<String, Error> {
-        let implementedkpi = self.get_implemented_data(transaction).await.map_err(|e| Error {
-            code: 404,
-            message: e,
-        })?;
+    async fn create(&self, transaction: &mut Transaction<'_>) -> Result<String, Error> {
+        let implementedkpi = self
+            .get_implemented_data(transaction)
+            .await
+            .map_err(|e| Error {
+                code: 404,
+                message: e,
+            })?;
 
         implementedkpi.create(transaction).await
     }
@@ -332,7 +335,13 @@ impl KpiImplementedData {
                 .replace(&DEFAULT_GRANULARITY.to_string(), &granularity.to_string());
 
             // Check if the source exists
-            if !source_exists(transaction, &source_name).await.map_err(|e| Error { code: 500, message: format!("Could not check source existence: {e}") } )? {
+            if !source_exists(transaction, &source_name)
+                .await
+                .map_err(|e| Error {
+                    code: 500,
+                    message: format!("Could not check source existence: {e}"),
+                })?
+            {
                 return Ok(None);
             }
 
@@ -396,13 +405,10 @@ impl KpiImplementedData {
 
         let function_src = map_sql_to_plpgsql(src_lines.join(""));
 
-        let granularity_interval = parse_interval(&granularity)
-            .map_err(|e| 
-                Error {
-                    code: 500,
-                    message: format!("Could not parse granularity '{granularity}': {e}"),
-                }
-            )?;
+        let granularity_interval = parse_interval(&granularity).map_err(|e| Error {
+            code: 500,
+            message: format!("Could not parse granularity '{granularity}': {e}"),
+        })?;
 
         let kpi = Kpi {
             trend_store_part: TrendStorePartCompleteData {
@@ -453,10 +459,7 @@ impl KpiImplementedData {
         Ok(Some(kpi))
     }
 
-    async fn create(
-        &self,
-        transaction: &mut Transaction<'_>,
-    ) -> Result<String, Error> {
+    async fn create(&self, transaction: &mut Transaction<'_>) -> Result<String, Error> {
         for granularity in GRANULARITIES.iter() {
             if let Some(kpi) = self.get_kpi(transaction, granularity.to_string()).await? {
                 kpi.trend_store_part
@@ -686,7 +689,12 @@ pub(super) async fn post_kpi(pool: Data<Pool>, post: String) -> Result<HttpRespo
         message: e.to_string(),
     })?;
 
-    transaction.execute("SET LOCAL citus.multi_shard_modify_mode TO 'sequential';", &[]).await?;
+    transaction
+        .execute(
+            "SET LOCAL citus.multi_shard_modify_mode TO 'sequential';",
+            &[],
+        )
+        .await?;
 
     data.create(&mut transaction).await?;
 

@@ -72,7 +72,7 @@ impl TrendData {
     fn as_minerva(&self) -> Trend {
         Trend {
             name: self.name.clone(),
-            data_type: serde_json::from_str(&self.data_type).unwrap_or( DataType::Numeric ),
+            data_type: serde_json::from_str(&self.data_type).unwrap_or(DataType::Numeric),
             description: self.description.clone(),
             time_aggregation: self.time_aggregation.clone(),
             entity_aggregation: self.entity_aggregation.clone(),
@@ -183,10 +183,7 @@ pub struct TrendStoreBasicData {
 }
 
 impl TrendStoreBasicData {
-    async fn as_minerva(
-        &self,
-        transaction: &mut Transaction<'_>,
-    ) -> Result<TrendStore, String> {
+    async fn as_minerva(&self, transaction: &mut Transaction<'_>) -> Result<TrendStore, String> {
         let result = load_trend_store(
             transaction,
             &self.data_source,
@@ -259,10 +256,12 @@ impl TrendStorePartCompleteData {
         })?;
 
         // first ensure the data source exists
-        _ = tx.execute(
-            "SELECT directory.name_to_data_source($1)",
-            &[&self.data_source]
-        ).await;
+        _ = tx
+            .execute(
+                "SELECT directory.name_to_data_source($1)",
+                &[&self.data_source],
+            )
+            .await;
 
         let trendstore = self
             .trend_store()
@@ -295,7 +294,7 @@ impl TrendStorePartCompleteData {
             ),
         })?;
 
-        let (trend_store_part_id, trend_store_id): (i32, i32) = tx 
+        let (trend_store_part_id, trend_store_id): (i32, i32) = tx
             .query_one(
                 "SELECT id, trend_store_id FROM trend_directory.trend_store_part WHERE name = $1",
                 &[&self.name],
@@ -357,7 +356,10 @@ impl TrendStorePartCompleteData {
                 .collect()
             )?;
 
-        tx.commit().await.map_err(|e| Error { code: 500, message: e.to_string() })?;
+        tx.commit().await.map_err(|e| Error {
+            code: 500,
+            message: e.to_string(),
+        })?;
 
         let trendstorepart = TrendStorePartFull {
             id: trend_store_part_id,

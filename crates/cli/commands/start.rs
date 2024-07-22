@@ -8,11 +8,11 @@ use clap::Parser;
 
 use tokio::signal;
 
+use minerva::cluster::MinervaCluster;
 use minerva::error::Error;
 use minerva::instance::MinervaInstance;
 use minerva::schema::create_schema;
 use minerva::trend_store::create_partitions;
-use minerva::cluster::MinervaCluster;
 
 use super::common::{Cmd, CmdResult, ENV_MINERVA_INSTANCE_ROOT};
 
@@ -79,15 +79,20 @@ impl Cmd for StartOpt {
 
         //client.execute("SET citus.multi_shard_modify_mode TO 'sequential';", &[]).await.unwrap();
 
-
         println!("Minerva cluster is running (press CTRL-C to stop)");
         println!("Connect to the cluster on port {}", cluster.controller_port);
         println!("");
-        println!("  psql -h localhost -p {} -d {} -U postgres", cluster.controller_port, test_database.name);
+        println!(
+            "  psql -h localhost -p {} -d {} -U postgres",
+            cluster.controller_port, test_database.name
+        );
         println!("");
         println!("or:");
         println!("");
-        println!("  PGHOST=localhost PGPORT={} PGDATABASE={} PGUSER=postgres PGSSLMODE=disable minerva", cluster.controller_port, test_database.name);
+        println!(
+            "  PGHOST=localhost PGPORT={} PGDATABASE={} PGUSER=postgres PGSSLMODE=disable minerva",
+            cluster.controller_port, test_database.name
+        );
 
         signal::ctrl_c().await.map_err(|e| {
             Error::Runtime(format!("Could not start waiting for Ctrl-C: {e}").into())
@@ -96,4 +101,3 @@ impl Cmd for StartOpt {
         Ok(())
     }
 }
-

@@ -375,7 +375,7 @@ impl Cmd for TriggerDump {
 #[derive(Debug, Parser, PartialEq)]
 pub struct TriggerOpt {
     #[command(subcommand)]
-    command: TriggerOptCommands
+    command: TriggerOptCommands,
 }
 
 #[derive(Debug, Subcommand, PartialEq)]

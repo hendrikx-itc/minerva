@@ -2,10 +2,8 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 
-use minerva::relation::{
-    AddRelation, load_relation_from_file,
-};
 use minerva::change::Change;
+use minerva::relation::{load_relation_from_file, AddRelation};
 
 use clap::{Parser, Subcommand};
 
@@ -26,9 +24,7 @@ impl Cmd for RelationCreate {
 
         let mut client = connect_db().await?;
 
-        let change = AddRelation {
-            relation
-        };
+        let change = AddRelation { relation };
 
         let mut tx = client.transaction().await?;
 
@@ -45,7 +41,7 @@ impl Cmd for RelationCreate {
 #[derive(Debug, Parser, PartialEq)]
 pub struct RelationOpt {
     #[command(subcommand)]
-    command: RelationOptCommands
+    command: RelationOptCommands,
 }
 
 #[derive(Debug, Subcommand, PartialEq)]
