@@ -197,6 +197,16 @@ impl RawAttributeStore for AttributeStore {
             self.data_source, self.entity_type
         );
 
+        let entity_ids: Vec<i32> = names_to_entity_ids(
+            client,
+            &self.entity_type,
+            records
+                .iter()
+                .map(|(entity_name, _timestamp, _values)| entity_name.clone())
+                .collect(),
+        )
+        .await?;
+
         let temp_table_name = create_temp_table(tx, self).await?;
 
         let mut column_names = vec!["entity_name".to_string()];
