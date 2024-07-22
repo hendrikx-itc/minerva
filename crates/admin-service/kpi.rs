@@ -146,7 +146,7 @@ async fn get_source<T: GenericClient + Send + Sync>(
         })?;
 
     if rows.len() == 1 {
-        let row = rows.iter().next().unwrap();
+        let row = rows.first().unwrap();
 
         let tsp: String = row.get(0);
 
@@ -188,10 +188,10 @@ async fn get_source<T: GenericClient + Send + Sync>(
 
     let tsp: String = row.get(0);
 
-    return Ok(Source {
+    Ok(Source {
         name: tsp,
         relation: None,
-    });
+    })
 }
 
 impl KpiRawData {
@@ -278,7 +278,7 @@ async fn map_view_sources(
 ) -> Result<Vec<String>, tokio_postgres::Error> {
     let view_sources = get_view_sources(transaction, source_name).await?;
 
-    if view_sources.len() > 0 {
+    if !view_sources.is_empty() {
         Ok(view_sources)
     } else {
         Ok(vec![source_name.to_string()])
@@ -300,7 +300,7 @@ async fn source_exists<T: GenericClient + Send + Sync>(
         .await
         .map(|rows| rows.iter().map(|row| row.get(0)).collect())?;
 
-    let exists = source_relations.len() > 0;
+    let exists = !source_relations.is_empty();
 
     Ok(exists)
 }

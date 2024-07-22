@@ -36,7 +36,7 @@ impl From<tokio_postgres::Error> for DatabaseError {
             msg: format!("{err}"),
             kind: err
                 .code()
-                .map_or(DatabaseErrorKind::Default, |c| map_error_kind(c)),
+                .map_or(DatabaseErrorKind::Default, map_error_kind),
         }
     }
 }
@@ -131,7 +131,7 @@ impl From<tokio_postgres::Error> for Error {
 impl From<String> for Error {
     fn from(err: String) -> Error {
         Error::Runtime(RuntimeError {
-            msg: format!("{err}"),
+            msg: err.to_string(),
         })
     }
 }

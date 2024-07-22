@@ -255,14 +255,14 @@ impl TrendStorePartCompleteData {
     ) -> Result<TrendStorePartFull, Error> {
         let mut tx = client.transaction().await.map_err(|_| Error {
             code: 500,
-            message: format!("Could not create trend store"),
+            message: "Could not create trend store".to_string(),
         })?;
 
         // first ensure the data source exists
         _ = tx.execute(
             "SELECT directory.name_to_data_source($1)",
             &[&self.data_source]
-        );
+        ).await;
 
         let trendstore = self
             .trend_store()

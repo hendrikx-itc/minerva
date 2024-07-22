@@ -358,16 +358,14 @@ impl Cmd for TrendStorePartAnalyze {
         for stat in result.trend_stats {
             table.add_row(Row::new(vec![
                 TableCell::new(&stat.name),
-                TableCell::new_with_alignment(
-                    &stat.min_value.unwrap_or("N/A".into()),
-                    1,
-                    Alignment::Right,
-                ),
-                TableCell::new_with_alignment(
-                    &stat.max_value.unwrap_or("N/A".into()),
-                    1,
-                    Alignment::Right,
-                ),
+                TableCell::builder(&stat.min_value.unwrap_or("N/A".into()))
+                    .col_span(1)
+                    .alignment(Alignment::Right)
+                    .build(),
+                TableCell::builder(&stat.max_value.unwrap_or("N/A".into()))
+                    .col_span(1)
+                    .alignment(Alignment::Right)
+                    .build(),
             ]));
         }
 

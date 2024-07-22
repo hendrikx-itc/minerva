@@ -82,7 +82,7 @@ impl Cmd for InitializeOpt {
         };
 
         if let Some(c) = cluster_config {
-            let query = format!("SELECT * FROM citus_add_node($1, $2)");
+            let query = "SELECT * FROM citus_add_node($1, $2)".to_string();
 
             for node in c.nodes {
                 client

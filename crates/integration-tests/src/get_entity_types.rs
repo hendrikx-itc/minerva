@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use std::net::{Ipv4Addr, SocketAddr, TcpStream};
+    use std::net::Ipv4Addr;
     use std::path::PathBuf;
 
     use log::debug;
-
-    use tokio::time::Duration;
 
     use minerva::change::Change;
     use minerva::changes::trend_store::AddTrendStore;

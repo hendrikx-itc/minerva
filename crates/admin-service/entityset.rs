@@ -42,10 +42,10 @@ impl EntitySetData {
         };
         EntitySet{
             name: self.name.to_string(),
-            group: group,
-            entity_type: entity_type,
+            group,
+            entity_type,
             owner: self.owner.to_string(),
-            description: description,
+            description,
             entities: self.entities.to_vec(),
             created: self.created.unwrap_or(Utc::now()),
             modified: self.modified.unwrap_or(Utc::now()),
@@ -68,9 +68,9 @@ pub(super) async fn get_entity_sets(pool: Data<Pool>) -> Result<HttpResponse, Se
         message: "".to_string(),
     })?;
 
-    let mut client: &mut tokio_postgres::Client = manager.deref_mut().deref_mut();
+    let client: &mut tokio_postgres::Client = manager.deref_mut().deref_mut();
 
-    let data = load_entity_sets(&mut client).await.map_err(|e| Error { code: 500, message: e.to_string() } )?;
+    let data = load_entity_sets(client).await.map_err(|e| Error { code: 500, message: e.to_string() } )?;
 
     Ok(HttpResponse::Ok().json(data))
 }

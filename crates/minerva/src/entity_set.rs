@@ -66,7 +66,7 @@ pub async fn load_entity_sets(
                 entity_type: row.get(2),
                 owner: row.get(3),
                 description: row.try_get(4).unwrap_or("".into()),
-                entities: entities,
+                entities,
                 created: row.get(6),
                 modified: row.get(7),
             }
@@ -156,7 +156,7 @@ impl Change for ChangeEntitySet {
 
         let missing_entities:Vec<String> = row.get(0);
 
-        if missing_entities.len() == 0 {
+        if missing_entities.is_empty() {
             Ok("Entity set updated".to_string())
         } else {
             let missing_entities_list = missing_entities.join(", ");

@@ -48,8 +48,8 @@ pub trait RawMeasurementStore {
         &self,
         client: &mut Client,
         job_id: i64,
-        trends: &Vec<String>,
-        data_package: &Vec<(String, DateTime<chrono::Utc>, Vec<String>)>,
+        trends: &[String],
+        data_package: &[(String, DateTime<chrono::Utc>, Vec<String>)],
         null_value: String,
     ) -> Result<(), Error>;
 }
@@ -60,8 +60,8 @@ pub trait MeasurementStore {
         &self,
         client: &mut Client,
         job_id: i64,
-        trends: &Vec<String>,
-        data_package: &Vec<ValueRow>,
+        trends: &[String],
+        data_package: &[ValueRow],
     ) -> Result<(), Error>;
 
     async fn store_package<U>(
@@ -183,7 +183,7 @@ impl Trend {
                 if value == null_value {
                     Ok(MeasValue::Integer(None))
                 } else {
-                    Ok(MeasValue::Integer(Some(i32::from_str(&value).map_err(
+                    Ok(MeasValue::Integer(Some(i32::from_str(value).map_err(
                         |e| {
                             Error::Runtime(RuntimeError {
                                 msg: format!(
@@ -199,7 +199,7 @@ impl Trend {
                     Ok(MeasValue::Numeric(None))
                 } else {
                     Ok(MeasValue::Numeric(Some(
-                        Decimal::from_str(&value).map_err(|e| {
+                        Decimal::from_str(value).map_err(|e| {
                             Error::Runtime(RuntimeError {
                                 msg: format!(
                                     "Could not parse numeric measurement value '{value}': {e}"
@@ -213,7 +213,7 @@ impl Trend {
                 if value == null_value {
                     Ok(MeasValue::Int8(None))
                 } else {
-                    Ok(MeasValue::Int8(Some(i64::from_str(&value).map_err(
+                    Ok(MeasValue::Int8(Some(i64::from_str(value).map_err(
                         |e| {
                             Error::Runtime(RuntimeError {
                                 msg: format!(
@@ -228,14 +228,14 @@ impl Trend {
                 if value == null_value {
                     Ok(MeasValue::Real(None))
                 } else {
-                    Ok(MeasValue::Real(Some(f32::from_str(&value).map_err(|e| Error::Runtime(RuntimeError { msg: format!("Could not parse floating point measurement value '{value}': {e}") }))?)))
+                    Ok(MeasValue::Real(Some(f32::from_str(value).map_err(|e| Error::Runtime(RuntimeError { msg: format!("Could not parse floating point measurement value '{value}': {e}") }))?)))
                 }
             }
             DataType::Double => {
                 if value == null_value {
                     Ok(MeasValue::Double(None))
                 } else {
-                    Ok(MeasValue::Double(Some(f64::from_str(&value).map_err(|e| Error::Runtime(RuntimeError { msg: format!("Could not parse floating point measurement value '{value}': {e}") }))?)))
+                    Ok(MeasValue::Double(Some(f64::from_str(value).map_err(|e| Error::Runtime(RuntimeError { msg: format!("Could not parse floating point measurement value '{value}': {e}") }))?)))
                 }
             }
             _ => Ok(MeasValue::Text("".to_string())),
@@ -275,7 +275,7 @@ fn default_generated_trends() -> Vec<GeneratedTrend> {
     Vec::new()
 }
 
-fn insert_query(trend_store_part: &TrendStorePart, trends: &Vec<&Trend>) -> String {
+fn insert_query(trend_store_part: &TrendStorePart, trends: &[&Trend]) -> String {
     let update_part = trends
         .iter()
         .map(|trend| {
@@ -310,7 +310,7 @@ fn insert_query(trend_store_part: &TrendStorePart, trends: &Vec<&Trend>) -> Stri
     insert_query
 }
 
-fn copy_from_query(trend_store_part: &TrendStorePart, trends: &Vec<&Trend>) -> String {
+fn copy_from_query(trend_store_part: &TrendStorePart, trends: &[&Trend]) -> String {
     let trend_names_part = trends
         .iter()
         .map(|t| escape_identifier(&t.name))
@@ -332,10 +332,10 @@ struct ValueExtractor<'a> {
 }
 
 impl<'a> ValueExtractor<'a> {
-    fn extract(&self, values: &Vec<String>, null_value: &str) -> Result<MeasValue, Error> {
+    fn extract(&self, values: &[String], null_value: &str) -> Result<MeasValue, Error> {
         values
             .get(self.value_index)
-            .map(|v| self.trend.meas_value_from_str(&v, null_value))
+            .map(|v| self.trend.meas_value_from_str(v, null_value))
             .ok_or(Error::Runtime(RuntimeError::from(format!(
                 "Could not find value at index {}",
                 self.value_index
@@ -368,7 +368,7 @@ impl<'a> SubPackageExtractor<'a> {
     fn extract_sub_package<'b>(
         &self,
         entity_ids: &Vec<i32>,
-        data_package: &'b Vec<(String, DateTime<Utc>, Vec<String>)>,
+        data_package: &'b [(String, DateTime<Utc>, Vec<String>)],
     ) -> Result<(Vec<ValueRow>, Vec<&'b DateTime<Utc>>), Error> {
         let mut sub_package = Vec::new();
         let mut timestamps: HashSet<&DateTime<Utc>> = HashSet::new();
@@ -382,7 +382,7 @@ impl<'a> SubPackageExtractor<'a> {
 
             timestamps.insert(timestamp);
 
-            sub_package.push(ValueRow { entity_id: *entity_id, timestamp: timestamp.clone(), values: meas_values?});
+            sub_package.push(ValueRow { entity_id: *entity_id, timestamp: *timestamp, values: meas_values?});
         }
 
         Ok((sub_package, timestamps.into_iter().collect()))
@@ -395,8 +395,8 @@ impl RawMeasurementStore for TrendStore {
         &self,
         client: &mut Client,
         job_id: i64,
-        trend_names: &Vec<String>,
-        records: &Vec<(String, DateTime<chrono::Utc>, Vec<String>)>,
+        trend_names: &[String],
+        records: &[(String, DateTime<chrono::Utc>, Vec<String>)],
         null_value: String,
     ) -> Result<(), Error> {
         let entity_ids: Vec<i32> = names_to_entity_ids(
@@ -460,10 +460,10 @@ impl MeasurementStore for TrendStorePart {
         &self,
         client: &mut Client,
         job_id: i64,
-        trends: &Vec<String>,
-        data_package: &Vec<ValueRow>,
+        trends: &[String],
+        data_package: &[ValueRow],
     ) -> Result<(), Error> {
-        if trends.len() == 0 {
+        if trends.is_empty() {
             return Ok(());
         };
 
@@ -510,7 +510,7 @@ impl MeasurementStore for TrendStorePart {
             },
         }?;
 
-        self.mark_modified(client, &data_package.timestamp()).await.map_err(|e| {
+        self.mark_modified(client, data_package.timestamp()).await.map_err(|e| {
             Error::Database(DatabaseError::from_msg(format!(
                 "Could not mark timestamp modified '{}' - '{}': {e}",
                 self.name,
@@ -583,7 +583,7 @@ pub async fn names_to_entity_ids(
     });
 
     // Only lookup in the database if there is anything left to lookup
-    if names_list.len() > 0 {
+    if !names_list.is_empty() {
         let rows = client.query(&query, &[&names_list]).await?;
 
         for row in rows {
@@ -609,10 +609,10 @@ pub async fn names_to_entity_ids(
         .map(|name| -> Result<i32, Error> {
             entity_ids
                 .get(&name)
-                .map(|v| *v)
-                .ok_or(Error::Runtime(RuntimeError::from(format!(
-                    "Could not find Id for entity name"
-                ))))
+                .copied()
+                .ok_or(Error::Runtime(RuntimeError::from(
+                    "Could not find Id for entity name".to_string()
+                )))
         })
         .collect()
 }
@@ -645,7 +645,7 @@ struct ValueMapper<'a> {
 }
 
 impl<'a> ValueMapper<'a> {
-    fn map_value_from(&self, values: &'a Vec<MeasValue>) -> &'a (dyn ToSql + Sync) {
+    fn map_value_from(&self, values: &'a[MeasValue]) -> &'a (dyn ToSql + Sync) {
         match self.index {
             Some(index) => {
                 match values.get(index) {
@@ -679,7 +679,7 @@ pub trait DataPackage {
     async fn write(
         &self,
         writer: std::pin::Pin<&mut BinaryCopyInWriter>,
-        values: &Vec<(usize, DataType)>,
+        values: &[(usize, DataType)],
         created_timestamp: &DateTime<chrono::Utc>,
     ) -> Result<usize, Error>;
 
@@ -687,7 +687,7 @@ pub trait DataPackage {
         &self,
         client: &mut C,
         query: &str,
-        values: &Vec<(usize, DataType)>,
+        values: &[(usize, DataType)],
         created_timestamp: &DateTime<chrono::Utc>,
     ) -> Result<usize, Error>;
 }
@@ -703,7 +703,7 @@ impl TrendStorePart {
         &self,
         client: &mut Client,
         job_id: i64,
-        trends: &Vec<String>,
+        trends: &[String],
         data_rows: I,
     ) -> Result<(), Error>
     where
@@ -740,7 +740,7 @@ impl TrendStorePart {
 
         let tx = client.transaction().await?;
 
-        if matched_trends.len() == 0 {
+        if matched_trends.is_empty() {
             return Ok(());
         }
 
@@ -781,11 +781,8 @@ impl TrendStorePart {
 
         binary_copy_writer.finish().await.map_err(|e| {
             let kind = match e.code() {
-                Some(code) => match code {
-                    &SqlState::UNIQUE_VIOLATION => crate::error::DatabaseErrorKind::UniqueViolation,
-                    _ => crate::error::DatabaseErrorKind::Default,
-                },
-                None => crate::error::DatabaseErrorKind::Default,
+                Some(&SqlState::UNIQUE_VIOLATION) => crate::error::DatabaseErrorKind::UniqueViolation,
+                _ => crate::error::DatabaseErrorKind::Default,
             };
 
             Error::Database(DatabaseError {
@@ -842,7 +839,7 @@ impl TrendStorePart {
 
         let tx = client.transaction().await?;
 
-        if matched_trends.len() == 0 {
+        if matched_trends.is_empty() {
             return Ok(());
         }
 
@@ -872,11 +869,8 @@ impl TrendStorePart {
 
         binary_copy_writer.finish().await.map_err(|e| {
             let kind = match e.code() {
-                Some(code) => match code {
-                    &SqlState::UNIQUE_VIOLATION => crate::error::DatabaseErrorKind::UniqueViolation,
-                    _ => crate::error::DatabaseErrorKind::Default,
-                },
-                None => crate::error::DatabaseErrorKind::Default,
+                Some(&SqlState::UNIQUE_VIOLATION) => crate::error::DatabaseErrorKind::UniqueViolation,
+                _ => crate::error::DatabaseErrorKind::Default,
             };
 
             Error::Database(DatabaseError {
@@ -898,8 +892,8 @@ impl TrendStorePart {
         &self,
         client: &mut Client,
         job_id: i64,
-        trends: &Vec<String>,
-        data_package: &Vec<ValueRow>,
+        trends: &[String],
+        data_package: &[ValueRow],
     ) -> Result<(), Error> {
         // List of indexes of matched trends to extract corresponding values
         let mut matched_trend_indexes: Vec<Option<usize>> = Vec::new();
@@ -922,11 +916,12 @@ impl TrendStorePart {
         let query = insert_query(self, &matched_trends);
 
         for value_row in data_package {
-            let mut values: Vec<&(dyn ToSql + Sync)> = Vec::new();
-            values.push(&value_row.entity_id);
-            values.push(&value_row.timestamp);
-            values.push(&created_timestamp);
-            values.push(&job_id);
+            let mut values: Vec<&(dyn ToSql + Sync)> = vec![
+                &value_row.entity_id,
+                &value_row.timestamp,
+                &created_timestamp,
+                &job_id,
+            ];
 
             for (i, t) in matched_trend_indexes.iter().zip(matched_trends.iter()) {
                 match i {
@@ -981,10 +976,10 @@ impl TrendStorePart {
         for t in self.trends.iter() {
             let index = data_package.trends().iter().position(|trend_name| trend_name == &t.name);
 
-            if index.is_some() {
+            if let Some(i) = index {
                 matched_trend_indexes.push(index);
                 matched_trends.push(t);
-                values.push((index.unwrap(), t.data_type));
+                values.push((i, t.data_type));
             }
         }
 
@@ -1023,8 +1018,8 @@ impl TrendStorePart {
                     if my_trend.data_type != other_trend.data_type {
                         alter_trend_data_types.push(ModifyTrendDataType {
                             trend_name: my_trend.name.clone(),
-                            from_type: my_trend.data_type.clone(),
-                            to_type: other_trend.data_type.clone(),
+                            from_type: my_trend.data_type,
+                            to_type: other_trend.data_type,
                         });
                     }
 
@@ -1628,7 +1623,7 @@ mod tests {
             "}",
         );
 
-        let trend: Trend = serde_json::from_str(&trend_def).unwrap();
+        let trend: Trend = serde_json::from_str(trend_def).unwrap();
 
         assert_eq!(trend.name, "Foo");
         assert_eq!(trend.data_type, DataType::Integer);
