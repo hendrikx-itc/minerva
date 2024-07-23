@@ -1,5 +1,8 @@
+mod common;
+
 #[cfg(test)]
 mod tests {
+    use chrono::{DateTime, Utc};
     use log::debug;
     use std::path::PathBuf;
 
@@ -42,6 +45,8 @@ mod tests {
 
     #[tokio::test]
     async fn load_attribute_data() -> Result<(), Box<dyn std::error::Error>> {
+        crate::common::setup();
+
         let config_file = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
 
         let cluster = MinervaCluster::start(&config_file, 3).await?;
@@ -50,7 +55,7 @@ mod tests {
 
         debug!("Created database '{}'", test_database.name);
 
-        {
+        let (elapsed, stored_count) = {
             let mut client = test_database.connect().await?;
             create_schema(&mut client).await?;
 
@@ -75,22 +80,47 @@ mod tests {
                 })
                 .collect();
 
+            let start = std::time::Instant::now();
+
             let tx = client.transaction().await?;
-            attribute_store.store(&tx, attributes, rows).await?;
+            let stored_count = attribute_store.store(&tx, attributes, rows).await?;
             tx.commit().await?;
-        }
+
+            (start.elapsed(), stored_count)
+        };
+
+        println!("Duration: {:?}", elapsed);
+
+        assert_eq!(stored_count, 500);
 
         {
             let client = test_database.connect().await?;
 
             let rows = client
                 .query(
-                    "SELECT entity_id, timestamp FROM attribute_history.\"hub_node\"",
+                    "SELECT entity_id, timestamp, hash FROM attribute_history.hub_node a JOIN entity.node e ON e.id = a.entity_id order by e.name",
                     &[],
                 )
                 .await?;
 
             assert_eq!(rows.len(), 500);
+
+            let first_row = rows.first().unwrap();
+
+            let now = Utc::now();
+
+            let first_timestamp: DateTime<Utc> = first_row.get(1);
+            assert!(first_timestamp < now);
+            let first_hash: String = first_row.get(2);
+            assert_eq!(first_hash, "a0bd39a96dab92bf492a1dc8c380c96a");
+
+
+            let last_row = rows.last().unwrap();
+
+            let last_timestamp: DateTime<Utc> = last_row.get(1);
+            assert!(last_timestamp < now);
+            let last_hash: String = last_row.get(2);
+            assert_eq!(last_hash, "4d29f20f44be7506e75e657b30571581");
         }
 
         Ok(())

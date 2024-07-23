@@ -34,5 +34,8 @@ url = { version = "2.5", optional = true}
 rand = { version = "0.8", optional = true}
 testcontainers = { version = "0.20", optional = true }
 
+[dev-dependencies]
+env_logger = { version = "0.11" }
+
 [features]
 test-containers = ["dep:url", "dep:rand", "dep:testcontainers"]
