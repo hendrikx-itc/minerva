@@ -128,7 +128,7 @@ pub trait RawAttributeStore {
         tx: &Transaction,
         attributes: Vec<String>,
         rows: Vec<AttributeDataRow>,
-    ) -> impl std::future::Future<Output = Result<(), AttributeStorageError>> + Send;
+    ) -> impl std::future::Future<Output = Result<u64, AttributeStorageError>> + Send;
 }
 
 impl RawAttributeStore for AttributeStore {
@@ -137,7 +137,7 @@ impl RawAttributeStore for AttributeStore {
         tx: &Transaction<'_>,
         attributes: Vec<String>,
         rows: Vec<AttributeDataRow>,
-    ) -> Result<(), AttributeStorageError> {
+    ) -> Result<u64, AttributeStorageError> {
         let matched_attributes: Vec<(usize, &Attribute)> = self
             .attributes
             .iter()
@@ -148,6 +148,11 @@ impl RawAttributeStore for AttributeStore {
                     .map(|index| (index, att))
             })
             .collect();
+
+        if matched_attributes.is_empty() {
+            debug!("No attributes matched, skipping storing");
+            return Ok(0);
+        }
 
         let table_name = format!("{}_{}", self.data_source, self.entity_type);
 
@@ -167,7 +172,7 @@ impl RawAttributeStore for AttributeStore {
         let column_names_part = column_names.join(",");
 
         let copy_from_query = format!(
-            "COPY attribute_staging.{}({}) FROM STDIN BINARY",
+            "COPY attribute_history.{}({}) FROM STDIN BINARY",
             escape_identifier(&table_name),
             column_names_part,
         );
@@ -210,26 +215,10 @@ impl RawAttributeStore for AttributeStore {
                 .map_err(AttributeStorageError::DatabaseError)?;
         }
 
-        let staged_count = binary_copy_writer
+        let stored_count = binary_copy_writer
             .finish()
             .await
             .map_err(AttributeStorageError::DatabaseError)?;
-
-        if matched_attributes.is_empty() {
-            debug!("No attributes matched, skipping storing");
-            return Ok(());
-        }
-
-        debug!("Staged {} records in '{}'", staged_count, &table_name);
-
-        let transfer_staged_query = "SELECT attribute_directory.transfer_staged(attribute_store) FROM attribute_directory.attribute_store WHERE attribute_store::text = $1";
-
-        let row = tx
-            .query_one(transfer_staged_query, &[&table_name])
-            .await
-            .map_err(AttributeStorageError::DatabaseError)?;
-
-        debug!("Transferred staged data: {:?}", row);
 
         debug!(
             "Stored {} rows with {} attributes for '{}'",
@@ -238,7 +227,7 @@ impl RawAttributeStore for AttributeStore {
             self
         );
 
-        Ok(())
+        Ok(stored_count)
     }
 }
 
