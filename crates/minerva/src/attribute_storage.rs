@@ -149,11 +149,6 @@ impl RawAttributeStore for AttributeStore {
             })
             .collect();
 
-        if matched_attributes.is_empty() {
-            debug!("No attributes matched, skipping storing");
-            return Ok(0);
-        }
-
         let table_name = format!("{}_{}", self.data_source, self.entity_type);
 
         let entity_names = rows.iter().map(|row| row.entity_name.clone()).collect();
@@ -161,6 +156,11 @@ impl RawAttributeStore for AttributeStore {
         let entity_ids: Vec<i32> = names_to_entity_ids(tx, &self.entity_type, entity_names)
             .await
             .map_err(AttributeStorageError::EntityMappingError)?;
+
+        if matched_attributes.is_empty() {
+            debug!("No attributes matched, skipping storing");
+            return Ok(0);
+        }
 
         let mut column_names = vec!["entity_id".to_string(), "timestamp".to_string()];
         column_names.extend(
