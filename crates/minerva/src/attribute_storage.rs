@@ -1,5 +1,5 @@
 use bytes::BytesMut;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use futures_util::pin_mut;
 use log::debug;
 use postgres_protocol::escape::escape_identifier;
@@ -119,6 +119,7 @@ impl ToSql for NullValue {
 
 pub struct AttributeDataRow {
     pub entity_name: String,
+    pub timestamp: DateTime<Utc>,
     pub values: Vec<Option<String>>,
 }
 
@@ -194,8 +195,6 @@ impl RawAttributeStore for AttributeStore {
         let binary_copy_writer = BinaryCopyInWriter::new(copy_in_sink, &types);
         pin_mut!(binary_copy_writer);
 
-        let timestamp = Utc::now();
-
         for (row, entity_id) in rows.iter().zip(entity_ids) {
             let attr_values: Vec<_> = matched_attributes
                 .iter()
@@ -205,7 +204,7 @@ impl RawAttributeStore for AttributeStore {
                 })
                 .collect();
 
-            let mut vs: Vec<&(dyn ToSql + Sync)> = vec![&entity_id, &timestamp];
+            let mut vs: Vec<&(dyn ToSql + Sync)> = vec![&entity_id, &row.timestamp];
             vs.extend(attr_values.iter().map(map_value));
 
             binary_copy_writer

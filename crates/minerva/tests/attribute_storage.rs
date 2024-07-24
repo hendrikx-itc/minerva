@@ -75,6 +75,7 @@ mod tests {
             let attributes = vec!["name".to_string()];
             let rows = (0..500)
                 .map(|num| AttributeDataRow {
+                    timestamp: Utc::now(),
                     entity_name: format!("node_{}", num),
                     values: vec![Some(format!("node_{}", num))],
                 })
