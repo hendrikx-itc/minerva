@@ -23,6 +23,10 @@ pub enum EntityMappingError {
     UnmappedEntityError,
 }
 
+pub fn clear_entity_cache() {
+    ENTITY_MAPPING_CACHE.clear();
+}
+
 pub async fn names_to_entity_ids<T: GenericClient>(
     client: &T,
     entity_type_table: &str,
