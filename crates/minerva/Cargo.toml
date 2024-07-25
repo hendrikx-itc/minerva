@@ -33,6 +33,7 @@ log = "0.4"
 url = { version = "2.5", optional = true}
 rand = { version = "0.8", optional = true}
 testcontainers = { version = "0.20", optional = true }
+quick_cache = "0.6.1"
 
 [dev-dependencies]
 env_logger = { version = "0.11" }
