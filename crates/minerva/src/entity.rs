@@ -1,20 +1,14 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::RwLock;
 
 use postgres_protocol::escape::escape_identifier;
 use thiserror::Error;
 use tokio_postgres::GenericClient;
+use quick_cache::sync::Cache;
 
 use lazy_static::lazy_static;
 
-type Data = HashMap<String, i32>;
 lazy_static! {
-    static ref ENTITY_CACHE: RwLock<Data> = RwLock::new(HashMap::new());
-}
-
-std::thread_local! {
-  static ENTITY_MAPPING_CACHE: RefCell<HashMap<(String, String), i32>> = RefCell::new(HashMap::new());
+    static ref ENTITY_MAPPING_CACHE: Cache<(String, String), i32> = Cache::new(100000);
 }
 
 #[derive(Error, Debug)]
@@ -45,19 +39,15 @@ pub async fn names_to_entity_ids<T: GenericClient>(
 
     let mut names_list: Vec<&str> = Vec::new();
 
-    ENTITY_MAPPING_CACHE.with(|m| {
-        let mapping = m.borrow();
-
-        for name in &names {
-            if let Some(entity_id) =
-                mapping.get(&(entity_type_table.to_string(), String::from(name)))
-            {
-                entity_ids.insert(name.clone(), *entity_id);
-            } else {
-                names_list.push(name.as_ref());
-            }
+    for name in &names {
+        if let Some(entity_id) =
+            ENTITY_MAPPING_CACHE.get(&(entity_type_table.to_string(), String::from(name)))
+        {
+            entity_ids.insert(name.clone(), entity_id);
+        } else {
+            names_list.push(name.as_ref());
         }
-    });
+    }
 
     // Only lookup in the database if there is anything left to lookup
     if !names_list.is_empty() {
@@ -75,11 +65,7 @@ pub async fn names_to_entity_ids<T: GenericClient>(
                 None => create_entity(client, entity_type_table, &name).await?,
             };
 
-            ENTITY_MAPPING_CACHE.with(|m| {
-                let mut mapping = m.borrow_mut();
-
-                mapping.insert((entity_type_table.to_string(), name.clone()), entity_id)
-            });
+            ENTITY_MAPPING_CACHE.insert((entity_type_table.to_string(), name.clone()), entity_id);
 
             entity_ids.insert(name, entity_id);
         }
