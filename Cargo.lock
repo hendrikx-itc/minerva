@@ -1853,7 +1853,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests"
-version = "8.0.0"
+version = "8.1.1"
 dependencies = [
  "actix-cors",
  "actix-rt",
@@ -2085,7 +2085,7 @@ dependencies = [
 
 [[package]]
 name = "minerva"
-version = "8.0.0"
+version = "8.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2120,7 +2120,7 @@ dependencies = [
 
 [[package]]
 name = "minerva-cli"
-version = "8.0.0"
+version = "8.1.1"
 dependencies = [
  "actix-cors",
  "actix-rt",
@@ -2159,7 +2159,7 @@ dependencies = [
 
 [[package]]
 name = "minerva-event-service"
-version = "8.0.0"
+version = "8.1.1"
 dependencies = [
  "chrono",
  "deadpool-postgres",
@@ -2181,7 +2181,7 @@ dependencies = [
 
 [[package]]
 name = "minerva-service"
-version = "8.0.0"
+version = "8.1.1"
 dependencies = [
  "actix-cors",
  "actix-web",

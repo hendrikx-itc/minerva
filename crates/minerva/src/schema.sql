@@ -4053,7 +4053,7 @@ BEGIN
         columns_part,
         job_id,
         columns_part,
-        mat.src_view::name
+        mat.src_view
     ) USING timestamp;
 
     GET DIAGNOSTICS row_count = ROW_COUNT;

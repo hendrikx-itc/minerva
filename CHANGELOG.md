@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.1.1] - 2024-07-25
+
+### Changed
+
+- Fix bug in view-materialization insert query building
+
+## [8.1.0] - 2024-07-25
+
 ### Changed
 
 - Use fixed-size entity mapping cache to prevent unbounded memory usage.
@@ -19,3 +27,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://gitlab.1optic.io/hitc/Minerva/minerva/-/compare/8.0.0...HEAD
 [8.0.0]: https://gitlab.1optic.io/hitc/Minerva/minerva/-/compare/7.7.1...8.0.0
+[8.1.0]: https://gitlab.1optic.io/hitc/Minerva/minerva/-/compare/8.0.0...8.1.0
+[8.1.1]: https://gitlab.1optic.io/hitc/Minerva/minerva/-/compare/8.1.0...8.1.1
