@@ -25,7 +25,7 @@ use crate::changes::trend_store::{
     AddTrendStorePart, AddTrends, ModifyTrendDataType, ModifyTrendDataTypes, ModifyTrendExtraData,
     RemoveTrends,
 };
-use crate::entity::names_to_entity_ids;
+use crate::entity::EntityMapping;
 use crate::error::DatabaseErrorKind;
 use crate::meas_value::{
     DataType, MeasValue, INT8_NONE_VALUE, INTEGER_NONE_VALUE, NUMERIC_NONE_VALUE, TEXT_NONE_VALUE,
@@ -39,9 +39,10 @@ type PostgresName = String;
 
 #[async_trait]
 pub trait RawMeasurementStore {
-    async fn store_raw(
+    async fn store_raw<E: EntityMapping + Sync>(
         &self,
         client: &mut Client,
+        entity_mapping: &E,
         job_id: i64,
         trends: &[String],
         data_package: &[(String, DateTime<chrono::Utc>, Vec<String>)],
@@ -390,15 +391,16 @@ impl<'a> SubPackageExtractor<'a> {
 
 #[async_trait]
 impl RawMeasurementStore for TrendStore {
-    async fn store_raw(
+    async fn store_raw<E: EntityMapping + Sync>(
         &self,
         client: &mut Client,
+        entity_mapping: &E,
         job_id: i64,
         trend_names: &[String],
         records: &[(String, DateTime<chrono::Utc>, Vec<String>)],
         null_value: String,
     ) -> Result<(), Error> {
-        let entity_ids: Vec<i32> = names_to_entity_ids(
+        let entity_ids: Vec<i32> = entity_mapping.names_to_entity_ids(
             client,
             &self.entity_type,
             records

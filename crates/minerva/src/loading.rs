@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio_postgres::Client;
 
+use crate::entity::CachingEntityMapping;
 use crate::error::{Error, RuntimeError};
 use crate::interval::parse_interval;
 use crate::job::{end_job, start_job};
@@ -137,9 +138,12 @@ pub async fn load_data<P: AsRef<Path>>(
         }
     }
 
+    let entity_mapping = CachingEntityMapping::new(100);
+
     trend_store
         .store_raw(
             client,
+            &entity_mapping,
             job_id,
             &trends,
             &raw_data_package,

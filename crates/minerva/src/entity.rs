@@ -1,15 +1,10 @@
+use std::future::Future;
 use std::collections::HashMap;
 
 use postgres_protocol::escape::escape_identifier;
+use quick_cache::sync::Cache;
 use thiserror::Error;
 use tokio_postgres::GenericClient;
-use quick_cache::sync::Cache;
-
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref ENTITY_MAPPING_CACHE: Cache<(String, String), i32> = Cache::new(100000);
-}
 
 #[derive(Error, Debug)]
 pub enum EntityMappingError {
@@ -23,68 +18,87 @@ pub enum EntityMappingError {
     UnmappedEntityError,
 }
 
-pub fn clear_entity_cache() {
-    ENTITY_MAPPING_CACHE.clear();
+type EntityTypeName = String;
+type EntityName = String;
+
+pub trait EntityMapping {
+    fn names_to_entity_ids<T: GenericClient + Sync>(&self, client: &T, entity_type: &EntityTypeName, names: Vec<EntityName>) -> impl Future<Output=Result<Vec<i32>, EntityMappingError>> + Send;
 }
 
-pub async fn names_to_entity_ids<T: GenericClient>(
-    client: &T,
-    entity_type_table: &str,
-    names: Vec<String>,
-) -> Result<Vec<i32>, EntityMappingError> {
-    let mut entity_ids: HashMap<String, i32> = HashMap::new();
-
-    let query = format!(
-        "WITH lookup_list AS (SELECT unnest($1::text[]) AS name) \
-        SELECT l.name, e.id FROM lookup_list l \
-        LEFT JOIN entity.{} e ON l.name = e.name ",
-        escape_identifier(entity_type_table)
-    );
-
-    let mut names_list: Vec<&str> = Vec::new();
-
-    for name in &names {
-        if let Some(entity_id) =
-            ENTITY_MAPPING_CACHE.get(&(entity_type_table.to_string(), String::from(name)))
-        {
-            entity_ids.insert(name.clone(), entity_id);
-        } else {
-            names_list.push(name.as_ref());
-        }
-    }
-
-    // Only lookup in the database if there is anything left to lookup
-    if !names_list.is_empty() {
-        let rows = client
-            .query(&query, &[&names_list])
-            .await
-            .map_err(EntityMappingError::DatabaseError)?;
-
-        for row in rows {
-            let name: String = row.get(0);
-            let entity_id_value: Option<i32> =
-                row.try_get(1).map_err(EntityMappingError::DatabaseError)?;
-            let entity_id: i32 = match entity_id_value {
-                Some(entity_id) => entity_id,
-                None => create_entity(client, entity_type_table, &name).await?,
-            };
-
-            ENTITY_MAPPING_CACHE.insert((entity_type_table.to_string(), name.clone()), entity_id);
-
-            entity_ids.insert(name, entity_id);
-        }
-    }
-
-    names
-        .into_iter()
-        .map(|name| -> Result<i32, EntityMappingError> {
-            entity_ids
-                .get(&name)
-                .copied()
-                .ok_or(EntityMappingError::UnmappedEntityError)
-        })
-        .collect()
+pub struct CachingEntityMapping {
+    cache: Cache<(EntityTypeName, EntityName), i32>,
 }
+
+impl CachingEntityMapping {
+    pub fn new(size: usize) -> Self {
+        CachingEntityMapping {
+            cache: Cache::new(size)
+        }
+    }
+}
+
+impl EntityMapping for CachingEntityMapping {
+    async fn names_to_entity_ids<T: GenericClient>(
+        &self,
+        client: &T,
+        entity_type: &EntityTypeName,
+        names: Vec<EntityName>,
+    ) -> Result<Vec<i32>, EntityMappingError> {
+        let mut entity_ids: HashMap<String, i32> = HashMap::new();
+
+        let query = format!(
+            "WITH lookup_list AS (SELECT unnest($1::text[]) AS name) \
+            SELECT l.name, e.id FROM lookup_list l \
+            LEFT JOIN entity.{} e ON l.name = e.name ",
+            escape_identifier(entity_type)
+        );
+
+        let mut names_list: Vec<&str> = Vec::new();
+
+        for name in &names {
+            if let Some(entity_id) =
+                self.cache.get(&(entity_type.to_string(), String::from(name)))
+            {
+                entity_ids.insert(name.clone(), entity_id);
+            } else {
+                names_list.push(name.as_ref());
+            }
+        }
+
+        // Only lookup in the database if there is anything left to lookup
+        if !names_list.is_empty() {
+            let rows = client
+                .query(&query, &[&names_list])
+                .await
+                .map_err(EntityMappingError::DatabaseError)?;
+
+            for row in rows {
+                let name: String = row.get(0);
+                let entity_id_value: Option<i32> =
+                    row.try_get(1).map_err(EntityMappingError::DatabaseError)?;
+                let entity_id: i32 = match entity_id_value {
+                    Some(entity_id) => entity_id,
+                    None => create_entity(client, entity_type, &name).await?,
+                };
+
+                self.cache.insert((entity_type.to_string(), name.clone()), entity_id);
+
+                entity_ids.insert(name, entity_id);
+            }
+        }
+
+        names
+            .into_iter()
+            .map(|name| -> Result<i32, EntityMappingError> {
+                entity_ids
+                    .get(&name)
+                    .copied()
+                    .ok_or(EntityMappingError::UnmappedEntityError)
+            })
+            .collect()
+    }
+}
+
 
 async fn create_entity<T: GenericClient>(
     client: &T,

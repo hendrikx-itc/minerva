@@ -9,7 +9,7 @@ use tokio_postgres::types::{IsNull, ToSql, Type};
 use tokio_postgres::Transaction;
 
 use crate::attribute_store::{Attribute, AttributeStore};
-use crate::entity::{names_to_entity_ids, EntityMappingError};
+use crate::entity::{EntityMapping, EntityMappingError};
 use crate::meas_value::{parse_meas_value, DataType, MeasValue, INT2_NONE_VALUE, TEXT_NONE_VALUE};
 
 #[derive(Error, Debug)]
@@ -124,18 +124,20 @@ pub struct AttributeDataRow {
 }
 
 pub trait RawAttributeStore {
-    fn store(
+    fn store<E: EntityMapping + Sync>(
         &self,
         tx: &Transaction,
+        entity_mapping: &E,
         attributes: Vec<String>,
         rows: Vec<AttributeDataRow>,
     ) -> impl std::future::Future<Output = Result<u64, AttributeStorageError>> + Send;
 }
 
 impl RawAttributeStore for AttributeStore {
-    async fn store(
+    async fn store<E: EntityMapping + Sync>(
         &self,
         tx: &Transaction<'_>,
+        entity_mapping: &E,
         attributes: Vec<String>,
         rows: Vec<AttributeDataRow>,
     ) -> Result<u64, AttributeStorageError> {
@@ -154,7 +156,7 @@ impl RawAttributeStore for AttributeStore {
 
         let entity_names = rows.iter().map(|row| row.entity_name.clone()).collect();
 
-        let entity_ids: Vec<i32> = names_to_entity_ids(tx, &self.entity_type, entity_names)
+        let entity_ids: Vec<i32> = entity_mapping.names_to_entity_ids(tx, &self.entity_type, entity_names)
             .await
             .map_err(AttributeStorageError::EntityMappingError)?;
 

@@ -4,6 +4,7 @@ mod common;
 mod tests {
     use chrono::{DateTime, Utc};
     use log::debug;
+    use minerva::entity::CachingEntityMapping;
     use std::path::PathBuf;
 
     use minerva::attribute_storage::{AttributeDataRow, RawAttributeStore};
@@ -49,6 +50,8 @@ mod tests {
 
         let config_file = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
 
+        let entity_mapping = CachingEntityMapping::new(100);
+
         let cluster = MinervaCluster::start(&config_file, 3).await?;
 
         let test_database = cluster.create_db().await?;
@@ -84,7 +87,7 @@ mod tests {
             let start = std::time::Instant::now();
 
             let tx = client.transaction().await?;
-            let stored_count = attribute_store.store(&tx, attributes, rows).await?;
+            let stored_count = attribute_store.store(&tx, &entity_mapping, attributes, rows).await?;
             tx.commit().await?;
 
             (start.elapsed(), stored_count)
